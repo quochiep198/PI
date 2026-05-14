@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chunky-shadow-primary {
+            box-shadow: 0 4px 0 0 #0e29cf;
+        }
+        .chunky-shadow-secondary {
+            box-shadow: 0 4px 0 0 #756100;
+        }
+        .chunky-shadow-tertiary {
+            box-shadow: 0 4px 0 0 #0d503f;
+        }
+        .chunky-shadow-surface {
+            box-shadow: 0 4px 0 0 #c5c5d8;
+        }
+        .active-press:active {
+            transform: translate(2px, 2px);
+            box-shadow: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c5c5d8",
+                        "outline": "#757687",
+                        "surface-bright": "#f9f9fc",
+                        "on-tertiary-container": "#ebfff5",
+                        "surface-dim": "#dadadc",
+                        "inverse-primary": "#bcc2ff",
+                        "tertiary-fixed-dim": "#96d3bd",
+                        "on-error": "#ffffff",
+                        "surface-container-highest": "#e2e2e5",
+                        "tertiary-fixed": "#b1efd8",
+                        "surface-variant": "#e2e2e5",
+                        "surface-container-low": "#f3f3f6",
+                        "secondary-fixed": "#ffe16e",
+                        "primary-fixed-dim": "#bcc2ff",
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#f9f9fc",
+                        "secondary-fixed-dim": "#e4c542",
+                        "inverse-on-surface": "#f0f0f3",
+                        "surface": "#f9f9fc",
+                        "on-primary-fixed": "#000b63",
+                        "tertiary-container": "#437e6b",
+                        "on-secondary-container": "#756100",
+                        "secondary": "#705d00",
+                        "primary": "#3045e3",
+                        "tertiary": "#286553",
+                        "on-primary-container": "#fcf9ff",
+                        "on-tertiary-fixed": "#002118",
+                        "primary-container": "#4d61fc",
+                        "surface-container": "#eeeef0",
+                        "on-tertiary-fixed-variant": "#0d503f",
+                        "on-surface": "#1a1c1e",
+                        "surface-container-high": "#e8e8ea",
+                        "on-secondary-fixed": "#221b00",
+                        "surface-tint": "#3449e6",
+                        "on-surface-variant": "#444655",
+                        "secondary-container": "#ffde59",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#544600",
+                        "on-primary-fixed-variant": "#0e29cf",
+                        "on-background": "#1a1c1e",
+                        "inverse-surface": "#2f3133",
+                        "primary-fixed": "#dfe0ff",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "8px",
+                        "gutter": "24px",
+                        "margin-desktop": "48px",
+                        "margin-mobile": "16px",
+                        "container-max": "1200px"
+                    },
+                    "fontFamily": {
+                        "label-code": ["JetBrains Mono"],
+                        "body-lg": ["Quicksand"],
+                        "headline-lg": ["Quicksand"],
+                        "headline-md": ["Quicksand"],
+                        "headline-lg-mobile": ["Quicksand"],
+                        "display-lg": ["Quicksand"],
+                        "body-md": ["Quicksand"]
+                    },
+                    "fontSize": {
+                        "label-code": ["15px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "body-lg": ["20px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-secondary-container">
+<!-- Top Navigation Shell -->
+<header class="bg-surface border-b-4 border-surface-container-highest shadow-[0_4px_0_0_rgba(226,222,229,1)] flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-4 h-20 sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary">PythonQuest</span>
+</div>
+<nav class="hidden md:flex gap-8 items-center h-full">
+<a class="text-primary font-bold border-b-2 border-primary h-full flex items-center px-2" href="#">Lessons</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors px-2 py-1 rounded-lg" href="#">Playground</a>
+<a class="text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors px-2 py-1 rounded-lg" href="#">Achievements</a>
+</nav>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="star">star</span>
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center overflow-hidden border-2 border-primary">
+<img alt="Junior Coder Avatar" data-alt="A friendly, stylized 3D avatar of a young robot coder with large expressive digital eyes and a sleek white and blue casing. The character is set against a soft purple background with subtle geometric grid patterns, reflecting a modern EdTech aesthetic with high-key studio lighting and a playful, approachable mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgNKNaVqWu7orFFAIrGfAV1JelJ5ydOTJh-a_CLY_Ww3ICx4EixAV4wmC6kZzUbUCVT5Aq8T2byBaHQokPgO-84ihTNK0z0BE-rSnlPo4tngru4pBNgLBUQPHWNq1g6CfN1ziiZ9X0Za8eeoDlKF9PdiEmS3aR5-AJSc2mX6SxpYHdVxGleH4gk6Eky81qYE8xTcg-Wga4U8aZoGDVXlxtTasNy5fYhcwYyRbB6xh5chhTBGbAfoumChi4mzMmQFP5gO87Sd6huTtZ"/>
+</div>
+</div>
+</header>
+<main class="flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden">
+<!-- Left SideNav (Hidden on Mobile) -->
+<aside class="hidden md:flex flex-col h-full w-64 bg-surface-container-low border-r-4 border-surface-container-highest shadow-[4px_0_0_0_rgba(226,222,229,1)] p-unit gap-4">
+<div class="p-4 bg-white rounded-xl shadow-[0_4px_0_0_rgba(226,222,229,1)] mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-secondary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="military_tech">military_tech</span>
+</div>
+<div>
+<p class="font-headline-md text-[18px] text-primary">Level 5</p>
+<p class="text-on-surface-variant text-sm">Code Explorer</p>
+</div>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<button class="bg-primary-container text-on-primary-container rounded-xl shadow-[0_4px_0_0_rgba(0,11,99,0.2)] flex items-center gap-3 p-4 text-left active-press">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-bold">Lessons</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high rounded-xl flex items-center gap-3 p-4 text-left transition-all active-press">
+<span class="material-symbols-outlined" data-icon="code">code</span>
+<span class="font-medium">Playground</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high rounded-xl flex items-center gap-3 p-4 text-left transition-all active-press">
+<span class="material-symbols-outlined" data-icon="military_tech">military_tech</span>
+<span class="font-medium">Achievements</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high rounded-xl flex items-center gap-3 p-4 text-left transition-all active-press">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-medium">Settings</span>
+</button>
+</nav>
+<div class="mt-auto p-4 bg-secondary-container rounded-xl chunky-shadow-secondary">
+<p class="font-bold text-on-secondary-container mb-2">Học không giới hạn!</p>
+<button class="w-full bg-on-secondary-container text-white py-2 rounded-lg font-bold active-press">Upgrade to Pro</button>
+</div>
+</aside>
+<!-- Main Lesson Canvas -->
+<section class="flex-1 flex flex-col md:flex-row overflow-hidden">
+<!-- Story & Task Panel -->
+<div class="w-full md:w-2/5 p-6 md:p-10 overflow-y-auto bg-surface-bright flex flex-col gap-8">
+<div>
+<h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary mb-2">Chương 1: Chào mừng tới PythonQuest!</h1>
+<div class="h-1 w-24 bg-secondary-container rounded-full"></div>
+</div>
+<!-- Story Block -->
+<div class="bg-white border-2 border-outline-variant p-6 rounded-2xl chunky-shadow-surface flex gap-4">
+<div class="flex-shrink-0">
+<div class="w-16 h-16 rounded-full bg-tertiary-container flex items-center justify-center border-2 border-tertiary">
+<img alt="Py-Bot" class="w-12" data-alt="A friendly, spherical yellow robot named Py-Bot with digital glowing blue eyes and a small antenna. The robot is illustrated in a clean vector style with soft gradients and sits in a futuristic lab environment. The lighting is bright and cheerful, using a palette of electric blues and soft mint greens to maintain a modern EdTech feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKwBXvyV97-lLR8lVF7nzy5WHe3jt-eC5ad1WZ8IxImidpU-qnVuGGFaFyDVmygzdwSZq_JQz5bhngeyhh95G1W1idsmiwbf4ixlZQrBG_pYByPanjgfjXpI37jlQiy9KqYtOgtcwRbNURrIsS-ih82c_eTTX5qK-FlXB4ad2xhyq_tIw4GDJD14qPvL0cRZADu2b7-ekbVl_r7tH46P6tPYLkCTaZkAvmeIBEhdQD4BQ86ancZSfDqlYrX5rgwhecWorN9oxxNvNw"/>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<p class="font-bold text-tertiary">Py-Bot</p>
+<p class="font-body-lg text-body-md md:text-body-lg text-on-surface-variant italic">
+                            "Chào bạn nhỏ! Mình là Py-Bot. Hôm nay chúng mình sẽ cùng nhau học cách để máy tính 'nói' nhé."
+                        </p>
+</div>
+</div>
+<!-- Task Block -->
+<div class="bg-primary-container/10 border-2 border-primary-container p-6 rounded-2xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-2">
+<span class="material-symbols-outlined text-primary-container opacity-20 text-6xl" data-icon="lightbulb">lightbulb</span>
+</div>
+<h3 class="font-headline-md text-primary mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+                        Nhiệm vụ của bạn
+                    </h3>
+<p class="font-body-lg text-on-surface leading-relaxed">
+                        Sử dụng lệnh <code class="bg-white px-2 py-1 rounded-md text-primary font-label-code">print()</code> để chào người bạn mới.
+                    </p>
+<div class="mt-4 p-4 bg-white/50 border-l-4 border-primary rounded-r-lg">
+<p class="font-medium">Hãy viết lệnh: <span class="font-label-code text-on-primary-fixed-variant">print('Chào Py-Bot!')</span> vào ô bên cạnh.</p>
+</div>
+</div>
+<div class="mt-auto">
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Tiến trình</span>
+<span class="text-sm font-bold text-tertiary">15%</span>
+</div>
+<div class="h-4 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[15%] rounded-full relative">
+<div class="absolute right-0 top-0 h-full w-2 bg-white/30"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Code Editor & Terminal Panel -->
+<div class="w-full md:w-3/5 bg-surface-container-highest p-4 md:p-6 flex flex-col gap-4">
+<!-- Editor Area -->
+<div class="flex-1 flex flex-col bg-inverse-surface rounded-3xl overflow-hidden shadow-2xl border-4 border-inverse-surface">
+<div class="bg-[#1e1e1e] px-6 py-3 flex items-center justify-between border-b border-white/10">
+<div class="flex items-center gap-4">
+<div class="flex gap-1.5">
+<div class="w-3 h-3 rounded-full bg-error"></div>
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<div class="w-3 h-3 rounded-full bg-tertiary"></div>
+</div>
+<span class="text-white/50 font-label-code text-xs uppercase tracking-widest">main.py</span>
+</div>
+<span class="material-symbols-outlined text-white/30" data-icon="terminal">terminal</span>
+</div>
+<div class="flex-1 p-6 font-label-code text-body-lg leading-relaxed bg-[#0a0a1a]">
+<div class="flex gap-4">
+<span class="text-white/20 select-none">1</span>
+<p class="text-tertiary-fixed"># Hãy viết mã của bạn bên dưới</p>
+</div>
+<div class="flex gap-4 mt-2">
+<span class="text-white/20 select-none">2</span>
+<div class="flex items-center">
+<span class="text-primary-fixed-dim">print</span>
+<span class="text-white">(</span>
+<span class="text-tertiary-fixed-dim">"..."</span>
+<span class="text-white">)</span>
+<span class="w-2 h-6 bg-primary-container animate-pulse ml-1"></span>
+</div>
+</div>
+</div>
+<!-- Editor Actions -->
+<div class="p-6 bg-[#16162a] border-t border-white/10 flex items-center justify-between">
+<div class="flex gap-4">
+<button class="bg-surface-container-high text-on-surface py-3 px-6 rounded-2xl font-bold flex items-center gap-2 chunky-shadow-surface active-press">
+<span class="material-symbols-outlined" data-icon="lightbulb">lightbulb</span>
+                                Gợi ý
+                            </button>
+<button class="bg-surface-container-high text-on-surface py-3 px-6 rounded-2xl font-bold flex items-center gap-2 chunky-shadow-surface active-press">
+<span class="material-symbols-outlined" data-icon="refresh">refresh</span>
+                                Đặt lại
+                            </button>
+</div>
+<button class="bg-primary-container text-white py-3 px-10 rounded-2xl font-bold text-headline-md flex items-center gap-3 chunky-shadow-primary active-press">
+<span class="material-symbols-outlined" data-icon="play_arrow" data-weight="fill">play_arrow</span>
+                            Chạy mã
+                        </button>
+</div>
+</div>
+<!-- Playground / Output Area -->
+<div class="h-1/3 bg-white rounded-3xl border-4 border-surface-container-highest p-6 flex flex-col shadow-inner">
+<div class="flex items-center gap-2 mb-4 border-b pb-2 border-surface-container-highest">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="wysiwyg">wysiwyg</span>
+<span class="font-bold text-on-surface-variant uppercase text-sm tracking-wider">Kết quả màn hình</span>
+</div>
+<div class="flex-1 flex flex-col items-center justify-center text-center">
+<div class="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-3">
+<span class="material-symbols-outlined text-outline-variant text-3xl" data-icon="smart_toy">smart_toy</span>
+</div>
+<p class="text-outline italic">Hãy chạy mã để thấy Py-Bot phản hồi nhé!</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Mobile Navigation Shell -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface h-20 flex justify-around items-center px-4 border-t-4 border-surface-container-highest shadow-[0_-4px_0_0_rgba(226,222,229,1)] z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-2xl" data-icon="menu_book" data-weight="fill">menu_book</span>
+<span class="text-[10px] font-bold uppercase">Bài học</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl" data-icon="code">code</span>
+<span class="text-[10px] font-bold uppercase">Playground</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl" data-icon="military_tech">military_tech</span>
+<span class="text-[10px] font-bold uppercase">Thành tích</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl" data-icon="account_circle">account_circle</span>
+<span class="text-[10px] font-bold uppercase">Tôi</span>
+</button>
+</nav>
+</body></html>

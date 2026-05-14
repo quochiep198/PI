@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS lessons (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  slug VARCHAR(120) NOT NULL UNIQUE,
+  track VARCHAR(120) NOT NULL DEFAULT 'Cơ bản lớp 6',
+  lesson_order INTEGER NOT NULL UNIQUE,
+  chapter VARCHAR(120) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  objective TEXT NOT NULL,
+  starter_code TEXT NOT NULL,
+  completion_check_type VARCHAR(32) NOT NULL DEFAULT 'output_contains',
+  completion_check_value TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS lesson_progress (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  learner_key VARCHAR(120) NOT NULL,
+  lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uq_progress_learner_lesson UNIQUE (learner_key, lesson_id)
+);
