@@ -5,6 +5,7 @@ import {
   authMeHandler,
   completeProgressHandler,
   createLessonHandler,
+  errorFeedbackHandler,
   healthHandler,
   hintHandler,
   lessonsHandler,
@@ -38,6 +39,7 @@ app.post('/api/auth/logout', logoutHandler);
 app.get('/api/lessons', lessonsHandler);
 app.get('/api/progress', progressHandler);
 app.post('/api/progress/complete', completeProgressHandler);
+app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 app.post('/api/lessons', createLessonHandler);
 

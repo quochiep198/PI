@@ -50,6 +50,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<string>('Cơ bản lớp 6');
   const [isHintLoading, setIsHintLoading] = useState(false);
+  const [isErrorFeedbackLoading, setIsErrorFeedbackLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'loading' || status === 'error') {
@@ -131,12 +132,74 @@ export function HomePage({ user, onLogout }: HomePageProps) {
     return currentOutput.includes(lesson.completionCheckValue);
   }
 
+  async function explainLessonError(errorOutput: string) {
+    if (!selectedLesson) {
+      return;
+    }
+
+    setIsErrorFeedbackLoading(true);
+
+    try {
+      const response = await fetch('/api/error-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lessonId: selectedLesson.id,
+          code,
+          errorOutput,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        explanation?: string;
+        fixFocus?: string;
+        preventionTip?: string;
+        guidance?: string;
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'Không phân tích được lỗi bằng AI.');
+      }
+
+      const explanationBlock = [
+        'Giải thích lỗi từ AI:',
+        payload.explanation || 'AI chưa giải thích được lỗi này.',
+        '',
+        'Cần sửa ở đâu:',
+        payload.fixFocus || payload.guidance || 'Hãy kiểm tra lại code theo dòng báo lỗi.',
+        '',
+        'Mẹo để không bị lại lần sau:',
+        payload.preventionTip || payload.guidance || 'Lần sau em hãy chạy thử từng đoạn ngắn để phát hiện lỗi sớm hơn.',
+      ].join('\n');
+
+      setOutput(explanationBlock);
+    } catch (error) {
+      setOutput(
+        `Không phân tích được lỗi bằng AI.\n${
+          error instanceof Error ? error.message : 'Đã xảy ra lỗi không xác định.'
+        }`,
+      );
+    } finally {
+      setIsErrorFeedbackLoading(false);
+    }
+  }
+
   async function handleRunCode() {
     setOutputTone('idle');
     setOutput('Đang chạy mã Python...');
 
     const result = await runCode(code);
     setOutputTone(result.kind);
+
+    if (result.kind === 'error') {
+      setOutput('Đang lấy phản hồi lỗi từ AI...');
+      await explainLessonError(result.output);
+      return;
+    }
+
     setOutput(result.output);
 
     if (
@@ -493,7 +556,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
                 </div>
                 <button
                   className="pressable editor-button editor-button--primary"
-                  disabled={status === 'loading' || status === 'running'}
+                  disabled={status === 'loading' || status === 'running' || isErrorFeedbackLoading}
                   type="button"
                   onClick={() => void handleRunCode()}
                 >
@@ -504,6 +567,8 @@ export function HomePage({ user, onLogout }: HomePageProps) {
                     ? 'Đang tải Python'
                     : status === 'running'
                       ? 'Đang chạy'
+                      : isErrorFeedbackLoading
+                        ? 'Đang giải thích lỗi'
                       : 'Chạy mã'}
                 </button>
               </div>

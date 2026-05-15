@@ -57,6 +57,25 @@ export async function ensureAppSchema() {
   `);
 
   await execute(`
+    CREATE TABLE IF NOT EXISTS user_lesson_errors (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+      error_message TEXT NOT NULL,
+      code_snapshot TEXT NOT NULL,
+      ai_explanation TEXT NOT NULL,
+      ai_guidance TEXT NOT NULL,
+      mistake_tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await execute(`
+    CREATE INDEX IF NOT EXISTS user_lesson_errors_user_lesson_idx
+    ON user_lesson_errors (user_id, lesson_id, created_at DESC)
+  `);
+
+  await execute(`
     CREATE INDEX IF NOT EXISTS user_sessions_user_id_idx
     ON user_sessions (user_id)
   `);

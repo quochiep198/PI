@@ -9,6 +9,7 @@ const groqApiKey = process.env.GROQ_API_KEY;
 const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const onlinePresenceConnections = new Map();
 const PRO_TRACKS = new Set(['Nâng cao lớp 6']);
+const ERROR_HISTORY_LIMIT = 5;
 
 function getRequestBody(request) {
   return request.body ?? {};
@@ -96,6 +97,180 @@ function canAccessTrack(user, track) {
   }
 
   return Boolean(user?.isPro ?? user?.is_pro);
+}
+
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function extractMistakeTags(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+
+  return rawValue
+    .map((tag) => String(tag).trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+async function getLessonById(lessonId) {
+  const lessons = await query(
+    `
+      SELECT
+        id,
+        track,
+        title,
+        objective,
+        starter_code AS "starterCode"
+      FROM lessons
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [lessonId],
+  );
+
+  return lessons[0] ?? null;
+}
+
+async function getRecentLessonErrors(userId, lessonId, limit = ERROR_HISTORY_LIMIT) {
+  return query(
+    `
+      SELECT
+        error_message AS "errorMessage",
+        ai_explanation AS "aiExplanation",
+        ai_guidance AS "aiGuidance",
+        mistake_tags AS "mistakeTags",
+        created_at AS "createdAt"
+      FROM user_lesson_errors
+      WHERE user_id = $1 AND lesson_id = $2
+      ORDER BY created_at DESC
+      LIMIT $3
+    `,
+    [userId, lessonId, limit],
+  );
+}
+
+async function callGroqChat(messages, temperature = 0.2) {
+  const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${groqApiKey}`,
+    },
+    body: JSON.stringify({
+      model: groqModel,
+      temperature,
+      messages,
+    }),
+  });
+
+  if (!groqResponse.ok) {
+    const errorText = await groqResponse.text();
+    throw new Error(errorText || 'Groq request failed.');
+  }
+
+  const payload = await groqResponse.json();
+  return payload?.choices?.[0]?.message?.content?.trim() || '';
+}
+
+async function analyzeLessonError({ lesson, code, errorOutput, errorHistory }) {
+  const historySummary =
+    errorHistory.length > 0
+      ? errorHistory
+          .map((item, index) => {
+            const tags = extractMistakeTags(item.mistakeTags).join(', ') || 'không có tag';
+            return `${index + 1}. Lỗi: ${item.errorMessage}\nGiải thích cũ: ${item.aiExplanation}\nGợi ý cũ: ${item.aiGuidance}\nTag: ${tags}`;
+          })
+          .join('\n\n')
+      : 'Chưa có lịch sử lỗi trước đó.';
+
+  const systemPrompt = `
+Bạn là trợ lý dạy Python cho học sinh lớp 6.
+
+Nguồn phân tích chính:
+- Ưu tiên đọc kỹ Traceback/lỗi Python được cung cấp.
+- Không đoán bừa nếu Traceback đã chỉ rõ nguyên nhân.
+- Phải nói rõ lỗi nằm ở đâu, vì sao Python báo lỗi đó, và học sinh cần chú ý điểm nào.
+
+Mục tiêu phản hồi:
+- Giải thích thật rõ ràng nhưng ngắn gọn, dễ hiểu với học sinh 11-12 tuổi.
+- Dùng giọng khuyến khích, giúp học sinh thấy lỗi là bình thường và có thể sửa được.
+- Chỉ ra lỗi đang lặp lại nếu lịch sử lỗi cho thấy điều đó.
+- Luôn thêm cách tránh bị lại lần sau.
+- Không đưa full đáp án hoàn chỉnh.
+
+Yêu cầu đầu ra:
+- Trả về JSON hợp lệ.
+- Dùng đúng schema:
+  {
+    "explanation": "string",
+    "fixFocus": "string",
+    "preventionTip": "string",
+    "guidance": "string",
+    "mistakeTags": ["string"]
+  }
+
+Ràng buộc nội dung:
+- \`explanation\` gồm 2-4 câu, giải thích dựa trên Traceback, nêu nguyên nhân và vị trí/ngữ cảnh lỗi.
+- \`fixFocus\` gồm 1-3 câu, nói rõ học sinh nên nhìn vào chỗ nào để sửa.
+- \`preventionTip\` gồm 1-3 câu, mang tính khuyến khích và chỉ cách để tránh lặp lại lỗi lần sau.
+- \`guidance\` là bản gộp ngắn của \`fixFocus\` và \`preventionTip\`.
+- Nếu là lỗi lặp lại, hãy nói nhẹ nhàng rằng học sinh đang gặp lại lỗi quen thuộc này.
+- \`mistakeTags\` gồm 1-5 nhãn ngắn như "syntax", "indentation", "variable-name", "print", "colon".
+`.trim();
+
+  const content = await callGroqChat(
+    [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          `Bài học: ${lesson.title}`,
+          `Mục tiêu: ${lesson.objective}`,
+          lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
+          `Code hiện tại:\n${code}`,
+          `Traceback / lỗi Python:\n${errorOutput}`,
+          `Lịch sử lỗi gần đây của học sinh:\n${historySummary}`,
+          'Hãy phân tích bám sát Traceback trước, rồi trả lời thật rõ ràng, tích cực, và có mẹo để không bị lại lần sau.',
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+      },
+    ],
+    0.2,
+  );
+
+  const parsed = safeJsonParse(content);
+  const explanation =
+    parsed && typeof parsed.explanation === 'string' && parsed.explanation.trim()
+      ? parsed.explanation.trim()
+      : 'Code đang gặp lỗi Python. Không sao cả, mình sửa từng chút là được. Hãy nhìn kỹ dòng báo lỗi cuối cùng vì đó thường là manh mối quan trọng nhất.';
+  const guidance =
+    parsed && typeof parsed.guidance === 'string' && parsed.guidance.trim()
+      ? parsed.guidance.trim()
+      : 'Em hãy kiểm tra lại dấu ngoặc, dấu hai chấm, tên biến và cách thụt lề ở gần dòng báo lỗi. Lần sau, sau mỗi lần viết một đoạn ngắn, em chạy thử ngay để phát hiện lỗi sớm hơn.';
+  const fixFocus =
+    parsed && typeof parsed.fixFocus === 'string' && parsed.fixFocus.trim()
+      ? parsed.fixFocus.trim()
+      : 'Em hãy nhìn vào dòng gần chỗ Python báo lỗi nhất, rồi kiểm tra lại dấu ngoặc, dấu hai chấm và tên biến ở đoạn đó.';
+  const preventionTip =
+    parsed && typeof parsed.preventionTip === 'string' && parsed.preventionTip.trim()
+      ? parsed.preventionTip.trim()
+      : 'Không sao cả, lỗi này sửa được. Lần sau em hãy viết từng đoạn ngắn rồi chạy thử ngay để bắt lỗi sớm hơn.';
+  const mistakeTags = extractMistakeTags(parsed?.mistakeTags);
+
+  return {
+    explanation,
+    fixFocus,
+    preventionTip,
+    guidance,
+    mistakeTags: mistakeTags.length > 0 ? mistakeTags : ['python-error'],
+  };
 }
 
 function hashSessionToken(token) {
@@ -531,6 +706,84 @@ export async function completeProgressHandler(request, response) {
   }
 }
 
+export async function errorFeedbackHandler(request, response) {
+  const { lessonId, code, errorOutput } = getRequestBody(request);
+
+  if (!groqApiKey) {
+    response.status(500).json({
+      message: 'GROQ_API_KEY is not configured on the server.',
+    });
+    return;
+  }
+
+  if (!lessonId || !code || !errorOutput) {
+    response.status(400).json({
+      message: 'Missing lessonId, code, or errorOutput.',
+    });
+    return;
+  }
+
+  try {
+    await ensureAppSchema();
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const lesson = await getLessonById(lessonId);
+    if (!lesson) {
+      response.status(404).json({
+        message: 'Lesson not found.',
+      });
+      return;
+    }
+
+    if (!canAccessTrack(user, lesson.track)) {
+      response.status(403).json({
+        message: 'This lesson is only available for Pro accounts.',
+      });
+      return;
+    }
+
+    const errorHistory = await getRecentLessonErrors(user.id, lessonId);
+    const analysis = await analyzeLessonError({
+      lesson,
+      code,
+      errorOutput,
+      errorHistory,
+    });
+
+    await query(
+      `
+        INSERT INTO user_lesson_errors (
+          user_id,
+          lesson_id,
+          error_message,
+          code_snapshot,
+          ai_explanation,
+          ai_guidance,
+          mistake_tags
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+      `,
+      [
+        user.id,
+        lessonId,
+        errorOutput,
+        code,
+        analysis.explanation,
+        analysis.guidance,
+        JSON.stringify(analysis.mistakeTags),
+      ],
+    );
+
+    response.json(analysis);
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to analyze lesson error.',
+    });
+  }
+}
+
 export async function hintHandler(request, response) {
   const { lessonId, code } = getRequestBody(request);
 
@@ -555,22 +808,7 @@ export async function hintHandler(request, response) {
       return;
     }
 
-    const lessons = await query(
-      `
-        SELECT
-          id,
-          track,
-          title,
-          objective,
-          starter_code AS "starterCode"
-        FROM lessons
-        WHERE id = $1
-        LIMIT 1
-      `,
-      [lessonId],
-    );
-
-    const lesson = lessons[0];
+    const lesson = await getLessonById(lessonId);
     if (!lesson) {
       response.status(404).json({
         message: 'Lesson not found.',
@@ -584,6 +822,17 @@ export async function hintHandler(request, response) {
       });
       return;
     }
+
+    const errorHistory = await getRecentLessonErrors(user.id, lessonId);
+    const mistakeSummary =
+      errorHistory.length > 0
+        ? errorHistory
+            .map((item, index) => {
+              const tags = extractMistakeTags(item.mistakeTags).join(', ') || 'không có tag';
+              return `${index + 1}. Lỗi hay gặp: ${item.errorMessage}\nGợi ý từng đưa: ${item.aiGuidance}\nTag: ${tags}`;
+            })
+            .join('\n\n')
+        : 'Chưa có lịch sử lỗi cho bài học này.';
 
     const systemPrompt = `
 Bạn là bạn đồng hành dạy Python cho học sinh lớp 6.
@@ -609,43 +858,28 @@ Phong cách:
 - Không dùng thuật ngữ kỹ thuật khó.
 `.trim();
 
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: groqModel,
-        temperature: 0.3,
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: [
-              `Bài học: ${lesson.title}`,
-              `Mục tiêu: ${lesson.objective}`,
-              lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
-              `Code hiện tại của học sinh:\n${code}`,
-              'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa.',
-            ]
-              .filter(Boolean)
-              .join('\n\n'),
-          },
-        ],
-      }),
-    });
-
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
-      throw new Error(errorText || 'Groq request failed.');
-    }
-
-    const payload = await groqResponse.json();
-    const hint = payload?.choices?.[0]?.message?.content?.trim();
+    const hint = await callGroqChat(
+      [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: [
+            `Bài học: ${lesson.title}`,
+            `Mục tiêu: ${lesson.objective}`,
+            lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
+            `Code hiện tại của học sinh:\n${code}`,
+            `Lịch sử lỗi hay gặp của học sinh ở bài này:\n${mistakeSummary}`,
+            'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa, ưu tiên đúng chỗ các lỗi em ấy hay lặp lại.',
+          ]
+            .filter(Boolean)
+            .join('\n\n'),
+        },
+      ],
+      0.3,
+    );
 
     response.json({
       hint: hint || 'Chưa nhận được gợi ý từ Groq.',
