@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { execute, query } from './db.mjs';
+import { ensureAppSchema, execute, query } from './db.mjs';
 
 const scryptAsync = promisify(crypto.scrypt);
 const SESSION_COOKIE_NAME = 'python_adventure_session';
@@ -185,6 +185,7 @@ export async function healthHandler(_request, response) {
 
 export async function authMeHandler(request, response) {
   try {
+    await ensureAppSchema();
     const user = await getAuthenticatedUser(request);
     response.json({
       authenticated: Boolean(user),
@@ -211,6 +212,7 @@ export async function registerHandler(request, response) {
   }
 
   try {
+    await ensureAppSchema();
     const existingUsers = await query(
       `
         SELECT id
@@ -265,6 +267,7 @@ export async function loginHandler(request, response) {
   }
 
   try {
+    await ensureAppSchema();
     const users = await query(
       `
         SELECT id, username, email, password_hash AS "passwordHash"
@@ -301,6 +304,7 @@ export async function loginHandler(request, response) {
 
 export async function logoutHandler(request, response) {
   try {
+    await ensureAppSchema();
     const cookies = parseCookies(request);
     const sessionToken = cookies[SESSION_COOKIE_NAME];
 
@@ -352,6 +356,7 @@ export async function lessonsHandler(_request, response) {
 
 export async function progressHandler(request, response) {
   try {
+    await ensureAppSchema();
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
       return;
@@ -385,6 +390,7 @@ export async function completeProgressHandler(request, response) {
   }
 
   try {
+    await ensureAppSchema();
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
       return;

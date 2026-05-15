@@ -8,6 +8,20 @@ type AuthMeResponse = {
   user: AuthUser | null;
 };
 
+async function readJsonSafely<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -18,13 +32,13 @@ export default function App() {
     async function loadSession() {
       try {
         const response = await fetch('/api/auth/me');
-        const data = (await response.json()) as AuthMeResponse;
+        const data = await readJsonSafely<AuthMeResponse>(response);
 
         if (!active) {
           return;
         }
 
-        setUser(response.ok && data.authenticated ? data.user : null);
+        setUser(response.ok && data?.authenticated ? data.user : null);
       } catch {
         if (active) {
           setUser(null);
