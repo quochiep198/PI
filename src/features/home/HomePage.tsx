@@ -3,6 +3,7 @@ import type { AuthUser } from '../auth/types';
 import { MobileNavigation, SideNavigation, TopNavigation } from './HomeNavigation';
 import { useLessons, type Lesson } from './useLessons';
 import { useLessonProgress } from './useLessonProgress';
+import { useOnlineLearners } from './useOnlineLearners';
 import { usePyodideRunner } from './usePyodideRunner';
 
 type OutputTone = 'idle' | 'success' | 'error';
@@ -35,6 +36,7 @@ type HomePageProps = {
 export function HomePage({ user, onLogout }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
+  const { onlineLearners, connected: onlinePresenceConnected } = useOnlineLearners();
   const { runCode, startupMessage, status } = usePyodideRunner();
   const isProUser = Boolean(user.isPro);
   const [code, setCode] = useState(getInitialCode);
@@ -146,7 +148,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
     setIsHintLoading(true);
     setOutputTone('idle');
-    setOutput('Đang xin gợi ý từ Groq AI...');
+    setOutput('Đang xin gợi ý từ  AI...');
 
     try {
       const response = await fetch('/api/hint', {
@@ -164,14 +166,14 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
       const payload = (await response.json()) as { hint?: string; message?: string };
       if (!response.ok) {
-        throw new Error(payload.message || 'Không lấy được gợi ý từ Groq.');
+        throw new Error(payload.message || 'Không lấy được gợi ý từ .');
       }
 
       setOutputTone('success');
       setOutput(`Gợi ý AI:\n${payload.hint || 'Chưa có gợi ý.'}`);
     } catch (error) {
       setOutputTone('error');
-      setOutput(error instanceof Error ? error.message : 'Không lấy được gợi ý từ Groq.');
+      setOutput(error instanceof Error ? error.message : 'Không lấy được gợi ý từ .');
     } finally {
       setIsHintLoading(false);
     }
@@ -252,6 +254,14 @@ export function HomePage({ user, onLogout }: HomePageProps) {
             <div>
               <p className="profile-card__title">Level 5</p>
               <p className="profile-card__subtitle">Code Explorer</p>
+              <p className={`profile-card__presence${onlinePresenceConnected ? ' is-live' : ''}`}>
+                <span aria-hidden="true" className="material-symbols-outlined profile-card__presence-icon">
+                  {onlinePresenceConnected ? 'radio_button_checked' : 'sync'}
+                </span>
+                {onlinePresenceConnected
+                  ? `${onlineLearners} người học đang online`
+                  : 'Đang cập nhật số người học online...'}
+              </p>
             </div>
           </div>
 

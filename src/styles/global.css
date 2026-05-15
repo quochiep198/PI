@@ -634,6 +634,24 @@ select {
   font-size: 14px;
 }
 
+.profile-card__presence {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  color: var(--color-on-surface-variant);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-card__presence.is-live {
+  color: #12805c;
+}
+
+.profile-card__presence-icon {
+  font-size: 14px;
+}
+
 .sidenav__nav {
   display: flex;
   flex-direction: column;

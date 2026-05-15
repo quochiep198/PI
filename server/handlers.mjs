@@ -7,6 +7,7 @@ const SESSION_COOKIE_NAME = 'python_adventure_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const onlinePresenceConnections = new Map();
 
 function getRequestBody(request) {
   return request.body ?? {};
@@ -63,6 +64,29 @@ function parseCookies(request) {
     cookies[key] = decodeURIComponent(value);
     return cookies;
   }, {});
+}
+
+function sendSseEvent(response, event, data) {
+  response.write(`event: ${event}\n`);
+  response.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function getOnlineLearnerCount() {
+  const activeUserIds = new Set();
+
+  for (const connection of onlinePresenceConnections.values()) {
+    activeUserIds.add(connection.userId);
+  }
+
+  return activeUserIds.size;
+}
+
+function broadcastOnlineLearnerCount() {
+  const payload = { count: getOnlineLearnerCount() };
+
+  for (const connection of onlinePresenceConnections.values()) {
+    sendSseEvent(connection.response, 'presence', payload);
+  }
 }
 
 function hashSessionToken(token) {
@@ -196,6 +220,56 @@ export async function authMeHandler(request, response) {
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to load auth session.',
+    });
+  }
+}
+
+export async function onlinePresenceStreamHandler(request, response) {
+  try {
+    await ensureAppSchema();
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
+      response.status(401).json({
+        message: 'Authentication required.',
+      });
+      return;
+    }
+
+    response.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    const connectionId = crypto.randomUUID();
+    const heartbeat = setInterval(() => {
+      sendSseEvent(response, 'heartbeat', { ts: Date.now() });
+    }, 15000);
+
+    onlinePresenceConnections.set(connectionId, {
+      userId: user.id,
+      response,
+      heartbeat,
+    });
+
+    sendSseEvent(response, 'presence', { count: getOnlineLearnerCount() });
+    broadcastOnlineLearnerCount();
+
+    request.on('close', () => {
+      const connection = onlinePresenceConnections.get(connectionId);
+      if (!connection) {
+        return;
+      }
+
+      clearInterval(connection.heartbeat);
+      onlinePresenceConnections.delete(connectionId);
+      broadcastOnlineLearnerCount();
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to stream online presence.',
     });
   }
 }
