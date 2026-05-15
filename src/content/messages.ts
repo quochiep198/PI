@@ -85,7 +85,7 @@ export const VI_MESSAGES = {
     saveFailed: 'Không lưu được tiến trình học tập.',
   },
   xp: {
-    displayXp: (current: number, _next: number) => `+${current} XP`,
+    displayXp: (current: number, xpToNext: number) => `+${current} / ${current + xpToNext} XP`,
     levelUpTitle: 'Lên cấp!',
     levelUpMessage: 'Chúc mừng bạn đã đạt cấp mới! Tiếp tục học hỏi để lên cấp cao hơn nhé.',
     continueLearning: 'Tiếp tục học',

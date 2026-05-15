@@ -7,8 +7,17 @@ type XpBarProps = {
   animatedXp: number | null;
 };
 
+const LEVEL_ICONS: Record<number, string> = {
+  1: '🌱',
+  2: '📚',
+  3: '💻',
+  4: '✨',
+  5: '💎',
+};
+
 export function XpBar({ xpData, loading, animatedXp }: XpBarProps) {
   const displayXp = animatedXp ?? xpData.totalXp;
+  const levelIcon = LEVEL_ICONS[xpData.level] || '⭐';
 
   if (loading) {
     return (
@@ -22,6 +31,7 @@ export function XpBar({ xpData, loading, animatedXp }: XpBarProps) {
     <div className="xp-bar">
       <div className="xp-bar__level">
         <span className="xp-bar__level-badge">Lv.{xpData.level}</span>
+        <span className="xp-bar__level-icon">{levelIcon}</span>
         <span className="xp-bar__level-name">{xpData.name}</span>
       </div>
 
@@ -41,7 +51,7 @@ export function XpBar({ xpData, loading, animatedXp }: XpBarProps) {
         <span className="xp-bar__xp-text">
           {VI_MESSAGES.xp.displayXp(displayXp, xpData.xpToNextLevel)}
         </span>
-        <span className="xp-bar__xp-icon material-symbols-outlined">bolt</span>
+        <span className="xp-bar__xp-icon">⚡</span>
       </div>
     </div>
   );
