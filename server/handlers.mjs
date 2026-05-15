@@ -8,6 +8,7 @@ const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const onlinePresenceConnections = new Map();
+const PRO_TRACKS = new Set(['Nâng cao lớp 6']);
 
 function getRequestBody(request) {
   return request.body ?? {};
@@ -87,6 +88,14 @@ function broadcastOnlineLearnerCount() {
   for (const connection of onlinePresenceConnections.values()) {
     sendSseEvent(connection.response, 'presence', payload);
   }
+}
+
+function canAccessTrack(user, track) {
+  if (!PRO_TRACKS.has(track)) {
+    return true;
+  }
+
+  return Boolean(user?.isPro ?? user?.is_pro);
 }
 
 function hashSessionToken(token) {
@@ -403,8 +412,14 @@ export async function logoutHandler(request, response) {
   }
 }
 
-export async function lessonsHandler(_request, response) {
+export async function lessonsHandler(request, response) {
   try {
+    await ensureAppSchema();
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
     const lessons = await query(`
       SELECT
         id,
@@ -422,7 +437,7 @@ export async function lessonsHandler(_request, response) {
       ORDER BY lesson_order ASC
     `);
 
-    response.json(lessons);
+    response.json(lessons.filter((lesson) => canAccessTrack(user, lesson.track)));
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to load lessons.',
@@ -440,14 +455,15 @@ export async function progressHandler(request, response) {
 
     const progress = await query(
       `
-        SELECT lesson_id AS "lessonId"
+        SELECT lesson_id AS "lessonId", lessons.track
         FROM user_lesson_progress
+        INNER JOIN lessons ON lessons.id = user_lesson_progress.lesson_id
         WHERE user_id = $1
       `,
       [user.id],
     );
 
-    response.json(progress);
+    response.json(progress.filter((item) => canAccessTrack(user, item.track)));
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to load lesson progress.',
@@ -472,6 +488,31 @@ export async function completeProgressHandler(request, response) {
       return;
     }
 
+    const lessons = await query(
+      `
+        SELECT track
+        FROM lessons
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [lessonId],
+    );
+
+    const lesson = lessons[0];
+    if (!lesson) {
+      response.status(404).json({
+        message: 'Lesson not found.',
+      });
+      return;
+    }
+
+    if (!canAccessTrack(user, lesson.track)) {
+      response.status(403).json({
+        message: 'This lesson is only available for Pro accounts.',
+      });
+      return;
+    }
+
     await query(
       `
         INSERT INTO user_lesson_progress (user_id, lesson_id)
@@ -491,7 +532,7 @@ export async function completeProgressHandler(request, response) {
 }
 
 export async function hintHandler(request, response) {
-  const { lessonTitle, objective, code, starterCode } = getRequestBody(request);
+  const { lessonId, code } = getRequestBody(request);
 
   if (!groqApiKey) {
     response.status(500).json({
@@ -500,14 +541,50 @@ export async function hintHandler(request, response) {
     return;
   }
 
-  if (!lessonTitle || !objective || !code) {
+  if (!lessonId || !code) {
     response.status(400).json({
-      message: 'Missing lessonTitle, objective, or code.',
+      message: 'Missing lessonId or code.',
     });
     return;
   }
 
   try {
+    await ensureAppSchema();
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const lessons = await query(
+      `
+        SELECT
+          id,
+          track,
+          title,
+          objective,
+          starter_code AS "starterCode"
+        FROM lessons
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [lessonId],
+    );
+
+    const lesson = lessons[0];
+    if (!lesson) {
+      response.status(404).json({
+        message: 'Lesson not found.',
+      });
+      return;
+    }
+
+    if (!canAccessTrack(user, lesson.track)) {
+      response.status(403).json({
+        message: 'This lesson is only available for Pro accounts.',
+      });
+      return;
+    }
+
     const systemPrompt = `
 Bạn là bạn đồng hành dạy Python cho học sinh lớp 6.
 
@@ -549,9 +626,9 @@ Phong cách:
           {
             role: 'user',
             content: [
-              `Bài học: ${lessonTitle}`,
-              `Mục tiêu: ${objective}`,
-              starterCode ? `Starter code:\n${starterCode}` : '',
+              `Bài học: ${lesson.title}`,
+              `Mục tiêu: ${lesson.objective}`,
+              lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
               `Code hiện tại của học sinh:\n${code}`,
               'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa.',
             ]

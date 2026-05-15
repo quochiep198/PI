@@ -9,6 +9,7 @@ import { usePyodideRunner } from './usePyodideRunner';
 type OutputTone = 'idle' | 'success' | 'error';
 
 const STORAGE_KEY = 'python-adventure.home-editor-code';
+const PRO_TRACKS = ['Nâng cao lớp 6'] as const;
 
 function normalizeEditorCode(value: string | null | undefined, fallback = DEFAULT_CODE) {
   if (!value) {
@@ -36,7 +37,11 @@ type HomePageProps = {
 export function HomePage({ user, onLogout }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
-  const { onlineLearners, connected: onlinePresenceConnected } = useOnlineLearners();
+  const {
+    onlineLearners,
+    connected: onlinePresenceConnected,
+    failed: onlinePresenceFailed,
+  } = useOnlineLearners();
   const { runCode, startupMessage, status } = usePyodideRunner();
   const isProUser = Boolean(user.isPro);
   const [code, setCode] = useState(getInitialCode);
@@ -72,8 +77,12 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
   const tracks = useMemo(() => {
     const uniqueTracks = Array.from(new Set(lessons.map((lesson) => lesson.track)));
-    return uniqueTracks.length > 0 ? uniqueTracks : ['Cơ bản lớp 6'];
-  }, [lessons]);
+    const visibleTracks = isProUser
+      ? uniqueTracks
+      : [...uniqueTracks, ...PRO_TRACKS.filter((track) => !uniqueTracks.includes(track))];
+
+    return visibleTracks.length > 0 ? visibleTracks : ['Cơ bản lớp 6'];
+  }, [isProUser, lessons]);
 
   const filteredLessons = useMemo(
     () => lessons.filter((lesson) => lesson.track === selectedTrack),
@@ -83,8 +92,16 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   useEffect(() => {
     if (!tracks.includes(selectedTrack) && tracks.length > 0) {
       setSelectedTrack(tracks[0]);
+      return;
     }
-  }, [selectedTrack, tracks]);
+
+    if (!isProUser && PRO_TRACKS.includes(selectedTrack as (typeof PRO_TRACKS)[number])) {
+      const fallbackTrack = tracks.find((track) => !PRO_TRACKS.includes(track as (typeof PRO_TRACKS)[number]));
+      if (fallbackTrack) {
+        setSelectedTrack(fallbackTrack);
+      }
+    }
+  }, [isProUser, selectedTrack, tracks]);
 
   useEffect(() => {
     if (filteredLessons.length === 0) {
@@ -157,9 +174,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          lessonTitle: selectedLesson.title,
-          objective: selectedLesson.objective,
-          starterCode: selectedLesson.starterCode,
+          lessonId: selectedLesson.id,
           code,
         }),
       });
@@ -187,7 +202,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   }
 
   function handleTrackSelect(track: string) {
-    if (track === 'Nâng cao lớp 6' && !isProUser) {
+    if (PRO_TRACKS.includes(track as (typeof PRO_TRACKS)[number]) && !isProUser) {
       setOutputTone('idle');
       setOutput('Lộ trình này chỉ dành cho tài khoản Pro.');
       return;
@@ -254,13 +269,21 @@ export function HomePage({ user, onLogout }: HomePageProps) {
             <div>
               <p className="profile-card__title">Level 5</p>
               <p className="profile-card__subtitle">Code Explorer</p>
-              <p className={`profile-card__presence${onlinePresenceConnected ? ' is-live' : ''}`}>
+              <p
+                className={`profile-card__presence${onlinePresenceConnected ? ' is-live' : ''}${onlinePresenceFailed ? ' is-error' : ''}`}
+              >
                 <span aria-hidden="true" className="material-symbols-outlined profile-card__presence-icon">
-                  {onlinePresenceConnected ? 'radio_button_checked' : 'sync'}
+                  {onlinePresenceConnected
+                    ? 'radio_button_checked'
+                    : onlinePresenceFailed
+                      ? 'error'
+                      : 'sync'}
                 </span>
                 {onlinePresenceConnected
                   ? `${onlineLearners} người học đang online`
-                  : 'Đang cập nhật số người học online...'}
+                  : onlinePresenceFailed
+                    ? 'Không thể cập nhật số người học online'
+                    : 'Đang cập nhật số người học online...'}
               </p>
             </div>
           </div>
@@ -345,7 +368,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
               <div className="track-tabs" role="tablist" aria-label="Lộ trình học">
                 {tracks.map((track) => {
-                  const isLockedTrack = track === 'Nâng cao lớp 6';
+                  const isLockedTrack = PRO_TRACKS.includes(track as (typeof PRO_TRACKS)[number]);
                   const isDisabled = isLockedTrack && !isProUser;
 
                   return (

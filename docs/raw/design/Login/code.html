@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-bright": "#f9f9fc",
+                      "primary-container": "#4d61fc",
+                      "primary-fixed-dim": "#bcc2ff",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed": "#002118",
+                      "error": "#ba1a1a",
+                      "error-container": "#ffdad6",
+                      "on-secondary-container": "#756100",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-high": "#e8e8ea",
+                      "primary-fixed": "#dfe0ff",
+                      "surface": "#f9f9fc",
+                      "outline-variant": "#c5c5d8",
+                      "surface-tint": "#3449e6",
+                      "secondary-fixed-dim": "#e4c542",
+                      "outline": "#757687",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-container": "#ffde59",
+                      "secondary": "#705d00",
+                      "on-tertiary-fixed-variant": "#0d503f",
+                      "on-surface-variant": "#444655",
+                      "tertiary": "#286553",
+                      "tertiary-fixed-dim": "#96d3bd",
+                      "surface-variant": "#e2e2e5",
+                      "surface-dim": "#dadadc",
+                      "on-background": "#1a1c1e",
+                      "surface-container-highest": "#e2e2e5",
+                      "on-tertiary-container": "#ebfff5",
+                      "inverse-primary": "#bcc2ff",
+                      "on-primary-fixed-variant": "#0e29cf",
+                      "surface-container": "#eeeef0",
+                      "on-surface": "#1a1c1e",
+                      "inverse-on-surface": "#f0f0f3",
+                      "on-secondary-fixed-variant": "#544600",
+                      "primary": "#3045e3",
+                      "on-primary-fixed": "#000b63",
+                      "tertiary-container": "#437e6b",
+                      "tertiary-fixed": "#b1efd8",
+                      "inverse-surface": "#2f3133",
+                      "surface-container-low": "#f3f3f6",
+                      "on-error-container": "#93000a",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed": "#221b00",
+                      "secondary-fixed": "#ffe16e",
+                      "on-primary-container": "#fcf9ff",
+                      "background": "#f9f9fc"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-desktop": "48px",
+                      "margin-mobile": "16px",
+                      "unit": "8px",
+                      "gutter": "24px",
+                      "container-max": "1200px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Quicksand"],
+                      "headline-lg": ["Quicksand"],
+                      "label-code": ["JetBrains Mono"],
+                      "body-lg": ["Quicksand"],
+                      "display-lg": ["Quicksand"],
+                      "body-md": ["Quicksand"],
+                      "headline-md": ["Quicksand"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "label-code": ["15px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                      "body-lg": ["20px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                      "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .chunky-shadow {
+            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.1);
+        }
+        .btn-chunky-primary {
+            box-shadow: 0 4px 0 0 #0e29cf;
+        }
+        .btn-chunky-primary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 #0e29cf;
+        }
+        .btn-chunky-secondary {
+            box-shadow: 0 4px 0 0 #c5c5d8;
+        }
+        .btn-chunky-secondary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 #c5c5d8;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface-bright text-on-surface min-h-screen flex items-center justify-center p-0 md:p-8">
+<main class="w-full max-w-[1200px] min-h-[700px] bg-surface-container-lowest flex flex-col md:flex-row overflow-hidden md:rounded-xl shadow-xl border border-surface-variant">
+<!-- Left Column: Illustration -->
+<section class="hidden md:flex md:w-1/2 relative bg-primary-container items-center justify-center p-12 overflow-hidden">
+<!-- Background Decorative Elements -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<div class="absolute top-10 left-10 w-32 h-32 border-4 border-white rounded-full"></div>
+<div class="absolute bottom-20 right-10 w-64 h-64 bg-secondary-container rounded-full blur-3xl opacity-30"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-label-code text-white text-[120px] font-bold opacity-10 select-none">print()</div>
+</div>
+<div class="relative z-10 flex flex-col items-center text-center">
+<div class="w-full aspect-square max-w-[400px] bg-surface-container-low rounded-full p-8 chunky-shadow border-4 border-white mb-8 overflow-hidden flex items-center justify-center">
+<img alt="Py-Bot Mascot" class="w-full h-full object-contain" data-alt="A friendly, high-tech robot character named Py-Bot with a sleek metallic body, glowing electric blue eyes, and a friendly wave. The robot is set against a vibrant, stylized digital space background with floating code snippets in Python, glowing nodes, and cosmic purple and blue nebulas. The illustration uses a modern, playful ed-tech style with clean lines, soft volumetric lighting, and bold primary colors to evoke excitement for learning." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4W4yro3Ao69fO9mvugy7WJ2x80WYW8ClcglnZ1wscTvZdpRqjENTInseCgmHetmfernXsDqVHm2dVQ7xMatuDGanvHGVum-838TejsV61zDpJ9OeWMEY2ehkTl3iRzUWJbtShpoIhRczplI8g5Mer3PwjPFv469wXvmoRudzKmA2tmZv0e8KeT5uTcMg_Vu0RS1m3udyk3jHF8dCE4oA6Z7WD0JuvH1A7PjdagTHCAVYSnoVQy3XUw0k2xvRg0cbthH10Gd7BZVqJ"/>
+</div>
+<h1 class="font-display-lg text-display-lg text-white mb-4">PythonQuest</h1>
+<p class="font-body-lg text-body-lg text-primary-fixed leading-relaxed max-w-sm">
+                    Khám phá thế giới của những dòng code và trở thành bậc thầy lập trình cùng Py-Bot!
+                </p>
+</div>
+</section>
+<!-- Right Column: Login Form -->
+<section class="w-full md:w-1/2 flex flex-col justify-center items-center p-margin-mobile md:p-12 bg-white">
+<div class="w-full max-w-[400px]">
+<!-- Branding Mobile Only -->
+<div class="md:hidden flex items-center gap-2 mb-8 justify-center">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="smart_toy">smart_toy</span>
+<span class="font-headline-md text-headline-md text-primary font-bold tracking-tight">PythonQuest</span>
+</div>
+<!-- Header -->
+<header class="mb-10 text-center md:text-left">
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Chào mừng nhà thám hiểm!</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Sẵn sàng để tiếp tục cuộc hành trình lập trình của bạn?</p>
+</header>
+<!-- Form -->
+<form class="space-y-6" onsubmit="return false;">
+<!-- Username/Email Field -->
+<div class="space-y-2">
+<label class="font-headline-md text-body-md text-on-surface font-semibold ml-1" for="username">Email hoặc Tên đăng nhập</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors" data-icon="smart_toy">smart_toy</span>
+</div>
+<input class="block w-full h-[56px] pl-12 pr-4 bg-surface-container-lowest border-2 border-surface-variant rounded-xl focus:border-primary focus:ring-0 font-body-md text-on-surface transition-all placeholder:text-outline-variant" id="username" name="username" placeholder="Ví dụ: explorer_01" type="text"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<label class="font-headline-md text-body-md text-on-surface font-semibold" for="password">Mật khẩu</label>
+<a class="font-body-md text-body-md text-primary font-bold hover:underline" href="#">Quên mật khẩu?</a>
+</div>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors" data-icon="lock">lock</span>
+</div>
+<input class="block w-full h-[56px] pl-12 pr-4 bg-surface-container-lowest border-2 border-surface-variant rounded-xl focus:border-primary focus:ring-0 font-body-md text-on-surface transition-all placeholder:text-outline-variant" id="password" name="password" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Login Button -->
+<button class="w-full h-[64px] bg-primary text-white font-headline-md text-headline-md rounded-xl btn-chunky-primary transition-transform flex items-center justify-center gap-2" type="submit">
+<span>Bắt đầu thám hiểm</span>
+<span class="material-symbols-outlined" data-icon="rocket_launch">rocket_launch</span>
+</button>
+</form>
+<!-- Divider -->
+<div class="relative my-10">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-surface-variant"></div>
+</div>
+<div class="relative flex justify-center text-sm">
+<span class="px-4 bg-white font-body-md text-on-surface-variant">Hoặc đăng nhập bằng</span>
+</div>
+</div>
+<!-- Social Logins -->
+<div class="grid grid-cols-2 gap-4">
+<button class="h-[56px] bg-white border-2 border-surface-variant rounded-xl btn-chunky-secondary flex items-center justify-center gap-3 hover:bg-surface-container-low transition-all">
+<img alt="Google" class="w-6 h-6" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkccZawS2sDX8JfJFSyk6R4xO-BaWZ05VmDV1CCLfmSdM9eUuZqX_nuzLdDvsAppWPH9b3BdejbJhlGrVN1qVUWAraR1ui5fdGSPusrnWNoIWYlUPwIr-xWPIa9PXHsuB9YbNOgcYihQv8_mfXWX1vJ0PfqYltgy-l0edBuVpUteBwWqrjYMXiN8D3hpsvcKyRZrri68vCVOCd1HDrAHUjHpBmbybtZgA13_9-5Ha4sT2SFrkqeFtFr2c-JyBy-JSHQBXpFi6OayI8"/>
+<span class="font-body-md text-on-surface font-bold">Google</span>
+</button>
+<button class="h-[56px] bg-white border-2 border-surface-variant rounded-xl btn-chunky-secondary flex items-center justify-center gap-3 hover:bg-surface-container-low transition-all">
+<svg aria-hidden="true" class="w-6 h-6 text-[#24292e]" fill="currentColor" viewbox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.008.069-.008 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" fill-rule="evenodd"></path></svg>
+<span class="font-body-md text-on-surface font-bold">Github</span>
+</button>
+</div>
+<!-- Footer -->
+<footer class="mt-10 text-center">
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Chưa có tài khoản? 
+                        <a class="text-primary font-bold hover:underline" href="#">Tham gia ngay!</a>
+</p>
+</footer>
+</div>
+</section>
+</main>
+</body></html>

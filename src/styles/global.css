@@ -648,6 +648,10 @@ select {
   color: #12805c;
 }
 
+.profile-card__presence.is-error {
+  color: var(--color-error);
+}
+
 .profile-card__presence-icon {
   font-size: 14px;
 }
