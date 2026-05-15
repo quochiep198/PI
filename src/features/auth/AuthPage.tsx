@@ -1,103 +1,28 @@
-import { useState, type FormEvent } from 'react';
 import type { AuthUser } from './types';
-
-type AuthMode = 'login' | 'register';
-
-type AuthResponse = {
-  user: AuthUser;
-  message?: string;
-};
+import { useAuthForm } from './useAuthForm';
 
 type AuthPageProps = {
   onAuthenticated: (user: AuthUser) => void;
 };
 
-async function readJsonSafely<T>(response: Response): Promise<T | null> {
-  const text = await response.text();
-
-  if (!text) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthPage({ onAuthenticated }: AuthPageProps) {
-  const [mode, setMode] = useState<AuthMode>('login');
-  const [identifier, setIdentifier] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-
-    if (mode === 'register') {
-      if (!username.trim() || !email.trim()) {
-        setError('Vui lòng nhập tên đăng nhập và email.');
-        return;
-      }
-
-      if (password.length < 8) {
-        setError('Mật khẩu phải có ít nhất 8 ký tự.');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        setError('Mật khẩu xác nhận chưa khớp.');
-        return;
-      }
-    } else if (!identifier.trim() || !password) {
-      setError('Vui lòng nhập thông tin đăng nhập và mật khẩu.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const payload =
-        mode === 'login'
-          ? { identifier, password }
-          : { username, email, password };
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await readJsonSafely<AuthResponse>(response);
-      if (!response.ok) {
-        throw new Error(data?.message || 'Không thể xác thực tài khoản.');
-      }
-
-      if (!data?.user) {
-        throw new Error('Máy chủ không trả về dữ liệu người dùng hợp lệ.');
-      }
-
-      onAuthenticated(data.user);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Không thể xác thực tài khoản.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  function switchMode(nextMode: AuthMode) {
-    setMode(nextMode);
-    setError(null);
-  }
+  const {
+    mode,
+    identifier,
+    username,
+    email,
+    password,
+    confirmPassword,
+    isSubmitting,
+    error,
+    setIdentifier,
+    setUsername,
+    setEmail,
+    setPassword,
+    setConfirmPassword,
+    switchMode,
+    handleSubmit,
+  } = useAuthForm({ onAuthenticated });
 
   return (
     <div className="auth-page">
@@ -117,8 +42,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
             </div>
             <h1 className="auth-hero__title">PythonQuest</h1>
             <p className="auth-hero__copy">
-              Khám phá thế giới của những dòng code và trở thành bậc thầy lập trình cùng
-              Py-Bot!
+              Khám phá thế giới của những dòng code và trở thành bậc thầy lập trình cùng Py-Bot!
             </p>
           </div>
         </section>
@@ -133,10 +57,10 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
             </div>
 
             <header className="auth-panel__header">
-              <h2>{mode === 'login' ? 'Chào mừng nhỏ thám hiểm!' : 'Tạo tài khoản mới'}</h2>
+              <h2>{mode === 'login' ? 'Chao mung nho tham hiem!' : 'Tao tai khoan moi'}</h2>
               <p>
                 {mode === 'login'
-                  ? 'Sẵn sàng để tiếp tục cuộc hành trình lập trình của bạn?'
+                 ? 'Sẵn sàng để tiếp tục cuộc hành trình lập trình của bạn?'
                   : 'Tạo tài khoản để lưu tiến trình học Python của riêng bạn.'}
               </p>
             </header>
@@ -147,14 +71,14 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                 type="button"
                 onClick={() => switchMode('login')}
               >
-                Đăng nhập
+                Dang nhap
               </button>
               <button
                 className={`pressable auth-toggle__button${mode === 'register' ? ' is-active' : ''}`}
                 type="button"
                 onClick={() => switchMode('register')}
               >
-                Tạo tài khoản
+                Tao tai khoan
               </button>
             </div>
 
@@ -166,7 +90,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                     <input
                       autoComplete="username"
                       className="auth-input"
-                      placeholder="Ví dụ: explorer_01"
+                      placeholder="Vi du: explorer_01"
                       type="text"
                       value={username}
                       onChange={(event) => setUsername(event.target.value)}
@@ -191,7 +115,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                   <input
                     autoComplete="username"
                     className="auth-input"
-                    placeholder="Ví dụ: explorer_01"
+                    placeholder="Vi du: explorer_01"
                     type="text"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
@@ -204,7 +128,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                 <input
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   className="auth-input"
-                  placeholder="••••••••"
+                  placeholder="........"
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -217,7 +141,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                   <input
                     autoComplete="new-password"
                     className="auth-input"
-                    placeholder="••••••••"
+                    placeholder="........"
                     type="password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
@@ -239,7 +163,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                   {isSubmitting
                     ? 'Đang xử lý...'
                     : mode === 'login'
-                      ? 'Bắt đầu thám hiểm'
+                      ? 'Bắt đầu tham quan'
                       : 'Tạo tài khoản'}
                 </span>
                 <span aria-hidden="true" className="material-symbols-outlined">

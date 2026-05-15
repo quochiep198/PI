@@ -36,6 +36,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
   const { runCode, startupMessage, status } = usePyodideRunner();
+  const isProUser = Boolean(user.isPro);
   const [code, setCode] = useState(getInitialCode);
   const [outputTone, setOutputTone] = useState<OutputTone>('idle');
   const [output, setOutput] = useState('Đang khởi tạo Python runtime...');
@@ -184,6 +185,12 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   }
 
   function handleTrackSelect(track: string) {
+    if (track === 'Nâng cao lớp 6' && !isProUser) {
+      setOutputTone('idle');
+      setOutput('Lộ trình này chỉ dành cho tài khoản Pro.');
+      return;
+    }
+
     setSelectedTrack(track);
     setOutputTone('idle');
     setOutput(`Đã chuyển sang lộ trình "${track}".`);
@@ -327,17 +334,29 @@ export function HomePage({ user, onLogout }: HomePageProps) {
               </div>
 
               <div className="track-tabs" role="tablist" aria-label="Lộ trình học">
-                {tracks.map((track) => (
-                  <button
-                    key={track}
-                    className={`pressable track-tab${track === selectedTrack ? ' is-active' : ''}`}
-                    role="tab"
-                    type="button"
-                    onClick={() => handleTrackSelect(track)}
-                  >
-                    {track}
-                  </button>
-                ))}
+                {tracks.map((track) => {
+                  const isLockedTrack = track === 'Nâng cao lớp 6';
+                  const isDisabled = isLockedTrack && !isProUser;
+
+                  return (
+                    <button
+                      key={track}
+                      className={`pressable track-tab${track === selectedTrack ? ' is-active' : ''}${isDisabled ? ' is-disabled' : ''}`}
+                      disabled={isDisabled}
+                      role="tab"
+                      title={isDisabled ? 'Chỉ dành cho tài khoản Pro' : undefined}
+                      type="button"
+                      onClick={() => handleTrackSelect(track)}
+                    >
+                      <span>{track}</span>
+                      {isDisabled ? (
+                        <span aria-hidden="true" className="material-symbols-outlined track-tab__icon">
+                          lock
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
 
               {lessonsLoading ? <p className="lessons-card__status">Đang tải bài học từ Neon DB...</p> : null}

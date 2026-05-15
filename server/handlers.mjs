@@ -101,6 +101,7 @@ function sanitizeUser(user) {
     id: user.id,
     username: user.username,
     email: user.email,
+    isPro: Boolean(user.isPro ?? user.is_pro),
   };
 }
 
@@ -145,7 +146,8 @@ async function getAuthenticatedUser(request) {
       SELECT
         users.id,
         users.username,
-        users.email
+        users.email,
+        users.is_pro AS "isPro"
       FROM user_sessions
       INNER JOIN users ON users.id = user_sessions.user_id
       WHERE user_sessions.session_token_hash = $1
@@ -235,7 +237,7 @@ export async function registerHandler(request, response) {
       `
         INSERT INTO users (username, email, password_hash)
         VALUES ($1, $2, $3)
-        RETURNING id, username, email
+        RETURNING id, username, email, is_pro AS "isPro"
       `,
       [normalizedUsername, normalizedEmail, passwordHash],
     );
@@ -270,7 +272,7 @@ export async function loginHandler(request, response) {
     await ensureAppSchema();
     const users = await query(
       `
-        SELECT id, username, email, password_hash AS "passwordHash"
+        SELECT id, username, email, is_pro AS "isPro", password_hash AS "passwordHash"
         FROM users
         WHERE username = $1 OR email = $1
         LIMIT 1
