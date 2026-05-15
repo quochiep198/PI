@@ -172,13 +172,13 @@ Ví dụ không tốt:
           },
           {
             role: 'user',
-            content: [
-              `Bﾃi h盻皇: ${lessonTitle}`,
-              `M盻･c tiﾃｪu: ${objective}`,
-              starterCode ? `Starter code:\n${starterCode}` : '',
-              `Code hi盻㌻ t蘯｡i c盻ｧa h盻皇 sinh:\n${code}`,
-              'Hﾃ｣y ﾄ柁ｰa ra 1-3 g盻｣i ﾃｽ ng蘯ｯn, d盻・hi盻ブ, khuy蘯ｿn khﾃｭch t盻ｱ s盻ｭa.',
-            ]
+             content: [
+            `Bài học: ${lessonTitle}`,
+            `Mục tiêu: ${objective}`,
+            starterCode ? `Starter code:\n${starterCode}` : '',
+            `Code hiện tại của học sinh:\n${code}`,
+            'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa.',
+          ]
               .filter(Boolean)
               .join('\n\n'),
           },
