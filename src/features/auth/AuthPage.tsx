@@ -1,3 +1,4 @@
+import { VI_MESSAGES } from '../../content/messages';
 import type { AuthUser } from './types';
 import { useAuthForm } from './useAuthForm';
 
@@ -57,7 +58,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
             </div>
 
             <header className="auth-panel__header">
-              <h2>{mode === 'login' ? 'Chao mung nho tham hiem!' : 'Tao tai khoan moi'}</h2>
+              <h2>{mode === 'login' ? 'Chào mừng nhỏ thám hiểm!' : 'Tạo tài khoản mới'}</h2>
               <p>
                 {mode === 'login'
                  ? 'Sẵn sàng để tiếp tục cuộc hành trình lập trình của bạn?'
@@ -71,14 +72,14 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                 type="button"
                 onClick={() => switchMode('login')}
               >
-                Dang nhap
+                Đăng nhập
               </button>
               <button
                 className={`pressable auth-toggle__button${mode === 'register' ? ' is-active' : ''}`}
                 type="button"
                 onClick={() => switchMode('register')}
               >
-                Tao tai khoan
+                Tạo tài khoản
               </button>
             </div>
 
@@ -111,7 +112,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                 </>
               ) : (
                 <label className="auth-field">
-                  <span className="auth-field__label">Email hoặc Tên đăng nhập</span>
+                  <span className="auth-field__label">{VI_MESSAGES.auth.labels.emailOrUsername}</span>
                   <input
                     autoComplete="username"
                     className="auth-input"
@@ -124,7 +125,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
               )}
 
               <label className="auth-field">
-                <span className="auth-field__label">Mật khẩu</span>
+                <span className="auth-field__label">{VI_MESSAGES.auth.labels.password}</span>
                 <input
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   className="auth-input"
@@ -137,7 +138,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
               {mode === 'register' ? (
                 <label className="auth-field">
-                  <span className="auth-field__label">Xác nhận mật khẩu</span>
+                  <span className="auth-field__label">{VI_MESSAGES.auth.labels.confirmPassword}</span>
                   <input
                     autoComplete="new-password"
                     className="auth-input"
@@ -151,7 +152,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                 <div className="auth-form__meta">
                   <span />
                   <button className="auth-link" disabled type="button">
-                    Quên mật khẩu?
+                    {VI_MESSAGES.auth.labels.forgotPassword}
                   </button>
                 </div>
               )}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { VI_MESSAGES } from '../../content/messages';
 import type { AuthUser } from '../auth/types';
 import { MobileNavigation, SideNavigation, TopNavigation } from './HomeNavigation';
 import { useLessons, type Lesson } from './useLessons';
@@ -9,7 +10,7 @@ import { usePyodideRunner } from './usePyodideRunner';
 type OutputTone = 'idle' | 'success' | 'error';
 
 const STORAGE_KEY = 'python-adventure.home-editor-code';
-const PRO_TRACKS = ['Nâng cao lớp 6'] as const;
+const PRO_TRACKS = [VI_MESSAGES.tracks.advancedGrade6] as const;
 
 function normalizeEditorCode(value: string | null | undefined, fallback = DEFAULT_CODE) {
   if (!value) {
@@ -18,8 +19,7 @@ function normalizeEditorCode(value: string | null | undefined, fallback = DEFAUL
 
   return value.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
 }
-const DEFAULT_CODE = `# Hãy viết mã của bạn bên dưới
-print("Chào Py-Bot!")`;
+const DEFAULT_CODE = VI_MESSAGES.home.defaultCode;
 
 function getInitialCode() {
   if (typeof window === 'undefined') {
@@ -46,9 +46,9 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   const isProUser = Boolean(user.isPro);
   const [code, setCode] = useState(getInitialCode);
   const [outputTone, setOutputTone] = useState<OutputTone>('idle');
-  const [output, setOutput] = useState('Đang khởi tạo Python runtime...');
+  const [output, setOutput] = useState<string>(VI_MESSAGES.home.output.initializingRuntime);
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
-  const [selectedTrack, setSelectedTrack] = useState<string>('Cơ bản lớp 6');
+  const [selectedTrack, setSelectedTrack] = useState<string>(VI_MESSAGES.tracks.basicGrade6);
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [isErrorFeedbackLoading, setIsErrorFeedbackLoading] = useState(false);
 
@@ -60,7 +60,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
     }
 
     setOutput((currentOutput) => {
-      if (currentOutput === 'Đang khởi tạo Python runtime...') {
+      if (currentOutput === VI_MESSAGES.home.output.initializingRuntime) {
         return startupMessage;
       }
 
@@ -82,7 +82,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
       ? uniqueTracks
       : [...uniqueTracks, ...PRO_TRACKS.filter((track) => !uniqueTracks.includes(track))];
 
-    return visibleTracks.length > 0 ? visibleTracks : ['Cơ bản lớp 6'];
+    return visibleTracks.length > 0 ? visibleTracks : [VI_MESSAGES.tracks.basicGrade6];
   }, [isProUser, lessons]);
 
   const filteredLessons = useMemo(
@@ -161,25 +161,25 @@ export function HomePage({ user, onLogout }: HomePageProps) {
       };
 
       if (!response.ok) {
-        throw new Error(payload.message || 'Không phân tích được lỗi bằng AI.');
+        throw new Error(payload.message || VI_MESSAGES.home.output.aiErrorFailed);
       }
 
       const explanationBlock = [
-        'Giải thích lỗi từ AI:',
-        payload.explanation || 'AI chưa giải thích được lỗi này.',
+        VI_MESSAGES.home.output.aiErrorAnalysisTitle,
+        payload.explanation || VI_MESSAGES.home.output.aiErrorFallback,
         '',
-        'Cần sửa ở đâu:',
-        payload.fixFocus || payload.guidance || 'Hãy kiểm tra lại code theo dòng báo lỗi.',
+        VI_MESSAGES.home.output.aiFixFocusTitle,
+        payload.fixFocus || payload.guidance || VI_MESSAGES.home.output.aiFixFocusFallback,
         '',
-        'Mẹo để không bị lại lần sau:',
-        payload.preventionTip || payload.guidance || 'Lần sau em hãy chạy thử từng đoạn ngắn để phát hiện lỗi sớm hơn.',
+        VI_MESSAGES.home.output.aiPreventionTitle,
+        payload.preventionTip || payload.guidance || VI_MESSAGES.home.output.aiPreventionFallback,
       ].join('\n');
 
       setOutput(explanationBlock);
     } catch (error) {
       setOutput(
-        `Không phân tích được lỗi bằng AI.\n${
-          error instanceof Error ? error.message : 'Đã xảy ra lỗi không xác định.'
+        `${VI_MESSAGES.home.output.aiErrorFailed}\n${
+          error instanceof Error ? error.message : VI_MESSAGES.home.output.unknownError
         }`,
       );
     } finally {
@@ -189,13 +189,13 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
   async function handleRunCode() {
     setOutputTone('idle');
-    setOutput('Đang chạy mã Python...');
+    setOutput(VI_MESSAGES.home.output.runningCode);
 
     const result = await runCode(code);
     setOutputTone(result.kind);
 
     if (result.kind === 'error') {
-      setOutput('Đang lấy phản hồi lỗi từ AI...');
+      setOutput(VI_MESSAGES.home.output.fetchingErrorFeedback);
       await explainLessonError(result.output);
       return;
     }
@@ -209,26 +209,26 @@ export function HomePage({ user, onLogout }: HomePageProps) {
       doesLessonPassCompletionCheck(selectedLesson, code, result.output)
     ) {
       await markLessonCompleted(selectedLesson.id);
-      setOutput(`${result.output}\n\nHoàn thành bài học: ${selectedLesson.title}`);
+      setOutput(VI_MESSAGES.home.output.completedLesson(selectedLesson.title, result.output));
     }
   }
 
   function resetCode() {
     setCode(normalizeEditorCode(selectedLesson?.starterCode));
     setOutputTone('idle');
-    setOutput('Editor đã được đặt lại theo bài học hiện tại.');
+    setOutput(VI_MESSAGES.home.output.resetEditor);
   }
 
   async function showHint() {
     if (!selectedLesson) {
       setOutputTone('error');
-      setOutput('Hãy chọn một bài học trước khi xin gợi ý AI.');
+      setOutput(VI_MESSAGES.home.output.selectLessonForHint);
       return;
     }
 
     setIsHintLoading(true);
     setOutputTone('idle');
-    setOutput('Đang xin gợi ý từ  AI...');
+    setOutput(VI_MESSAGES.home.output.askingHint);
 
     try {
       const response = await fetch('/api/hint', {
@@ -244,14 +244,14 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
       const payload = (await response.json()) as { hint?: string; message?: string };
       if (!response.ok) {
-        throw new Error(payload.message || 'Không lấy được gợi ý từ .');
+        throw new Error(payload.message || VI_MESSAGES.home.output.hintFetchFailed);
       }
 
       setOutputTone('success');
-      setOutput(`Gợi ý AI:\n${payload.hint || 'Chưa có gợi ý.'}`);
+      setOutput(`${VI_MESSAGES.home.output.hintTitle}\n${payload.hint || VI_MESSAGES.home.output.noHintYet}`);
     } catch (error) {
       setOutputTone('error');
-      setOutput(error instanceof Error ? error.message : 'Không lấy được gợi ý từ .');
+      setOutput(error instanceof Error ? error.message : VI_MESSAGES.home.output.hintFetchFailed);
     } finally {
       setIsHintLoading(false);
     }
@@ -261,19 +261,19 @@ export function HomePage({ user, onLogout }: HomePageProps) {
     setSelectedLessonId(lesson.id);
     setCode(normalizeEditorCode(lesson.starterCode));
     setOutputTone('idle');
-    setOutput(`Đã mở bài học "${lesson.title}".`);
+    setOutput(VI_MESSAGES.home.output.openLesson(lesson.title));
   }
 
   function handleTrackSelect(track: string) {
     if (PRO_TRACKS.includes(track as (typeof PRO_TRACKS)[number]) && !isProUser) {
       setOutputTone('idle');
-      setOutput('Lộ trình này chỉ dành cho tài khoản Pro.');
+      setOutput(VI_MESSAGES.home.output.proTrackOnly);
       return;
     }
 
     setSelectedTrack(track);
     setOutputTone('idle');
-    setOutput(`Đã chuyển sang lộ trình "${track}".`);
+    setOutput(VI_MESSAGES.home.output.switchedTrack(track));
   }
 
   function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {

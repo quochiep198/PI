@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { VI_MESSAGES } from '../../content/messages';
 
 export type RuntimeStatus = 'loading' | 'ready' | 'running' | 'error';
 
@@ -26,7 +27,7 @@ let pyodidePromise: Promise<PyodideInterface> | null = null;
 
 function loadPyodideScript() {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Pyodide chỉ chạy được trong trình duyệt.'));
+    return Promise.reject(new Error(VI_MESSAGES.pyodide.browserOnly));
   }
 
   if (window.loadPyodide) {
@@ -42,7 +43,7 @@ function loadPyodideScript() {
       existingScript.addEventListener('load', () => resolve(), { once: true });
       existingScript.addEventListener(
         'error',
-        () => reject(new Error('Không tải được Pyodide runtime.')),
+        () => reject(new Error(VI_MESSAGES.pyodide.loadRuntimeFailed)),
         { once: true },
       );
       return;
@@ -53,7 +54,7 @@ function loadPyodideScript() {
     script.async = true;
     script.dataset.pyodideRuntime = 'true';
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Không tải được Pyodide runtime.'));
+    script.onerror = () => reject(new Error(VI_MESSAGES.pyodide.loadRuntimeFailed));
     document.head.append(script);
   });
 }
@@ -64,7 +65,7 @@ async function getPyodide() {
       await loadPyodideScript();
 
       if (!window.loadPyodide) {
-        throw new Error('Pyodide chưa sẵn sàng.');
+        throw new Error(VI_MESSAGES.pyodide.notReady);
       }
 
       return window.loadPyodide({
@@ -81,12 +82,12 @@ function formatRuntimeError(error: unknown) {
     return error.message;
   }
 
-  return 'Đã xảy ra lỗi khi chạy mã Python.';
+  return VI_MESSAGES.pyodide.runtimeRunFailed;
 }
 
 export function usePyodideRunner() {
   const [status, setStatus] = useState<RuntimeStatus>('loading');
-  const [startupMessage, setStartupMessage] = useState('Đang khởi tạo Python runtime...');
+  const [startupMessage, setStartupMessage] = useState<string>(VI_MESSAGES.home.output.initializingRuntime);
 
   useEffect(() => {
     let mounted = true;
@@ -98,7 +99,7 @@ export function usePyodideRunner() {
         }
 
         setStatus('ready');
-        setStartupMessage('Python runtime đã sẵn sàng. Hãy nhập mã và nhấn "Chạy mã".');
+        setStartupMessage(VI_MESSAGES.pyodide.runtimeReady);
       })
       .catch((error: unknown) => {
         if (!mounted) {
@@ -167,7 +168,7 @@ export function usePyodideRunner() {
 
       return {
         kind: 'success',
-        output: 'Chương trình chạy thành công nhưng không có dữ liệu được in ra.',
+        output: VI_MESSAGES.pyodide.noOutput,
       };
     } catch (error: unknown) {
       setStatus('ready');

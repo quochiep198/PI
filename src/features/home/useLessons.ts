@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { VI_MESSAGES } from '../../content/messages';
 
 export type Lesson = {
   id: number;
@@ -28,7 +29,7 @@ export function useLessons() {
         const response = await fetch('/api/lessons');
 
         if (!response.ok) {
-          throw new Error('Không tải được danh sách bài học từ Neon DB.');
+          throw new Error(VI_MESSAGES.lessons.loadFailed);
         }
 
         const data = (await response.json()) as Lesson[];
@@ -43,7 +44,7 @@ export function useLessons() {
           return;
         }
 
-        setError(loadError instanceof Error ? loadError.message : 'Không tải được bài học.');
+        setError(loadError instanceof Error ? loadError.message : VI_MESSAGES.lessons.loadFallbackFailed);
       } finally {
         if (active) {
           setLoading(false);

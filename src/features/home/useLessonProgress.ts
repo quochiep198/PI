@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { VI_MESSAGES } from '../../content/messages';
 
 export function useLessonProgress() {
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
@@ -12,7 +13,7 @@ export function useLessonProgress() {
         setLoading(true);
         const response = await fetch('/api/progress');
         if (!response.ok) {
-          throw new Error('Không tải được tiến trình học tập.');
+          throw new Error(VI_MESSAGES.progress.loadFailed);
         }
 
         const data = (await response.json()) as Array<{ lessonId: number }>;
@@ -51,7 +52,7 @@ export function useLessonProgress() {
     });
 
     if (!response.ok) {
-      throw new Error('Không lưu được tiến trình học tập.');
+      throw new Error(VI_MESSAGES.progress.saveFailed);
     }
 
     setCompletedLessonIds((currentIds) =>
