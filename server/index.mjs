@@ -6,6 +6,7 @@ import {
   completeProgressHandler,
   createLessonHandler,
   errorFeedbackHandler,
+  getXpHandler,
   healthHandler,
   hintHandler,
   lessonsHandler,
@@ -14,6 +15,8 @@ import {
   logoutHandler,
   progressHandler,
   registerHandler,
+  addXpHandler,
+  recordFirstSuccessHandler,
 } from './handlers.mjs';
 import { ensureAppSchema } from './db.mjs';
 
@@ -39,6 +42,9 @@ app.post('/api/auth/logout', logoutHandler);
 app.get('/api/lessons', lessonsHandler);
 app.get('/api/progress', progressHandler);
 app.post('/api/progress/complete', completeProgressHandler);
+app.get('/api/xp', getXpHandler);
+app.post('/api/xp', addXpHandler);
+app.post('/api/xp/first-success', recordFirstSuccessHandler);
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 app.post('/api/lessons', createLessonHandler);

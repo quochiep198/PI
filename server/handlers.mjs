@@ -26,6 +26,48 @@ const HINT_TEMPERATURE = Number(process.env.HINT_TEMPERATURE || 0.3);
 const hintIpRequestLog = new Map();
 const hintCooldownByUser = new Map();
 
+// XP System Constants
+const XP_LESSON_COMPLETE_FIRST = 50;
+const XP_FIRST_SUCCESS_RUN = 10;
+const XP_DAILY_CHALLENGE = 30;
+const XP_DAILY_CHALLENGE_BONUS = 30;
+
+const LEVEL_THRESHOLDS = [
+  { level: 1, name: 'Người mới', minXp: 0 },
+  { level: 2, name: 'Học viên', minXp: 100 },
+  { level: 3, name: 'Lập trình viên', minXp: 300 },
+  { level: 4, name: 'Phù thủy code', minXp: 700 },
+  { level: 5, name: 'Huyền thoại Python', minXp: 1500 },
+];
+
+const XP_SOURCES = {
+  LESSON_COMPLETE_FIRST: 'lesson_complete_first',
+  FIRST_SUCCESS_RUN: 'first_success_run',
+  DAILY_CHALLENGE: 'daily_challenge',
+  DAILY_CHALLENGE_BONUS: 'daily_challenge_bonus',
+};
+
+function getLevelFromXp(xp) {
+  let currentLevel = LEVEL_THRESHOLDS[0];
+  for (const threshold of LEVEL_THRESHOLDS) {
+    if (xp >= threshold.minXp) {
+      currentLevel = threshold;
+    } else {
+      break;
+    }
+  }
+  const currentIndex = LEVEL_THRESHOLDS.indexOf(currentLevel);
+  const nextThreshold = LEVEL_THRESHOLDS[currentIndex + 1];
+  return {
+    ...currentLevel,
+    xpInCurrentLevel: xp - currentLevel.minXp,
+    xpToNextLevel: nextThreshold ? nextThreshold.minXp - currentLevel.minXp : 0,
+    progressPercent: nextThreshold
+      ? Math.min(100, Math.round((xp - currentLevel.minXp) / (nextThreshold.minXp - currentLevel.minXp) * 100))
+      : 100,
+  };
+}
+
 function getRequestBody(request) {
   return request.body ?? {};
 }
@@ -342,6 +384,59 @@ async function recordHintUsage({ userId, lessonId, model, requestIp }) {
     `,
     [userId, lessonId || null, model, requestIp || null],
   );
+}
+
+async function getUserXp(userId) {
+  const result = await query(
+    `SELECT total_xp AS "totalXp" FROM user_xp WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  const totalXp = result[0]?.totalXp ?? 0;
+  return {
+    totalXp,
+    ...getLevelFromXp(totalXp),
+  };
+}
+
+async function ensureUserXp(userId) {
+  await query(
+    `INSERT INTO user_xp (user_id, total_xp) VALUES ($1, 0) ON CONFLICT (user_id) DO NOTHING`,
+    [userId],
+  );
+}
+
+async function hasUserClaimedLessonXp(userId, lessonId, source) {
+  const result = await query(
+    `SELECT 1 FROM user_xp_log WHERE user_id = $1 AND lesson_id = $2 AND source = $3 LIMIT 1`,
+    [userId, lessonId, source],
+  );
+  return result.length > 0;
+}
+
+async function addUserXp(userId, xpAmount, source, lessonId = null) {
+  await query(
+    `INSERT INTO user_xp (user_id, total_xp) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET total_xp = user_xp.total_xp + $2`,
+    [userId, xpAmount],
+  );
+  await query(
+    `INSERT INTO user_xp_log (user_id, xp_amount, source, lesson_id) VALUES ($1, $2, $3, $4)`,
+    [userId, xpAmount, source, lessonId || null],
+  );
+}
+
+async function markFirstSuccessRun(userId, lessonId) {
+  await query(
+    `INSERT INTO user_lesson_first_success (user_id, lesson_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [userId, lessonId],
+  );
+}
+
+async function hasFirstSuccessRun(userId, lessonId) {
+  const result = await query(
+    `SELECT 1 FROM user_lesson_first_success WHERE user_id = $1 AND lesson_id = $2 LIMIT 1`,
+    [userId, lessonId],
+  );
+  return result.length > 0;
 }
 
 async function getLessonById(lessonId) {
@@ -981,7 +1076,17 @@ export async function completeProgressHandler(request, response) {
       [user.id, lessonId],
     );
 
-    response.status(201).json({ ok: true });
+    await ensureUserXp(user.id);
+    let xpData = null;
+    const alreadyClaimed = await hasUserClaimedLessonXp(user.id, lessonId, XP_SOURCES.LESSON_COMPLETE_FIRST);
+    if (!alreadyClaimed) {
+      await addUserXp(user.id, XP_LESSON_COMPLETE_FIRST, XP_SOURCES.LESSON_COMPLETE_FIRST, lessonId);
+      xpData = await getUserXp(user.id);
+    } else {
+      xpData = await getUserXp(user.id);
+    }
+
+    response.status(201).json({ ok: true, xp: xpData });
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to save lesson progress.',
@@ -1345,6 +1450,118 @@ export async function createLessonHandler(request, response) {
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to create lesson.',
+    });
+  }
+}
+
+export async function getXpHandler(request, response) {
+  try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      response.status(401).json({ message: 'Authentication required.' });
+      return;
+    }
+
+    await ensureAppSchema();
+    const xpData = await getUserXp(user.id);
+    response.json(xpData);
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to load XP.',
+    });
+  }
+}
+
+export async function addXpHandler(request, response) {
+  const { xp, source, lessonId } = getRequestBody(request);
+  const xpAmount = Number(xp);
+
+  if (!xpAmount || xpAmount <= 0) {
+    response.status(400).json({ message: 'Invalid XP amount.' });
+    return;
+  }
+
+  if (!Object.values(XP_SOURCES).includes(source)) {
+    response.status(400).json({ message: 'Invalid XP source.' });
+    return;
+  }
+
+  try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      response.status(401).json({ message: 'Authentication required.' });
+      return;
+    }
+
+    await ensureAppSchema();
+    await ensureUserXp(user.id);
+
+    if (lessonId) {
+      const alreadyClaimed = await hasUserClaimedLessonXp(user.id, lessonId, source);
+      if (alreadyClaimed) {
+        response.json({
+          message: 'XP already claimed for this lesson.',
+          totalXp: (await getUserXp(user.id)).totalXp,
+        });
+        return;
+      }
+    }
+
+    const oldXpData = await getUserXp(user.id);
+    await addUserXp(user.id, xpAmount, source, lessonId || null);
+    const newXpData = await getUserXp(user.id);
+
+    response.json({
+      xpAdded: xpAmount,
+      totalXp: newXpData.totalXp,
+      oldLevel: getLevelFromXp(oldXpData.totalXp).level,
+      newLevel: newXpData.level,
+      leveledUp: newXpData.level > getLevelFromXp(oldXpData.totalXp).level,
+      ...newXpData,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to add XP.',
+    });
+  }
+}
+
+export async function recordFirstSuccessHandler(request, response) {
+  const { lessonId } = getRequestBody(request);
+
+  if (!lessonId) {
+    response.status(400).json({ message: 'Missing lessonId.' });
+    return;
+  }
+
+  try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      response.status(401).json({ message: 'Authentication required.' });
+      return;
+    }
+
+    await ensureAppSchema();
+
+    const alreadyDone = await hasFirstSuccessRun(user.id, lessonId);
+    if (alreadyDone) {
+      response.json({ alreadyRecorded: true, xpGranted: 0 });
+      return;
+    }
+
+    await markFirstSuccessRun(user.id, lessonId);
+    await ensureUserXp(user.id);
+    await addUserXp(user.id, XP_FIRST_SUCCESS_RUN, XP_SOURCES.FIRST_SUCCESS_RUN, lessonId);
+
+    const xpData = await getUserXp(user.id);
+    response.json({
+      alreadyRecorded: false,
+      xpGranted: XP_FIRST_SUCCESS_RUN,
+      totalXp: xpData.totalXp,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to record first success.',
     });
   }
 }

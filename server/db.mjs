@@ -121,4 +121,37 @@ export async function ensureAppSchema() {
     CREATE INDEX IF NOT EXISTS ai_hint_usage_user_lesson_created_idx
     ON ai_hint_usage (user_id, lesson_id, created_at DESC)
   `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS user_xp (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+      total_xp INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS user_xp_log (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      xp_amount INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await execute(`
+    CREATE INDEX IF NOT EXISTS user_xp_log_user_created_idx
+    ON user_xp_log (user_id, created_at DESC)
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS user_lesson_first_success (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, lesson_id)
+    )
+  `);
 }

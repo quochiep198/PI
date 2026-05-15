@@ -84,6 +84,19 @@ export const VI_MESSAGES = {
     loadFailed: 'Không tải được tiến trình học tập.',
     saveFailed: 'Không lưu được tiến trình học tập.',
   },
+  xp: {
+    displayXp: (current: number, _next: number) => `+${current} XP`,
+    levelUpTitle: 'Lên cấp!',
+    levelUpMessage: 'Chúc mừng bạn đã đạt cấp mới! Tiếp tục học hỏi để lên cấp cao hơn nhé.',
+    continueLearning: 'Tiếp tục học',
+    levels: {
+      1: 'Người mới',
+      2: 'Học viên',
+      3: 'Lập trình viên',
+      4: 'Phù thủy code',
+      5: 'Huyền thoại Python',
+    },
+  },
   pyodide: {
     browserOnly: 'Pyodide chỉ chạy được trong trình duyệt.',
     loadRuntimeFailed: 'Không tải được Pyodide runtime.',

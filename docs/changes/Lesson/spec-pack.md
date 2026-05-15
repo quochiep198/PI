@@ -329,6 +329,41 @@ POST /api/hint
 - Khi cache hit, user vẫn nhận hint nhanh nhưng không làm tăng chi phí/request tới Groq.
 - Khi Groq bị rate limit hoặc model chính lỗi tạm thời, hệ thống có thể chuyển model fallback trước khi trả lỗi cho user.
 ---
+
+### 5.10 Hệ thống XP & Level (F-01)
+
+**Luồng chính**
+1. Sau mỗi hành động đủ điều kiện, hệ thống gọi `POST /api/xp` với số điểm tương ứng.
+2. `useXP` cập nhật `totalXP` local.
+3. Nếu `totalXP` vượt ngưỡng level tiếp theo, `currentLevel` tăng lên.
+4. Thanh XP hiển thị animation tăng dần; nếu lên level, hiển thị modal chúc mừng level mới.
+
+**Bảng XP theo hành động**
+
+| Hành động | XP |
+|---|---|
+| Hoàn thành bài lần đầu | +50 |
+| Chạy code không lỗi lần đầu trong bài | +10 |
+| Hoàn thành Daily Challenge | +30 |
+| Hoàn thành Daily Challenge trước 20:00 | +30 bonus (tổng +60) |
+
+**Bảng Level**
+
+| Level | Tên | XP tối thiểu |
+|---|---|---|
+| 1 | Người mới | 0 |
+| 2 | Học viên | 100 |
+| 3 | Lập trình viên | 300 |
+| 4 | Phù thủy code | 700 |
+| 5 | Huyền thoại Python | 1500 |
+
+**Business rules**
+- BR-F01-1: XP chỉ cộng sau khi server xác nhận `response.ok`.
+- BR-F01-2: Không cộng XP nếu bài đã completed trước đó.
+- BR-F01-3: Thanh XP hiển thị phía trên progress bar; animation chạy mượt trong 600ms.
+
+---
+
 ## 6. API liên quan
 
 | Method | Path | Mục đích |
