@@ -1,5 +1,10 @@
-import { query } from './db.mjs';
+import crypto from 'node:crypto';
+import { promisify } from 'node:util';
+import { execute, query } from './db.mjs';
 
+const scryptAsync = promisify(crypto.scrypt);
+const SESSION_COOKIE_NAME = 'python_adventure_session';
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
@@ -7,13 +12,163 @@ function getRequestBody(request) {
   return request.body ?? {};
 }
 
-function getLearnerKey(request) {
-  if (request.params?.learnerKey) {
-    return request.params.learnerKey;
+function isProduction() {
+  return process.env.NODE_ENV === 'production';
+}
+
+function normalizeIdentifier(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function serializeCookie(name, value, maxAgeMs) {
+  const parts = [
+    `${name}=${encodeURIComponent(value)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${Math.floor(maxAgeMs / 1000)}`,
+  ];
+
+  if (isProduction()) {
+    parts.push('Secure');
   }
 
-  const learnerKey = request.query?.learnerKey;
-  return Array.isArray(learnerKey) ? learnerKey[0] : learnerKey;
+  return parts.join('; ');
+}
+
+function clearCookie(name) {
+  const parts = [`${name}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
+
+  if (isProduction()) {
+    parts.push('Secure');
+  }
+
+  return parts.join('; ');
+}
+
+function parseCookies(request) {
+  const header = request.headers?.cookie;
+  if (!header) {
+    return {};
+  }
+
+  return header.split(';').reduce((cookies, pair) => {
+    const separatorIndex = pair.indexOf('=');
+    if (separatorIndex < 0) {
+      return cookies;
+    }
+
+    const key = pair.slice(0, separatorIndex).trim();
+    const value = pair.slice(separatorIndex + 1).trim();
+    cookies[key] = decodeURIComponent(value);
+    return cookies;
+  }, {});
+}
+
+function hashSessionToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derivedKey = await scryptAsync(password, salt, 64);
+  return `${salt}:${Buffer.from(derivedKey).toString('hex')}`;
+}
+
+async function verifyPassword(password, storedHash) {
+  const [salt, expectedHash] = String(storedHash || '').split(':');
+  if (!salt || !expectedHash) {
+    return false;
+  }
+
+  const derivedKey = await scryptAsync(password, salt, 64);
+  const expectedBuffer = Buffer.from(expectedHash, 'hex');
+  const actualBuffer = Buffer.from(derivedKey);
+
+  if (expectedBuffer.length !== actualBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+function sanitizeUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+  };
+}
+
+async function deleteExpiredSessions() {
+  await execute(
+    `
+      DELETE FROM user_sessions
+      WHERE expires_at <= CURRENT_TIMESTAMP
+    `,
+  );
+}
+
+async function createSession(userId) {
+  const sessionToken = crypto.randomBytes(32).toString('hex');
+  const sessionTokenHash = hashSessionToken(sessionToken);
+  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS);
+
+  await query(
+    `
+      INSERT INTO user_sessions (user_id, session_token_hash, expires_at)
+      VALUES ($1, $2, $3)
+    `,
+    [userId, sessionTokenHash, expiresAt.toISOString()],
+  );
+
+  return sessionToken;
+}
+
+async function getAuthenticatedUser(request) {
+  await deleteExpiredSessions();
+
+  const cookies = parseCookies(request);
+  const sessionToken = cookies[SESSION_COOKIE_NAME];
+
+  if (!sessionToken) {
+    return null;
+  }
+
+  const sessionTokenHash = hashSessionToken(sessionToken);
+  const sessions = await query(
+    `
+      SELECT
+        users.id,
+        users.username,
+        users.email
+      FROM user_sessions
+      INNER JOIN users ON users.id = user_sessions.user_id
+      WHERE user_sessions.session_token_hash = $1
+        AND user_sessions.expires_at > CURRENT_TIMESTAMP
+      LIMIT 1
+    `,
+    [sessionTokenHash],
+  );
+
+  return sanitizeUser(sessions[0]);
+}
+
+async function requireAuthenticatedUser(request, response) {
+  const user = await getAuthenticatedUser(request);
+
+  if (!user) {
+    response.status(401).json({
+      message: 'Authentication required.',
+    });
+    return null;
+  }
+
+  return user;
 }
 
 export async function healthHandler(_request, response) {
@@ -24,6 +179,146 @@ export async function healthHandler(_request, response) {
     response.status(500).json({
       ok: false,
       message: error instanceof Error ? error.message : 'Database connection failed.',
+    });
+  }
+}
+
+export async function authMeHandler(request, response) {
+  try {
+    const user = await getAuthenticatedUser(request);
+    response.json({
+      authenticated: Boolean(user),
+      user,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to load auth session.',
+    });
+  }
+}
+
+export async function registerHandler(request, response) {
+  const { username, email, password } = getRequestBody(request);
+  const normalizedUsername = normalizeIdentifier(username);
+  const normalizedEmail = normalizeIdentifier(email);
+  const rawPassword = String(password || '');
+
+  if (!normalizedUsername || !normalizedEmail || rawPassword.length < 8) {
+    response.status(400).json({
+      message: 'Username, email, and a password of at least 8 characters are required.',
+    });
+    return;
+  }
+
+  try {
+    const existingUsers = await query(
+      `
+        SELECT id
+        FROM users
+        WHERE username = $1 OR email = $2
+        LIMIT 1
+      `,
+      [normalizedUsername, normalizedEmail],
+    );
+
+    if (existingUsers.length > 0) {
+      response.status(409).json({
+        message: 'Username or email already exists.',
+      });
+      return;
+    }
+
+    const passwordHash = await hashPassword(rawPassword);
+    const users = await query(
+      `
+        INSERT INTO users (username, email, password_hash)
+        VALUES ($1, $2, $3)
+        RETURNING id, username, email
+      `,
+      [normalizedUsername, normalizedEmail, passwordHash],
+    );
+
+    const user = sanitizeUser(users[0]);
+    const sessionToken = await createSession(user.id);
+
+    response.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE_NAME, sessionToken, SESSION_MAX_AGE_MS));
+    response.status(201).json({
+      user,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to register user.',
+    });
+  }
+}
+
+export async function loginHandler(request, response) {
+  const { identifier, password } = getRequestBody(request);
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+  const rawPassword = String(password || '');
+
+  if (!normalizedIdentifier || !rawPassword) {
+    response.status(400).json({
+      message: 'Identifier and password are required.',
+    });
+    return;
+  }
+
+  try {
+    const users = await query(
+      `
+        SELECT id, username, email, password_hash AS "passwordHash"
+        FROM users
+        WHERE username = $1 OR email = $1
+        LIMIT 1
+      `,
+      [normalizedIdentifier],
+    );
+
+    const userRecord = users[0];
+    const isValid = userRecord ? await verifyPassword(rawPassword, userRecord.passwordHash) : false;
+
+    if (!userRecord || !isValid) {
+      response.status(401).json({
+        message: 'Thông tin đăng nhập không hợp lệ.',
+      });
+      return;
+    }
+
+    const user = sanitizeUser(userRecord);
+    const sessionToken = await createSession(user.id);
+
+    response.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE_NAME, sessionToken, SESSION_MAX_AGE_MS));
+    response.json({
+      user,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to log in.',
+    });
+  }
+}
+
+export async function logoutHandler(request, response) {
+  try {
+    const cookies = parseCookies(request);
+    const sessionToken = cookies[SESSION_COOKIE_NAME];
+
+    if (sessionToken) {
+      await execute(
+        `
+          DELETE FROM user_sessions
+          WHERE session_token_hash = $1
+        `,
+        [hashSessionToken(sessionToken)],
+      );
+    }
+
+    response.setHeader('Set-Cookie', clearCookie(SESSION_COOKIE_NAME));
+    response.status(204).send();
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to log out.',
     });
   }
 }
@@ -57,14 +352,18 @@ export async function lessonsHandler(_request, response) {
 
 export async function progressHandler(request, response) {
   try {
-    const learnerKey = getLearnerKey(request);
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
     const progress = await query(
       `
         SELECT lesson_id AS "lessonId"
-        FROM lesson_progress
-        WHERE learner_key = $1
+        FROM user_lesson_progress
+        WHERE user_id = $1
       `,
-      [learnerKey],
+      [user.id],
     );
 
     response.json(progress);
@@ -76,24 +375,29 @@ export async function progressHandler(request, response) {
 }
 
 export async function completeProgressHandler(request, response) {
-  const { learnerKey, lessonId } = getRequestBody(request);
+  const { lessonId } = getRequestBody(request);
 
-  if (!learnerKey || !lessonId) {
+  if (!lessonId) {
     response.status(400).json({
-      message: 'Missing learnerKey or lessonId.',
+      message: 'Missing lessonId.',
     });
     return;
   }
 
   try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
     await query(
       `
-        INSERT INTO lesson_progress (learner_key, lesson_id)
+        INSERT INTO user_lesson_progress (user_id, lesson_id)
         VALUES ($1, $2)
-        ON CONFLICT (learner_key, lesson_id)
+        ON CONFLICT (user_id, lesson_id)
         DO UPDATE SET completed_at = CURRENT_TIMESTAMP
       `,
-      [learnerKey, lessonId],
+      [user.id, lessonId],
     );
 
     response.status(201).json({ ok: true });
@@ -139,23 +443,13 @@ Quy tắc:
 - Luôn khuyến khích tích cực.
 - Dùng tiếng Việt đơn giản cho trẻ 11-12 tuổi.
 - Mỗi phản hồi tối đa 3 câu ngắn.
-- Có thể dùng emoji nhẹ như 🤖 ✨ 🎯.
 
 Phong cách:
 - Giống người bạn đồng hành trong game.
 - Không giống giáo viên nghiêm khắc.
 - Không dùng thuật ngữ kỹ thuật khó.
-
-Ví dụ tốt:
-- Robot đi đúng hướng rồi 🤖 Con thử xem còn thiếu bước nào để tới đồng xu nhé!
-- Con gần đúng rồi đó ✨ Hình như robot mới đi 2 bước thôi?
-- Python cần dòng này thụt vào thêm một chút nhé 🎯
-
-Ví dụ không tốt:
-- Bạn bị SyntaxError.
-- Đây là đáp án đúng.
-- Giải thích dài dòng.
 `.trim();
+
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -172,13 +466,13 @@ Ví dụ không tốt:
           },
           {
             role: 'user',
-             content: [
-            `Bài học: ${lessonTitle}`,
-            `Mục tiêu: ${objective}`,
-            starterCode ? `Starter code:\n${starterCode}` : '',
-            `Code hiện tại của học sinh:\n${code}`,
-            'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa.',
-          ]
+            content: [
+              `Bài học: ${lessonTitle}`,
+              `Mục tiêu: ${objective}`,
+              starterCode ? `Starter code:\n${starterCode}` : '',
+              `Code hiện tại của học sinh:\n${code}`,
+              'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa.',
+            ]
               .filter(Boolean)
               .join('\n\n'),
           },
@@ -195,7 +489,7 @@ Ví dụ không tốt:
     const hint = payload?.choices?.[0]?.message?.content?.trim();
 
     response.json({
-      hint: hint || 'Chﾆｰa nh蘯ｭn ﾄ柁ｰ盻｣c g盻｣i ﾃｽ t盻ｫ Groq.',
+      hint: hint || 'Chưa nhận được gợi ý từ Groq.',
     });
   } catch (error) {
     response.status(500).json({
