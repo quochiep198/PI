@@ -455,11 +455,6 @@ export function HomePage() {
                 <span>Kết quả màn hình</span>
               </div>
               <div className={`output-shell__body output-shell__body--${outputTone}`}>
-                <div className="output-shell__robot">
-                  <span aria-hidden="true" className="material-symbols-outlined">
-                    {outputTone === 'error' ? 'error' : 'smart_toy'}
-                  </span>
-                </div>
                 <pre className="output-shell__text">{output}</pre>
               </div>
             </section>
