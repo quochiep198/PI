@@ -84,4 +84,41 @@ export async function ensureAppSchema() {
     CREATE INDEX IF NOT EXISTS user_sessions_expires_at_idx
     ON user_sessions (expires_at)
   `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS ai_hint_cache (
+      cache_key TEXT PRIMARY KEY,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
+      response_text TEXT NOT NULL,
+      model TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+
+  await execute(`
+    CREATE INDEX IF NOT EXISTS ai_hint_cache_expires_at_idx
+    ON ai_hint_cache (expires_at)
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS ai_hint_usage (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
+      model TEXT NOT NULL,
+      request_ip TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await execute(`
+    CREATE INDEX IF NOT EXISTS ai_hint_usage_user_created_idx
+    ON ai_hint_usage (user_id, created_at DESC)
+  `);
+
+  await execute(`
+    CREATE INDEX IF NOT EXISTS ai_hint_usage_user_lesson_created_idx
+    ON ai_hint_usage (user_id, lesson_id, created_at DESC)
+  `);
 }

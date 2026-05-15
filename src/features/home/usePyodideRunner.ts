@@ -25,6 +25,21 @@ const PYODIDE_BASE_URL = `https://cdn.jsdelivr.net/pyodide/${PYODIDE_VERSION}/fu
 
 let pyodidePromise: Promise<PyodideInterface> | null = null;
 
+function isMobileLikeDevice() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent || navigator.vendor || '';
+  const isTouchMobileUa =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  const hasSmallViewport = window.matchMedia?.('(max-width: 768px)').matches ?? false;
+  const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  const lowMemoryDevice = typeof deviceMemory === 'number' ? deviceMemory <= 4 : false;
+
+  return isTouchMobileUa || (hasSmallViewport && lowMemoryDevice);
+}
+
 function loadPyodideScript() {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error(VI_MESSAGES.pyodide.browserOnly));
@@ -86,40 +101,37 @@ function formatRuntimeError(error: unknown) {
 }
 
 export function usePyodideRunner() {
-  const [status, setStatus] = useState<RuntimeStatus>('loading');
-  const [startupMessage, setStartupMessage] = useState<string>(VI_MESSAGES.home.output.initializingRuntime);
+  const [status, setStatus] = useState<RuntimeStatus>('ready');
+  const [startupMessage, setStartupMessage] = useState<string>(VI_MESSAGES.pyodide.lazyReady);
+  const [isRuntimeSupported, setIsRuntimeSupported] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
+    if (isMobileLikeDevice()) {
+      setIsRuntimeSupported(false);
+      setStatus('error');
+      setStartupMessage(VI_MESSAGES.pyodide.mobileFallback);
+      return;
+    }
 
-    void getPyodide()
-      .then(() => {
-        if (!mounted) {
-          return;
-        }
-
-        setStatus('ready');
-        setStartupMessage(VI_MESSAGES.pyodide.runtimeReady);
-      })
-      .catch((error: unknown) => {
-        if (!mounted) {
-          return;
-        }
-
-        setStatus('error');
-        setStartupMessage(formatRuntimeError(error));
-      });
-
-    return () => {
-      mounted = false;
-    };
+    setIsRuntimeSupported(true);
+    setStatus('ready');
+    setStartupMessage(VI_MESSAGES.pyodide.lazyReady);
   }, []);
 
   async function runCode(code: string): Promise<RunResult> {
+    if (!isRuntimeSupported) {
+      setStatus('error');
+      return {
+        kind: 'error',
+        output: VI_MESSAGES.pyodide.mobileFallback,
+      };
+    }
+
     setStatus('running');
 
     try {
       const pyodide = await getPyodide();
+      setStartupMessage(VI_MESSAGES.pyodide.runtimeReady);
       const stdoutChunks: string[] = [];
       const stderrChunks: string[] = [];
 
@@ -171,7 +183,8 @@ export function usePyodideRunner() {
         output: VI_MESSAGES.pyodide.noOutput,
       };
     } catch (error: unknown) {
-      setStatus('ready');
+      setStatus('error');
+      setStartupMessage(formatRuntimeError(error));
 
       return {
         kind: 'error',

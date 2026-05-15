@@ -8,6 +8,10 @@ import { useOnlineLearners } from './useOnlineLearners';
 import { usePyodideRunner } from './usePyodideRunner';
 
 type OutputTone = 'idle' | 'success' | 'error';
+type RuntimeFeedback = {
+  kind: OutputTone;
+  output: string;
+} | null;
 
 const STORAGE_KEY = 'python-adventure.home-editor-code';
 const PRO_TRACKS = [VI_MESSAGES.tracks.advancedGrade6] as const;
@@ -51,6 +55,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   const [selectedTrack, setSelectedTrack] = useState<string>(VI_MESSAGES.tracks.basicGrade6);
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [isErrorFeedbackLoading, setIsErrorFeedbackLoading] = useState(false);
+  const [lastRuntimeFeedback, setLastRuntimeFeedback] = useState<RuntimeFeedback>(null);
 
   useEffect(() => {
     if (status === 'loading' || status === 'error') {
@@ -193,6 +198,10 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
     const result = await runCode(code);
     setOutputTone(result.kind);
+    setLastRuntimeFeedback({
+      kind: result.kind,
+      output: result.output,
+    });
 
     if (result.kind === 'error') {
       setOutput(VI_MESSAGES.home.output.fetchingErrorFeedback);
@@ -215,6 +224,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
 
   function resetCode() {
     setCode(normalizeEditorCode(selectedLesson?.starterCode));
+    setLastRuntimeFeedback(null);
     setOutputTone('idle');
     setOutput(VI_MESSAGES.home.output.resetEditor);
   }
@@ -238,7 +248,12 @@ export function HomePage({ user, onLogout }: HomePageProps) {
         },
         body: JSON.stringify({
           lessonId: selectedLesson.id,
+          lessonTitle: selectedLesson.title,
+          objective: selectedLesson.objective,
+          starterCode: selectedLesson.starterCode,
           code,
+          output: lastRuntimeFeedback?.kind === 'success' ? lastRuntimeFeedback.output : undefined,
+          errorOutput: lastRuntimeFeedback?.kind === 'error' ? lastRuntimeFeedback.output : undefined,
         }),
       });
 
@@ -260,6 +275,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
   function handleLessonSelect(lesson: Lesson) {
     setSelectedLessonId(lesson.id);
     setCode(normalizeEditorCode(lesson.starterCode));
+    setLastRuntimeFeedback(null);
     setOutputTone('idle');
     setOutput(VI_MESSAGES.home.output.openLesson(lesson.title));
   }

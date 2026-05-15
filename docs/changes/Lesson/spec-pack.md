@@ -303,7 +303,7 @@ Tài liệu này phản ánh hành vi thực tế của code hiện tại và th
 
 | Nhóm user | Thứ tự model | Ghi chú |
 |---|---|---|
-| Free | model nhỏ đã cấu hình → `llama-3.3-70b-versatile` | Dùng model nhỏ cho hint đơn giản để tiết kiệm request chất lượng cao |
+| Free | model nhỏ đã cấu hình → `llama-3.1-8b-instant` | Dùng model nhỏ cho hint đơn giản để tiết kiệm request chất lượng cao |
 | Pro | `llama-3.3-70b-versatile` → model nhỏ đã cấu hình | Ưu tiên chất lượng, fallback để tăng ổn định |
 
 **Pseudo flow backend**

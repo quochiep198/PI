@@ -88,6 +88,9 @@ export const VI_MESSAGES = {
     browserOnly: 'Pyodide chỉ chạy được trong trình duyệt.',
     loadRuntimeFailed: 'Không tải được Pyodide runtime.',
     notReady: 'Pyodide chưa sẵn sàng.',
+    lazyReady: 'Python runtime sẽ được tải khi bạn nhấn "Chạy mã".',
+    mobileFallback:
+      'Thiết bị này không phù hợp để chạy Python trực tiếp. Hãy dùng máy tính hoặc chuyển sang chế độ chạy trên server.',
     runtimeReady: 'Python runtime đã sẵn sàng. Hãy nhập mã và nhấn "Chạy mã".',
     runtimeRunFailed: 'Đã xảy ra lỗi khi chạy mã Python.',
     noOutput: 'Chương trình chạy thành công nhưng không có dữ liệu được in ra.',

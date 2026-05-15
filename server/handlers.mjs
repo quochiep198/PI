@@ -6,10 +6,25 @@ const scryptAsync = promisify(crypto.scrypt);
 const SESSION_COOKIE_NAME = 'python_adventure_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const groqApiKey = process.env.GROQ_API_KEY;
-const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const groqPrimaryModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const groqSmallModel = process.env.GROQ_SMALL_MODEL || 'llama-3.1-8b-instant';
 const onlinePresenceConnections = new Map();
 const PRO_TRACKS = new Set(['Nâng cao lớp 6']);
 const ERROR_HISTORY_LIMIT = 5;
+const HINT_CACHE_TTL_MS = Number(process.env.HINT_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000);
+const HINT_IP_WINDOW_MS = Number(process.env.HINT_IP_WINDOW_MS || 10 * 60 * 1000);
+const HINT_IP_LIMIT = Number(process.env.HINT_IP_LIMIT || 10);
+const HINT_DAILY_QUOTA_FREE = Number(process.env.HINT_DAILY_QUOTA_FREE || 5);
+const HINT_DAILY_QUOTA_PRO = Number(process.env.HINT_DAILY_QUOTA_PRO || 40);
+const HINT_LESSON_DAILY_QUOTA_FREE = Number(process.env.HINT_LESSON_DAILY_QUOTA_FREE || 2);
+const HINT_LESSON_DAILY_QUOTA_PRO = Number(process.env.HINT_LESSON_DAILY_QUOTA_PRO || 8);
+const HINT_COOLDOWN_FREE_MS = Number(process.env.HINT_COOLDOWN_FREE_MS || 20_000);
+const HINT_COOLDOWN_PRO_MS = Number(process.env.HINT_COOLDOWN_PRO_MS || 8_000);
+const HINT_MAX_TOKENS_FREE = Number(process.env.HINT_MAX_TOKENS_FREE || 300);
+const HINT_MAX_TOKENS_PRO = Number(process.env.HINT_MAX_TOKENS_PRO || 500);
+const HINT_TEMPERATURE = Number(process.env.HINT_TEMPERATURE || 0.3);
+const hintIpRequestLog = new Map();
+const hintCooldownByUser = new Map();
 
 function getRequestBody(request) {
   return request.body ?? {};
@@ -118,6 +133,217 @@ function extractMistakeTags(rawValue) {
     .slice(0, 5);
 }
 
+class GroqRequestError extends Error {
+  constructor(message, { status = 500, body = '', model = '' } = {}) {
+    super(message);
+    this.name = 'GroqRequestError';
+    this.status = status;
+    this.body = body;
+    this.model = model;
+  }
+}
+
+function normalizeMultilineText(value) {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
+}
+
+function normalizeHintCode(value) {
+  return normalizeMultilineText(value)
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n');
+}
+
+function getClientIp(request) {
+  const forwardedFor = request.headers?.['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  const realIp = request.headers?.['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.trim()) {
+    return realIp.trim();
+  }
+
+  return request.socket?.remoteAddress || request.ip || 'unknown';
+}
+
+function getHintEntitlement(user) {
+  const isPro = Boolean(user?.isPro ?? user?.is_pro);
+  return {
+    isPro,
+    dailyQuota: isPro ? HINT_DAILY_QUOTA_PRO : HINT_DAILY_QUOTA_FREE,
+    lessonDailyQuota: isPro ? HINT_LESSON_DAILY_QUOTA_PRO : HINT_LESSON_DAILY_QUOTA_FREE,
+    cooldownMs: isPro ? HINT_COOLDOWN_PRO_MS : HINT_COOLDOWN_FREE_MS,
+    maxCompletionTokens: isPro ? HINT_MAX_TOKENS_PRO : HINT_MAX_TOKENS_FREE,
+    modelOrder: isPro ? [groqPrimaryModel, groqSmallModel] : [groqSmallModel, groqPrimaryModel],
+  };
+}
+
+function getUtcDayBounds(reference = new Date()) {
+  const start = new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate()));
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return {
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+  };
+}
+
+function pruneOldTimestamps(timestamps, now, windowMs) {
+  return timestamps.filter((timestamp) => now - timestamp < windowMs);
+}
+
+function enforceHintIpRateLimit(request) {
+  const now = Date.now();
+  const ip = getClientIp(request);
+  const existing = pruneOldTimestamps(hintIpRequestLog.get(ip) || [], now, HINT_IP_WINDOW_MS);
+
+  if (existing.length >= HINT_IP_LIMIT) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((existing[0] + HINT_IP_WINDOW_MS - now) / 1000));
+    return {
+      allowed: false,
+      ip,
+      retryAfterSeconds,
+    };
+  }
+
+  existing.push(now);
+  hintIpRequestLog.set(ip, existing);
+  return {
+    allowed: true,
+    ip,
+    retryAfterSeconds: 0,
+  };
+}
+
+function getHintCooldownStatus(userId, cooldownMs) {
+  const lastRequestedAt = hintCooldownByUser.get(userId);
+  if (!lastRequestedAt) {
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  const remainingMs = cooldownMs - (Date.now() - lastRequestedAt);
+  if (remainingMs <= 0) {
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.max(1, Math.ceil(remainingMs / 1000)),
+  };
+}
+
+function markHintCooldownUsed(userId) {
+  hintCooldownByUser.set(userId, Date.now());
+}
+
+function buildHintCacheKey({ lessonId, lessonTitle, objective, starterCode, code }) {
+  const normalizedLessonId = lessonId ? String(lessonId).trim() : '';
+  const lessonIdentity = normalizedLessonId
+    ? `lesson:${normalizedLessonId}`
+    : `lesson-meta:${crypto
+        .createHash('sha256')
+        .update(
+          JSON.stringify({
+            lessonTitle: normalizeMultilineText(lessonTitle),
+            objective: normalizeMultilineText(objective),
+            starterCode: normalizeHintCode(starterCode),
+          }),
+        )
+        .digest('hex')}`;
+
+  const payload = JSON.stringify({
+    lessonIdentity,
+    objective: normalizeMultilineText(objective),
+    normalizedCode: normalizeHintCode(code),
+  });
+
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
+async function getDailyHintUsageCount(userId, { startIso, endIso }) {
+  const result = await query(
+    `
+      SELECT COUNT(*)::int AS count
+      FROM ai_hint_usage
+      WHERE user_id = $1
+        AND created_at >= $2
+        AND created_at < $3
+    `,
+    [userId, startIso, endIso],
+  );
+
+  return Number(result[0]?.count || 0);
+}
+
+async function getDailyHintUsageCountByLesson(userId, lessonId, { startIso, endIso }) {
+  const result = await query(
+    `
+      SELECT COUNT(*)::int AS count
+      FROM ai_hint_usage
+      WHERE user_id = $1
+        AND lesson_id = $2
+        AND created_at >= $3
+        AND created_at < $4
+    `,
+    [userId, lessonId, startIso, endIso],
+  );
+
+  return Number(result[0]?.count || 0);
+}
+
+async function getCachedHint(cacheKey) {
+  await execute(`
+    DELETE FROM ai_hint_cache
+    WHERE expires_at <= CURRENT_TIMESTAMP
+  `);
+
+  const cached = await query(
+    `
+      SELECT response_text AS "responseText", model
+      FROM ai_hint_cache
+      WHERE cache_key = $1
+        AND expires_at > CURRENT_TIMESTAMP
+      LIMIT 1
+    `,
+    [cacheKey],
+  );
+
+  return cached[0] ?? null;
+}
+
+async function saveCachedHint({ cacheKey, lessonId, hint, model }) {
+  const expiresAt = new Date(Date.now() + HINT_CACHE_TTL_MS).toISOString();
+
+  await query(
+    `
+      INSERT INTO ai_hint_cache (cache_key, lesson_id, response_text, model, expires_at)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (cache_key)
+      DO UPDATE SET
+        lesson_id = EXCLUDED.lesson_id,
+        response_text = EXCLUDED.response_text,
+        model = EXCLUDED.model,
+        created_at = CURRENT_TIMESTAMP,
+        expires_at = EXCLUDED.expires_at
+    `,
+    [cacheKey, lessonId || null, hint, model, expiresAt],
+  );
+}
+
+async function recordHintUsage({ userId, lessonId, model, requestIp }) {
+  await query(
+    `
+      INSERT INTO ai_hint_usage (user_id, lesson_id, model, request_ip)
+      VALUES ($1, $2, $3, $4)
+    `,
+    [userId, lessonId || null, model, requestIp || null],
+  );
+}
+
 async function getLessonById(lessonId) {
   const lessons = await query(
     `
@@ -155,7 +381,15 @@ async function getRecentLessonErrors(userId, lessonId, limit = ERROR_HISTORY_LIM
   );
 }
 
-async function callGroqChat(messages, temperature = 0.2) {
+async function callGroqChat(input = {}, legacyTemperature) {
+  const options = Array.isArray(input) ? { messages: input, temperature: legacyTemperature } : input;
+  const {
+    messages,
+    temperature = 0.2,
+    model = groqPrimaryModel,
+    maxCompletionTokens,
+  } = options;
+
   const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -163,19 +397,68 @@ async function callGroqChat(messages, temperature = 0.2) {
       Authorization: `Bearer ${groqApiKey}`,
     },
     body: JSON.stringify({
-      model: groqModel,
+      model,
       temperature,
       messages,
+      ...(typeof maxCompletionTokens === 'number' ? { max_completion_tokens: maxCompletionTokens } : {}),
     }),
   });
 
   if (!groqResponse.ok) {
     const errorText = await groqResponse.text();
-    throw new Error(errorText || 'Groq request failed.');
+    throw new GroqRequestError(errorText || 'Groq request failed.', {
+      status: groqResponse.status,
+      body: errorText,
+      model,
+    });
   }
 
   const payload = await groqResponse.json();
   return payload?.choices?.[0]?.message?.content?.trim() || '';
+}
+
+function isRetryableGroqError(error) {
+  if (!(error instanceof GroqRequestError)) {
+    return false;
+  }
+
+  if (error.status === 429 || error.status >= 500) {
+    return true;
+  }
+
+  const body = String(error.body || '').toLowerCase();
+  return body.includes('rate limit') || body.includes('temporar') || body.includes('overload');
+}
+
+async function generateHintWithFallback({ messages, modelOrder, maxCompletionTokens }) {
+  const uniqueModels = [...new Set(modelOrder.filter(Boolean))];
+  let lastError = null;
+
+  for (let index = 0; index < uniqueModels.length; index += 1) {
+    const model = uniqueModels[index];
+
+    try {
+      const hint = await callGroqChat({
+        messages,
+        model,
+        temperature: HINT_TEMPERATURE,
+        maxCompletionTokens,
+      });
+
+      return {
+        hint,
+        model,
+      };
+    } catch (error) {
+      lastError = error;
+      const hasFallback = index < uniqueModels.length - 1;
+      if (!hasFallback || !isRetryableGroqError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error('Failed to generate hint.');
 }
 
 async function analyzeLessonError({ lesson, code, errorOutput, errorHistory }) {
@@ -785,7 +1068,7 @@ export async function errorFeedbackHandler(request, response) {
 }
 
 export async function hintHandler(request, response) {
-  const { lessonId, code } = getRequestBody(request);
+  const { lessonId, lessonTitle, objective, starterCode, code, output, errorOutput } = getRequestBody(request);
 
   if (!groqApiKey) {
     response.status(500).json({
@@ -823,68 +1106,161 @@ export async function hintHandler(request, response) {
       return;
     }
 
+    const entitlement = getHintEntitlement(user);
+    const ipLimitStatus = enforceHintIpRateLimit(request);
+    if (!ipLimitStatus.allowed) {
+      response.setHeader('Retry-After', String(ipLimitStatus.retryAfterSeconds));
+      response.status(429).json({
+        message: `Ban dang gui qua nhieu yeu cau goi y AI tu cung mot mang. Hay thu lai sau khoang ${ipLimitStatus.retryAfterSeconds} giay.`,
+      });
+      return;
+    }
+
+    const dayBounds = getUtcDayBounds();
+    const userDailyUsage = await getDailyHintUsageCount(user.id, dayBounds);
+    if (userDailyUsage >= entitlement.dailyQuota) {
+      response.status(429).json({
+        message: `Ban da dung het ${entitlement.dailyQuota} luot goi y AI hom nay. Hay quay lai vao ngay mai hoac nang cap Pro neu can them quota.`,
+      });
+      return;
+    }
+
+    const lessonDailyUsage = await getDailyHintUsageCountByLesson(user.id, lesson.id, dayBounds);
+    if (lessonDailyUsage >= entitlement.lessonDailyQuota) {
+      response.status(429).json({
+        message: `Ban da dung het ${entitlement.lessonDailyQuota} luot goi y cho bai hoc nay trong hom nay. Hay thu tu chinh code truoc roi quay lai sau.`,
+      });
+      return;
+    }
+
+    const cooldownStatus = getHintCooldownStatus(user.id, entitlement.cooldownMs);
+    if (!cooldownStatus.allowed) {
+      response.setHeader('Retry-After', String(cooldownStatus.retryAfterSeconds));
+      response.status(429).json({
+        message: `Hay cho them ${cooldownStatus.retryAfterSeconds} giay roi xin goi y tiep nhe.`,
+      });
+      return;
+    }
+
+    const normalizedCode = normalizeHintCode(code);
+    const cacheKey = buildHintCacheKey({
+      lessonId,
+      lessonTitle: lessonTitle || lesson.title,
+      objective: objective || lesson.objective,
+      starterCode: starterCode || lesson.starterCode,
+      code: normalizedCode,
+    });
+    const cachedHint = await getCachedHint(cacheKey);
+
+    markHintCooldownUsed(user.id);
+
+    if (cachedHint?.responseText) {
+      response.json({
+        hint: cachedHint.responseText,
+        cached: true,
+        model: cachedHint.model,
+      });
+      return;
+    }
+
     const errorHistory = await getRecentLessonErrors(user.id, lessonId);
     const mistakeSummary =
       errorHistory.length > 0
         ? errorHistory
             .map((item, index) => {
-              const tags = extractMistakeTags(item.mistakeTags).join(', ') || 'không có tag';
-              return `${index + 1}. Lỗi hay gặp: ${item.errorMessage}\nGợi ý từng đưa: ${item.aiGuidance}\nTag: ${tags}`;
+              const tags = extractMistakeTags(item.mistakeTags).join(', ') || 'khong co tag';
+              return `${index + 1}. Loi hay gap: ${item.errorMessage}\nGoi y tung dua: ${item.aiGuidance}\nTag: ${tags}`;
             })
             .join('\n\n')
-        : 'Chưa có lịch sử lỗi cho bài học này.';
+        : 'Chua co lich su loi cho bai hoc nay.';
 
     const systemPrompt = `
-Bạn là bạn đồng hành dạy Python cho học sinh lớp 6.
+Ban la ban dong hanh day Python cho hoc sinh lop 6.
 
-Mục tiêu:
-- Giúp trẻ thấy học Python vui và dễ hiểu.
-- Khuyến khích trẻ tự sửa code.
-- Không làm trẻ cảm thấy thất bại.
+Muc tieu:
+- Giup tre thay hoc Python vui va de hieu.
+- Khuyen khich tre tu sua code.
+- Khong lam tre cam thay that bai.
 
-Quy tắc:
-- Chỉ đưa gợi ý ngắn gọn.
-- Không giải full bài.
-- Không đưa nguyên đáp án hoàn chỉnh.
-- Chỉ chỉ ra bước tiếp theo hoặc lỗi nhỏ cần sửa.
-- Ưu tiên đặt câu hỏi gợi mở.
-- Luôn khuyến khích tích cực.
-- Dùng tiếng Việt đơn giản cho trẻ 11-12 tuổi.
-- Mỗi phản hồi tối đa 3 câu ngắn.
+Quy tac:
+- Chi dua goi y ngan gon.
+- Khong giai full bai.
+- Khong dua nguyen dap an hoan chinh.
+- Chi cho ra buoc tiep theo hoac loi nho can sua.
+- Uu tien dat cau hoi goi mo.
+- Luon khuyen khich tich cuc.
+- Dung tieng Viet don gian cho tre 11-12 tuoi.
+- Moi phan hoi toi da 3 cau ngan.
 
-Phong cách:
-- Giống người bạn đồng hành trong game.
-- Không giống giáo viên nghiêm khắc.
-- Không dùng thuật ngữ kỹ thuật khó.
+Phong cach:
+- Giong nguoi ban dong hanh trong game.
+- Khong giong giao vien nghiem khac.
+- Khong dung thuat ngu ky thuat kho.
 `.trim();
 
-    const hint = await callGroqChat(
-      [
+    const latestRuntimeContext = [
+      errorOutput ? `Loi Python gan nhat:\n${normalizeMultilineText(errorOutput)}` : '',
+      !errorOutput && output ? `Ket qua chay gan nhat:\n${normalizeMultilineText(output)}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const hintPrompt = [
+      `Bai hoc: ${lesson.title}`,
+      `Muc tieu: ${lesson.objective}`,
+      lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
+      `Code hien tai cua hoc sinh:\n${normalizedCode}`,
+      latestRuntimeContext,
+      `Lich su loi hay gap cua hoc sinh o bai nay:\n${mistakeSummary}`,
+      'Hay dua ra 1-3 goi y ngan giup hoc sinh tu sua, uu tien dung cho cac loi em ay hay lap lai.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const hintResult = await generateHintWithFallback({
+      messages: [
         {
           role: 'system',
           content: systemPrompt,
         },
         {
           role: 'user',
-          content: [
-            `Bài học: ${lesson.title}`,
-            `Mục tiêu: ${lesson.objective}`,
-            lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
-            `Code hiện tại của học sinh:\n${code}`,
-            `Lịch sử lỗi hay gặp của học sinh ở bài này:\n${mistakeSummary}`,
-            'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa, ưu tiên đúng chỗ các lỗi em ấy hay lặp lại.',
-          ]
-            .filter(Boolean)
-            .join('\n\n'),
+          content: hintPrompt,
         },
       ],
-      0.3,
-    );
+      modelOrder: entitlement.modelOrder,
+      maxCompletionTokens: entitlement.maxCompletionTokens,
+    });
+
+    const hint = hintResult.hint || 'Chua nhan duoc goi y tu Groq.';
+
+    await saveCachedHint({
+      cacheKey,
+      lessonId: lesson.id,
+      hint,
+      model: hintResult.model,
+    });
+
+    await recordHintUsage({
+      userId: user.id,
+      lessonId: lesson.id,
+      model: hintResult.model,
+      requestIp: ipLimitStatus.ip,
+    });
 
     response.json({
-      hint: hint || 'Chưa nhận được gợi ý từ Groq.',
+      hint,
+      cached: false,
+      model: hintResult.model,
     });
   } catch (error) {
+    if (error instanceof GroqRequestError && (error.status === 429 || error.status >= 500)) {
+      response.status(429).json({
+        message: 'He thong goi y AI dang ban hoac tam cham gioi han. Ban thu lai sau it phut nhe.',
+      });
+      return;
+    }
+
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to generate hint.',
     });
@@ -972,3 +1348,4 @@ export async function createLessonHandler(request, response) {
     });
   }
 }
+
