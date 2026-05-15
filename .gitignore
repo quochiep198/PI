@@ -6,3 +6,5 @@ dist-ssr
 .env.*
 coverage
 .DS_Store
+.vercel
+.env*.local
