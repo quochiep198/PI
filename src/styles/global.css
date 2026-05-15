@@ -853,6 +853,9 @@ select {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   text-align: center;
 }
 
@@ -906,7 +909,11 @@ select {
 }
 
 .output-shell__text {
+  flex: 1;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
   margin: 0;
   overflow: auto;
   color: var(--color-on-surface);
@@ -914,6 +921,7 @@ select {
   font-size: 15px;
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -971,6 +979,10 @@ select {
 }
 
 @media (max-width: 768px) {
+  .material-symbols-outlined {
+    display: none !important;
+  }
+
   body {
     overflow: auto;
     overflow-x: hidden;

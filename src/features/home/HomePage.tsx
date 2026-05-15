@@ -7,6 +7,14 @@ import { usePyodideRunner } from './usePyodideRunner';
 type OutputTone = 'idle' | 'success' | 'error';
 
 const STORAGE_KEY = 'python-adventure.home-editor-code';
+
+function normalizeEditorCode(value: string | null | undefined, fallback = DEFAULT_CODE) {
+  if (!value) {
+    return fallback;
+  }
+
+  return value.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+}
 const DEFAULT_CODE = `# Hãy viết mã của bạn bên dưới
 print("Chào Py-Bot!")`;
 
@@ -15,7 +23,7 @@ function getInitialCode() {
     return DEFAULT_CODE;
   }
 
-  return window.localStorage.getItem(STORAGE_KEY) || DEFAULT_CODE;
+  return normalizeEditorCode(window.localStorage.getItem(STORAGE_KEY));
 }
 
 export function HomePage() {
@@ -117,7 +125,7 @@ export function HomePage() {
   }
 
   function resetCode() {
-    setCode(selectedLesson?.starterCode || DEFAULT_CODE);
+    setCode(normalizeEditorCode(selectedLesson?.starterCode));
     setOutputTone('idle');
     setOutput('Editor đã được đặt lại theo bài học hiện tại.');
   }
@@ -164,7 +172,7 @@ export function HomePage() {
 
   function handleLessonSelect(lesson: Lesson) {
     setSelectedLessonId(lesson.id);
-    setCode(lesson.starterCode);
+    setCode(normalizeEditorCode(lesson.starterCode));
     setOutputTone('idle');
     setOutput(`Đã mở bài học "${lesson.title}".`);
   }
