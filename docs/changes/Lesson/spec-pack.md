@@ -244,7 +244,91 @@ Tài liệu này phản ánh hành vi thực tế của code hiện tại và th
 - `HomePage` hiển thị dòng `X người học đang online` trong thẻ profile.
 
 ---
+### 5.9 Chống spam AI hint và tối ưu Groq quota
 
+**Bối cảnh vận hành**
+- Model chính hiện dùng cho AI hint là `llama-3.3-70b-versatile`.
+- Giới hạn Groq hiện tại được xác định ở mức tối đa `30 requests/phút` và `1.000 requests/ngày`.
+- Do giới hạn ngày thấp hơn đáng kể so với giới hạn phút, hệ thống phải tối ưu theo quota ngày trước, sau đó mới tối ưu theo giới hạn phút.
+
+**Pre-conditions**
+- User đã đăng nhập hợp lệ.
+- Có `selectedLesson`.
+- Payload hint đã có `lessonTitle`, `objective`, `starterCode`, `code` và có thể bổ sung `lessonId`, `output` hoặc error gần nhất nếu frontend có dữ liệu.
+
+**Luồng chính**
+1. User bấm `Gợi ý AI`.
+2. Frontend vẫn disable nút khi `isHintLoading = true` hoặc chưa có lesson để tránh double click ở UI.
+3. Backend `POST /api/hint` xác thực session.
+4. Backend kiểm tra IP rate limit.
+5. Backend kiểm tra quota ngày theo user.
+6. Backend kiểm tra quota ngày theo lesson của user.
+7. Backend kiểm tra cooldown theo user.
+8. Backend chuẩn hóa payload để tạo cache key.
+9. Nếu cache hit:
+   - trả hint từ cache
+   - không gọi Groq
+   - không trừ quota gọi AI thực tế
+10. Nếu cache miss:
+   - chọn model theo model routing
+   - gọi Groq
+   - lưu kết quả vào cache
+   - ghi nhận usage
+   - trả hint cho frontend
+11. Nếu Groq trả lỗi quá tải hoặc rate limit, backend thử model fallback hợp lệ trong danh sách cấu hình.
+12. Nếu tất cả model đều lỗi hoặc quota đã hết, backend trả message thân thiện để UI hiển thị trong output.
+
+**Business rules**
+- BR-22: `POST /api/hint` bắt buộc yêu cầu user đã đăng nhập; user chưa đăng nhập trả `401`.
+- BR-23: frontend chỉ hỗ trợ UX chống bấm liên tục; rate limit bắt buộc phải enforce ở backend.
+- BR-24: quota beta mặc định cho Free user là `5 hints/ngày`.
+- BR-25: quota beta mặc định cho Pro user là `40 hints/ngày`.
+- BR-26: cooldown mặc định cho Free user là `20 giây/lần`.
+- BR-27: cooldown mặc định cho Pro user là `8 giây/lần`.
+- BR-28: IP limit mặc định là `10 requests/10 phút/IP` cho endpoint hint.
+- BR-29: Free user tối đa `2 hints/lesson/ngày`.
+- BR-30: Pro user tối đa `8 hints/lesson/ngày`.
+- BR-31: cache key được tạo từ `lessonId`, `objective`, và `normalizedCode`; nếu chưa có `lessonId` thì dùng định danh lesson tương đương đang có trong payload.
+- BR-32: cache TTL mặc định là `7 ngày`.
+- BR-33: cache hit không gọi Groq và không trừ quota gọi AI thực tế.
+- BR-34: Free user ưu tiên model nhỏ trước, sau đó fallback sang `llama-3.3-70b-versatile` khi cần.
+- BR-35: Pro user ưu tiên `llama-3.3-70b-versatile`, sau đó fallback sang model nhỏ nếu model chính bị rate limit hoặc tạm lỗi.
+- BR-36: Model fallback chỉ dùng để tăng độ ổn định và tiết kiệm quota, không dùng để né giới hạn hoặc abuse nhà cung cấp.
+- BR-37: `max_completion_tokens` mặc định là `300` cho Free user và `500` cho Pro user.
+- BR-38: `temperature` mặc định cho AI hint là `0.3`.
+- BR-39: Backend không gửi dữ liệu dài không cần thiết lên AI; payload gửi model chỉ gồm thông tin bài học, mục tiêu, starter code, code của học sinh và output/error gần nhất nếu có.
+- BR-40: Khi vượt quota/cooldown/IP limit, backend trả `429` kèm message tiếng Việt phù hợp để frontend hiển thị.
+
+**Model routing đề xuất**
+
+| Nhóm user | Thứ tự model | Ghi chú |
+|---|---|---|
+| Free | model nhỏ đã cấu hình → `llama-3.3-70b-versatile` | Dùng model nhỏ cho hint đơn giản để tiết kiệm request chất lượng cao |
+| Pro | `llama-3.3-70b-versatile` → model nhỏ đã cấu hình | Ưu tiên chất lượng, fallback để tăng ổn định |
+
+**Pseudo flow backend**
+
+```text
+POST /api/hint
+  -> requireAuth
+  -> validatePayload
+  -> checkIpLimit
+  -> checkUserDailyQuota
+  -> checkUserLessonDailyQuota
+  -> checkUserCooldown
+  -> buildCacheKey
+  -> return cached hint if exists
+  -> call Groq with model routing/fallback
+  -> save cache
+  -> save usage
+  -> return hint
+```
+
+**Post-conditions**
+- User không thể spam nút AI để tạo nhiều request Groq vượt quota nội bộ.
+- Khi cache hit, user vẫn nhận hint nhanh nhưng không làm tăng chi phí/request tới Groq.
+- Khi Groq bị rate limit hoặc model chính lỗi tạm thời, hệ thống có thể chuyển model fallback trước khi trả lỗi cho user.
+---
 ## 6. API liên quan
 
 | Method | Path | Mục đích |
