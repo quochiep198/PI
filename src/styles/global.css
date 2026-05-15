@@ -338,6 +338,10 @@ select {
   background: var(--color-surface-bright);
 }
 
+.lesson-panel > * {
+  flex-shrink: 0;
+}
+
 .lesson-panel__title {
   margin: 0 0 8px;
   color: var(--color-primary);
