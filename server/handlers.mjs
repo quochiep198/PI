@@ -126,8 +126,16 @@ function parseCookies(request) {
 }
 
 function sendSseEvent(response, event, data) {
-  response.write(`event: ${event}\n`);
-  response.write(`data: ${JSON.stringify(data)}\n\n`);
+  if (response.writableEnded) {
+    return false;
+  }
+  try {
+    response.write(`event: ${event}\n`);
+    response.write(`data: ${JSON.stringify(data)}\n\n`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function getOnlineLearnerCount() {
@@ -829,6 +837,16 @@ export async function onlinePresenceStreamHandler(request, response) {
       onlinePresenceConnections.delete(connectionId);
       broadcastOnlineLearnerCount();
     });
+
+    request.on('error', () => {
+      const connection = onlinePresenceConnections.get(connectionId);
+      if (!connection) {
+        return;
+      }
+
+      clearInterval(connection.heartbeat);
+      onlinePresenceConnections.delete(connectionId);
+    });
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to stream online presence.',
@@ -1524,6 +1542,14 @@ export async function addXpHandler(request, response) {
       message: error instanceof Error ? error.message : 'Failed to add XP.',
     });
   }
+}
+
+export async function postXpHandler(request, response) {
+  const { source } = getRequestBody(request);
+  if (source === 'first_success_run') {
+    return recordFirstSuccessHandler(request, response);
+  }
+  return addXpHandler(request, response);
 }
 
 export async function recordFirstSuccessHandler(request, response) {

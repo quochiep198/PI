@@ -363,7 +363,32 @@ POST /api/hint
 - BR-F01-3: Thanh XP hiển thị phía trên progress bar; animation chạy mượt trong 600ms.
 
 ---
+### 5.11 Hệ thống Huy hiệu — Badges (F-02)
 
+**Luồng chính**
+1. Sau mỗi sự kiện có thể trigger badge (complete lesson, run code, v.v.), `useBadges` kiểm tra điều kiện.
+2. Nếu điều kiện thỏa và badge chưa được mở khóa, gọi `POST /api/badges/unlock`.
+3. Server lưu badge vào DB và trả về thông tin badge.
+4. Client hiển thị modal chúc mừng với tên badge, icon và mô tả.
+5. Modal có nút `Chia sẻ` (copy text) và `Tiếp tục`.
+
+**Danh sách badge**
+
+| Badge | Icon | Điều kiện |
+|---|---|---|
+| Khởi đầu bùng nổ | 🔥 | Hoàn thành 3 bài trong cùng 1 ngày |
+| Thợ săn bug | 🐛 | Sửa lỗi thành công sau ít nhất 3 lần chạy lỗi liên tiếp |
+| Tự lực | 🤔 | Hoàn thành bài mà `hintCount = 0` |
+| Siêu tốc | ⚡ | Hoàn thành bài trong vòng 2 phút kể từ khi mở |
+| Chinh phục track | 🏆 | Hoàn thành tất cả bài trong 1 track |
+| Streak 7 ngày | 🔥🔥 | Hoàn thành Daily Challenge 7 ngày liên tiếp |
+
+**Business rules**
+- BR-F02-1: Mỗi badge chỉ mở khóa một lần; lần sau không hiển thị lại modal.
+- BR-F02-2: Modal badge không được che editor; hiển thị sau khi output đã cập nhật xong.
+- BR-F02-3: Lỗi unlock badge không ảnh hưởng luồng học chính; fail silently với log.
+
+---
 ## 6. API liên quan
 
 | Method | Path | Mục đích |

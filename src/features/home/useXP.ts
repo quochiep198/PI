@@ -160,10 +160,10 @@ export function useXP() {
   const recordFirstSuccess = useCallback(
     async (lessonId: number) => {
       try {
-        const response = await fetch('/api/xp/first-success', {
+        const response = await fetch('/api/xp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lessonId }),
+          body: JSON.stringify({ lessonId, source: 'first_success_run' }),
         });
 
         if (!response.ok) {
