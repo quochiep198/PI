@@ -4,7 +4,7 @@ import {
   completeProgressHandler,
   createLessonHandler,
   errorFeedbackHandler,
-  healthHandler,
+  getXpHandler,
   hintHandler,
   lessonsHandler,
   loginHandler,
@@ -12,109 +12,85 @@ import {
   onlinePresenceStreamHandler,
   postXpHandler,
   progressHandler,
-  getXpHandler,
   registerHandler,
 } from '../server/handlers.mjs';
 
-export const config = {
-  api: {
-    bodyParser: true,
-  },
-};
+export default async function handler(req: any, res: any) {
+  // Build pathname from route query param
+  const routeParam = req.query.route;
+  const routeArray = Array.isArray(routeParam)
+    ? routeParam
+    : [routeParam].filter(Boolean);
+  const pathname = '/' + routeArray.join('/');
 
-interface ApiRequest {
-  method: string;
-  query: { route: string[] };
+  console.log('[API Debug] pathname:', pathname, 'method:', req.method);
+
+  try {
+    switch (pathname) {
+      case '/health':
+        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+        return res.status(200).json({ status: 'ok' });
+
+      case '/auth/login':
+        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
+        return loginHandler(req, res);
+
+      case '/auth/logout':
+        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
+        return logoutHandler(req, res);
+
+      case '/auth/me':
+        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+        return authMeHandler(req, res);
+
+      case '/auth/register':
+        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
+        return registerHandler(req, res);
+
+      case '/presence/stream':
+        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+        return onlinePresenceStreamHandler(req, res);
+
+      case '/lessons':
+        if (req.method === 'GET') return lessonsHandler(req, res);
+        if (req.method === 'POST') return createLessonHandler(req, res);
+        return methodNotAllowed(res, 'GET, POST');
+
+      case '/progress':
+        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+        return progressHandler(req, res);
+
+      case '/progress/complete':
+        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
+        return completeProgressHandler(req, res);
+
+      case '/xp':
+        if (req.method === 'GET') return getXpHandler(req, res);
+        if (req.method === 'POST') return postXpHandler(req, res);
+        return methodNotAllowed(res, 'GET, POST');
+
+      case '/hint':
+        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
+        return hintHandler(req, res);
+
+      case '/error-feedback':
+        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
+        return errorFeedbackHandler(req, res);
+
+      default:
+        if (pathname.startsWith('/progress/')) {
+          if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+          return progressHandler(req, res);
+        }
+        return res.status(404).json({ message: 'Not found' });
+    }
+  } catch (error) {
+    console.error('[API Error]', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 }
 
-interface ApiResponse {
-  status(code: number): ApiResponse;
-  setHeader(name: string, value: string): void;
-  json(data: unknown): boolean;
-  write(data: string): boolean;
-  writableEnded: boolean;
-  end(): void;
-}
-
-export default async function handler(
-  request: ApiRequest,
-  response: ApiResponse,
-) {
-  const pathname = `/${(request.query.route as string[]).join('/')}`;
-
-  if (pathname === '/health') {
-    if (request.method !== 'GET') breakMethodNotAllowed(response, 'GET');
-    return healthHandler(request, response);
-  }
-
-  if (pathname === '/auth/login') {
-    if (request.method !== 'POST') breakMethodNotAllowed(response, 'POST');
-    return loginHandler(request, response);
-  }
-
-  if (pathname === '/auth/logout') {
-    if (request.method !== 'POST') breakMethodNotAllowed(response, 'POST');
-    return logoutHandler(request, response);
-  }
-
-  if (pathname === '/auth/me') {
-    if (request.method !== 'GET') breakMethodNotAllowed(response, 'GET');
-    return authMeHandler(request, response);
-  }
-
-  if (pathname === '/auth/register') {
-    if (request.method !== 'POST') breakMethodNotAllowed(response, 'POST');
-    return registerHandler(request, response);
-  }
-
-  if (pathname === '/presence/stream') {
-    if (request.method !== 'GET') breakMethodNotAllowed(response, 'GET');
-    return onlinePresenceStreamHandler(request, response);
-  }
-
-  if (pathname === '/lessons') {
-    if (request.method === 'GET') return lessonsHandler(request, response);
-    if (request.method === 'POST') return createLessonHandler(request, response);
-    breakMethodNotAllowed(response, 'GET, POST');
-    return;
-  }
-
-  if (pathname === '/progress') {
-    if (request.method !== 'GET') breakMethodNotAllowed(response, 'GET');
-    return progressHandler(request, response);
-  }
-
-  if (pathname === '/progress/complete') {
-    if (request.method !== 'POST') breakMethodNotAllowed(response, 'POST');
-    return completeProgressHandler(request, response);
-  }
-
-  if (pathname === '/progress/:learnerKey' || pathname.startsWith('/progress/')) {
-    if (request.method !== 'GET') breakMethodNotAllowed(response, 'GET');
-    return progressHandler(request, response);
-  }
-
-  if (pathname === '/xp') {
-    if (request.method === 'GET') return getXpHandler(request, response);
-    if (request.method === 'POST') return postXpHandler(request, response);
-    breakMethodNotAllowed(response, 'GET, POST');
-    return;
-  }
-
-  if (pathname === '/hint') {
-    if (request.method !== 'POST') breakMethodNotAllowed(response, 'POST');
-    return hintHandler(request, response);
-  }
-
-  if (pathname === '/error-feedback') {
-    if (request.method !== 'POST') breakMethodNotAllowed(response, 'POST');
-    return errorFeedbackHandler(request, response);
-  }
-
-  return response.status(404).json({ message: 'Not found' });
-}
-
-function breakMethodNotAllowed(response: ApiResponse, allowed: string) {
-  response.setHeader('Allow', allowed);
-  response.status(405).json({ message: 'Method Not Allowed' });
+function methodNotAllowed(res: any, allowed: string) {
+  res.setHeader('Allow', allowed);
+  return res.status(405).json({ message: 'Method Not Allowed' });
 }
