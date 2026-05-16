@@ -10,6 +10,7 @@ import {
   lessonsHandler,
   loginHandler,
   logoutHandler,
+  onlinePresenceStreamHandler,
   postXpHandler,
   progressHandler,
   registerHandler,
@@ -28,6 +29,7 @@ app.use(express.json());
 app.get('/api/health', authMeHandler);
 
 app.get('/api/auth/me', authMeHandler);
+app.get('/api/presence/stream', onlinePresenceStreamHandler);
 app.post('/api/auth/login', loginHandler);
 app.post('/api/auth/register', registerHandler);
 app.post('/api/auth/logout', logoutHandler);
