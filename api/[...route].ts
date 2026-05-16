@@ -9,88 +9,203 @@ import {
   lessonsHandler,
   loginHandler,
   logoutHandler,
-  onlinePresenceStreamHandler,
   postXpHandler,
   progressHandler,
   registerHandler,
 } from '../server/handlers.mjs';
 
-export default async function handler(req: any, res: any) {
-  // Build pathname from route query param
-  const routeParam = req.query.route;
-  const routeArray = Array.isArray(routeParam)
-    ? routeParam
-    : [routeParam].filter(Boolean);
-  const pathname = '/' + routeArray.join('/');
+function getPathname(request: Request): string {
+  const url = new URL(request.url);
+  return url.pathname;
+}
 
-  console.log('[API Debug] pathname:', pathname, 'method:', req.method);
+function parseCookies(request: Request): Record<string, string> {
+  const header = request.headers.get('cookie');
+  if (!header) {
+    return {};
+  }
+
+  return header.split(';').reduce((cookies: Record<string, string>, pair) => {
+    const separatorIndex = pair.indexOf('=');
+    if (separatorIndex < 0) {
+      return cookies;
+    }
+
+    const key = pair.slice(0, separatorIndex).trim();
+    const value = pair.slice(separatorIndex + 1).trim();
+    cookies[key] = decodeURIComponent(value);
+    return cookies;
+  }, {});
+}
+
+// Wrapper to convert Next.js-style (req, res) to native Request/Response
+function wrapHandler(
+  handler: (req: any, res: any) => Promise<void> | void,
+) {
+  return async (request: Request) => {
+    const url = new URL(request.url);
+    const method = request.method;
+    let body: any = {};
+
+    try {
+      if (['POST', 'PUT', 'PATCH'].includes(method)) {
+        body = await request.json();
+      }
+    } catch {
+      // ignore json parse errors
+    }
+
+    const cookies = parseCookies(request);
+
+    // Mock Express req/res objects
+    const mockReq = {
+      method,
+      headers: Object.fromEntries(request.headers.entries()),
+      body,
+      cookies,
+      query: Object.fromEntries(url.searchParams.entries()),
+      url: url.pathname,
+    };
+
+    let statusCode = 200;
+    let responseBody: any = null;
+    let headers: Array<[string, string]> = [];
+    let isEnded = false;
+
+    const mockRes = {
+      status: (code: number) => {
+        statusCode = code;
+        return mockRes;
+      },
+      json: (data: any) => {
+        if (!isEnded) {
+          responseBody = data;
+          isEnded = true;
+        }
+        return mockRes;
+      },
+      send: (data: any) => {
+        if (!isEnded) {
+          responseBody = data;
+          isEnded = true;
+        }
+        return mockRes;
+      },
+      setHeader: (name: string, value: string) => {
+        headers.push([name, value]);
+        return mockRes;
+      },
+      getHeader: (name: string) => {
+        return headers.find(([k]) => k === name)?.[1];
+      },
+    };
+
+    try {
+      await handler(mockReq, mockRes);
+    } catch (error) {
+      console.error('[Handler Error]', error);
+      return new Response(JSON.stringify({ message: 'Internal server error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const responseHeaders: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    for (const [name, value] of headers) {
+      responseHeaders[name] = value;
+    }
+
+    return new Response(JSON.stringify(responseBody), {
+      status: statusCode,
+      headers: responseHeaders,
+    });
+  };
+}
+
+export async function GET(request: Request) {
+  const pathname = getPathname(request);
+
+  console.log('[API Debug] GET pathname:', pathname);
 
   try {
     switch (pathname) {
-      case '/health':
-        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-        return res.status(200).json({ status: 'ok' });
+      case '/api/health':
+        return new Response(JSON.stringify({ status: 'ok' }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
 
-      case '/auth/login':
-        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-        return loginHandler(req, res);
+      case '/api/auth/me':
+        return wrapHandler(authMeHandler)(request);
 
-      case '/auth/logout':
-        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-        return logoutHandler(req, res);
+      case '/api/lessons':
+        return wrapHandler(lessonsHandler)(request);
 
-      case '/auth/me':
-        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-        return authMeHandler(req, res);
+      case '/api/progress':
+        return wrapHandler(progressHandler)(request);
 
-      case '/auth/register':
-        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-        return registerHandler(req, res);
-
-      case '/presence/stream':
-        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-        return onlinePresenceStreamHandler(req, res);
-
-      case '/lessons':
-        if (req.method === 'GET') return lessonsHandler(req, res);
-        if (req.method === 'POST') return createLessonHandler(req, res);
-        return methodNotAllowed(res, 'GET, POST');
-
-      case '/progress':
-        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-        return progressHandler(req, res);
-
-      case '/progress/complete':
-        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-        return completeProgressHandler(req, res);
-
-      case '/xp':
-        if (req.method === 'GET') return getXpHandler(req, res);
-        if (req.method === 'POST') return postXpHandler(req, res);
-        return methodNotAllowed(res, 'GET, POST');
-
-      case '/hint':
-        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-        return hintHandler(req, res);
-
-      case '/error-feedback':
-        if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
-        return errorFeedbackHandler(req, res);
+      case '/api/xp':
+        return wrapHandler(getXpHandler)(request);
 
       default:
-        if (pathname.startsWith('/progress/')) {
-          if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
-          return progressHandler(req, res);
-        }
-        return res.status(404).json({ message: 'Not found' });
+        return new Response(JSON.stringify({ message: 'Not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
     }
   } catch (error) {
     console.error('[API Error]', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return new Response(JSON.stringify({ message: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
 
-function methodNotAllowed(res: any, allowed: string) {
-  res.setHeader('Allow', allowed);
-  return res.status(405).json({ message: 'Method Not Allowed' });
+export async function POST(request: Request) {
+  const pathname = getPathname(request);
+
+  console.log('[API Debug] POST pathname:', pathname);
+
+  try {
+    switch (pathname) {
+      case '/api/auth/login':
+        return wrapHandler(loginHandler)(request);
+
+      case '/api/auth/logout':
+        return wrapHandler(logoutHandler)(request);
+
+      case '/api/auth/register':
+        return wrapHandler(registerHandler)(request);
+
+      case '/api/lessons':
+        return wrapHandler(createLessonHandler)(request);
+
+      case '/api/progress/complete':
+        return wrapHandler(completeProgressHandler)(request);
+
+      case '/api/xp':
+        return wrapHandler(postXpHandler)(request);
+
+      case '/api/hint':
+        return wrapHandler(hintHandler)(request);
+
+      case '/api/error-feedback':
+        return wrapHandler(errorFeedbackHandler)(request);
+
+      default:
+        return new Response(JSON.stringify({ message: 'Not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+    }
+  } catch (error) {
+    console.error('[API Error]', error);
+    return new Response(JSON.stringify({ message: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
