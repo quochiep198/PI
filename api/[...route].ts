@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
   authMeHandler,
   completeProgressHandler,
@@ -14,22 +15,23 @@ import {
   registerHandler,
 } from '../server/handlers.mjs';
 
-function getPathname(request: Request): string {
-  const url = new URL(request.url);
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+function getPathname(req: VercelRequest): string {
+  const url = new URL(req.url || '', 'http://localhost');
   return url.pathname;
 }
 
-function parseCookies(request: Request): Record<string, string> {
-  const header = request.headers.get('cookie');
-  if (!header) {
-    return {};
-  }
+function parseCookies(cookieHeader: string | null): Record<string, string> {
+  if (!cookieHeader) return {};
 
-  return header.split(';').reduce((cookies: Record<string, string>, pair) => {
+  return cookieHeader.split(';').reduce((cookies: Record<string, string>, pair) => {
     const separatorIndex = pair.indexOf('=');
-    if (separatorIndex < 0) {
-      return cookies;
-    }
+    if (separatorIndex < 0) return cookies;
 
     const key = pair.slice(0, separatorIndex).trim();
     const value = pair.slice(separatorIndex + 1).trim();
@@ -38,38 +40,32 @@ function parseCookies(request: Request): Record<string, string> {
   }, {});
 }
 
-// Wrapper to convert Next.js-style (req, res) to native Request/Response
-function wrapHandler(
-  handler: (req: any, res: any) => Promise<void> | void,
-) {
-  return async (request: Request) => {
-    const url = new URL(request.url);
-    const method = request.method;
+function wrapHandler(handler: (req: any, res: any) => Promise<void> | void) {
+  return async (req: VercelRequest, res: VercelResponse) => {
+    const pathname = getPathname(req);
+    const method = req.method || 'GET';
     let body: any = {};
 
-    try {
-      if (['POST', 'PUT', 'PATCH'].includes(method)) {
-        body = await request.json();
-      }
-    } catch {
-      // ignore json parse errors
+    if (['POST', 'PUT', 'PATCH'].includes(method)) {
+      try {
+        body = req.body;
+      } catch {}
     }
 
-    const cookies = parseCookies(request);
+    const cookies = parseCookies(req.headers.cookie || null);
 
-    // Mock Express req/res objects
     const mockReq = {
       method,
-      headers: Object.fromEntries(request.headers.entries()),
+      headers: req.headers,
       body,
       cookies,
-      query: Object.fromEntries(url.searchParams.entries()),
-      url: url.pathname,
+      query: req.query,
+      url: pathname,
     };
 
     let statusCode = 200;
     let responseBody: any = null;
-    let headers: Array<[string, string]> = [];
+    const responseHeaders: Array<[string, string]> = [];
     let isEnded = false;
 
     const mockRes = {
@@ -92,11 +88,11 @@ function wrapHandler(
         return mockRes;
       },
       setHeader: (name: string, value: string) => {
-        headers.push([name, value]);
+        responseHeaders.push([name, value]);
         return mockRes;
       },
       getHeader: (name: string) => {
-        return headers.find(([k]) => k === name)?.[1];
+        return responseHeaders.find(([k]) => k === name)?.[1];
       },
     };
 
@@ -104,108 +100,82 @@ function wrapHandler(
       await handler(mockReq, mockRes);
     } catch (error) {
       console.error('[Handler Error]', error);
-      return new Response(JSON.stringify({ message: 'Internal server error' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      res.status(500).json({ message: 'Internal server error' });
+      return;
     }
 
-    const responseHeaders: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-
-    for (const [name, value] of headers) {
-      responseHeaders[name] = value;
+    for (const [name, value] of responseHeaders) {
+      res.setHeader(name, value);
     }
 
-    return new Response(JSON.stringify(responseBody), {
-      status: statusCode,
-      headers: responseHeaders,
-    });
+    res.status(statusCode).json(responseBody);
   };
 }
 
-export async function GET(request: Request) {
-  const pathname = getPathname(request);
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const pathname = getPathname(req);
+  const method = req.method || 'GET';
 
-  console.log('[API Debug] GET pathname:', pathname);
-
-  try {
-    switch (pathname) {
-      case '/api/health':
-        return new Response(JSON.stringify({ status: 'ok' }), {
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-      case '/api/auth/me':
-        return wrapHandler(authMeHandler)(request);
-
-      case '/api/lessons':
-        return wrapHandler(lessonsHandler)(request);
-
-      case '/api/progress':
-        return wrapHandler(progressHandler)(request);
-
-      case '/api/xp':
-        return wrapHandler(getXpHandler)(request);
-
-      default:
-        return new Response(JSON.stringify({ message: 'Not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
-    }
-  } catch (error) {
-    console.error('[API Error]', error);
-    return new Response(JSON.stringify({ message: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
-
-export async function POST(request: Request) {
-  const pathname = getPathname(request);
-
-  console.log('[API Debug] POST pathname:', pathname);
+  console.log('[API Debug]', method, pathname);
 
   try {
-    switch (pathname) {
-      case '/api/auth/login':
-        return wrapHandler(loginHandler)(request);
+    if (method === 'GET') {
+      switch (pathname) {
+        case '/api/health':
+          return res.status(200).json({ status: 'ok' });
 
-      case '/api/auth/logout':
-        return wrapHandler(logoutHandler)(request);
+        case '/api/auth/me':
+          return wrapHandler(authMeHandler)(req, res);
 
-      case '/api/auth/register':
-        return wrapHandler(registerHandler)(request);
+        case '/api/lessons':
+          return wrapHandler(lessonsHandler)(req, res);
 
-      case '/api/lessons':
-        return wrapHandler(createLessonHandler)(request);
+        case '/api/progress':
+          return wrapHandler(progressHandler)(req, res);
 
-      case '/api/progress/complete':
-        return wrapHandler(completeProgressHandler)(request);
+        case '/api/xp':
+          return wrapHandler(getXpHandler)(req, res);
 
-      case '/api/xp':
-        return wrapHandler(postXpHandler)(request);
-
-      case '/api/hint':
-        return wrapHandler(hintHandler)(request);
-
-      case '/api/error-feedback':
-        return wrapHandler(errorFeedbackHandler)(request);
-
-      default:
-        return new Response(JSON.stringify({ message: 'Not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        default:
+          return res.status(404).json({ message: 'Not found' });
+      }
     }
+
+    if (method === 'POST') {
+      switch (pathname) {
+        case '/api/auth/login':
+          return wrapHandler(loginHandler)(req, res);
+
+        case '/api/auth/logout':
+          return wrapHandler(logoutHandler)(req, res);
+
+        case '/api/auth/register':
+          return wrapHandler(registerHandler)(req, res);
+
+        case '/api/lessons':
+          return wrapHandler(createLessonHandler)(req, res);
+
+        case '/api/progress/complete':
+          return wrapHandler(completeProgressHandler)(req, res);
+
+        case '/api/xp':
+          return wrapHandler(postXpHandler)(req, res);
+
+        case '/api/hint':
+          return wrapHandler(hintHandler)(req, res);
+
+        case '/api/error-feedback':
+          return wrapHandler(errorFeedbackHandler)(req, res);
+
+        default:
+          return res.status(404).json({ message: 'Not found' });
+      }
+    }
+
+    res.setHeader('Allow', 'GET, POST');
+    return res.status(405).json({ message: 'Method Not Allowed' });
   } catch (error) {
     console.error('[API Error]', error);
-    return new Response(JSON.stringify({ message: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }
