@@ -1,5 +1,5 @@
 import { XpBar } from '../home/components/XpBar';
-import { useXP } from '../home/useXP';
+import { useXPCached } from '../home/useXPCached';
 import { SideNavigation } from '../navigate/NavigateNavigation';
 
 type PracticeSideNavProps = {
@@ -7,7 +7,7 @@ type PracticeSideNavProps = {
 };
 
 export function PracticeSideNav({ onNavigateHome }: PracticeSideNavProps) {
-  const { xpData, loading: xpLoading } = useXP();
+  const { xpData, loading: xpLoading } = useXPCached();
 
   return (
     <aside className="sidenav">
