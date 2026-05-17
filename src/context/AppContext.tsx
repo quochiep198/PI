@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import type { AuthUser } from '../../auth/types';
-import type { XpLevel } from '../../home/useXP';
+import type { AuthUser } from '../features/auth/types';
+import type { XpLevel } from '../features/home/useXP';
 
 type AppContextType = {
   user: AuthUser | null;
@@ -14,7 +14,16 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [xpData, setXpData] = useState<XpLevel>({ level: 1, currentXp: 0, xpForNextLevel: 100, levelName: 'Newcomer' });
+  const DEFAULT_XP_DATA: XpLevel = {
+    level: 1,
+    name: 'Người mới',
+    minXp: 0,
+    xpInCurrentLevel: 0,
+    xpToNextLevel: 100,
+    progressPercent: 0,
+    totalXp: 0,
+  };
+  const [xpData, setXpData] = useState<XpLevel>(DEFAULT_XP_DATA);
   const [xpLoading, setXpLoading] = useState(true);
 
   const fetchXP = useCallback(async () => {
