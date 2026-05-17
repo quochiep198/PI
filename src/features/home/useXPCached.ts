@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { XpLevel } from './useXP';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
