@@ -9,6 +9,7 @@ type HomeSideNavProps = {
   xpData: XpLevel;
   xpLoading: boolean;
   pendingXpAnimation: number | null;
+  onNavigatePractice: () => void;
 };
 
 export function HomeSideNav({
@@ -18,6 +19,7 @@ export function HomeSideNav({
   xpData,
   xpLoading,
   pendingXpAnimation,
+  onNavigatePractice,
 }: HomeSideNavProps) {
   return (
     <aside className="sidenav">
@@ -37,7 +39,12 @@ export function HomeSideNav({
         </span>
       </div>
 
-      <SideNavigation />
+      <SideNavigation
+        activeLabel="Lessons"
+        itemClickHandlers={{
+          'Daily Practice': onNavigatePractice,
+        }}
+      />
 
       <div className="upgrade-card">
         <p className="upgrade-card__title">Học không giới hạn!</p>

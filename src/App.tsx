@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { AuthPage } from './features/auth/AuthPage';
 import type { AuthUser } from './features/auth/types';
 import { HomePage } from './features/home/HomePage';
+import { PracticePage } from './features/practice/PracticePage';
+
+type View = 'home' | 'practice';
 
 type AuthMeResponse = {
   authenticated: boolean;
@@ -25,6 +28,7 @@ async function readJsonSafely<T>(response: Response): Promise<T | null> {
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [view, setView] = useState<View>('home');
 
   useEffect(() => {
     let active = true;
@@ -38,7 +42,8 @@ export default function App() {
           return;
         }
 
-        setUser(response.ok && data?.authenticated ? data.user : null);
+        const authUser = response.ok && data?.authenticated ? data.user : null;
+        setUser(authUser);
       } catch {
         if (active) {
           setUser(null);
@@ -80,5 +85,22 @@ export default function App() {
     return <AuthPage onAuthenticated={setUser} />;
   }
 
-  return <HomePage user={user} onLogout={handleLogout} />;
+  return (
+    <>
+      {view === 'home' && (
+        <HomePage
+          user={user}
+          onLogout={handleLogout}
+          onNavigatePractice={() => setView('practice')}
+        />
+      )}
+      {view === 'practice' && (
+        <PracticePage
+          user={user}
+          onLogout={handleLogout}
+          onNavigateHome={() => setView('home')}
+        />
+      )}
+    </>
+  );
 }

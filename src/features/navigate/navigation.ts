@@ -8,6 +8,7 @@ export type IconNavItem = {
   icon: string;
   label: string;
   active?: boolean;
+  onClick?: () => void;
 };
 
 export const topNavItems: TopNavItem[] = [
@@ -17,7 +18,8 @@ export const topNavItems: TopNavItem[] = [
 ];
 
 export const sideNavItems: IconNavItem[] = [
-  { icon: 'menu_book', label: 'Lessons', active: true },
+  { icon: 'menu_book', label: 'Lessons' },
+  { icon: 'event_repeat', label: 'Daily Practice' },
   { icon: 'code', label: 'Playground' },
   { icon: 'military_tech', label: 'Achievements' },
   { icon: 'settings', label: 'Settings' },

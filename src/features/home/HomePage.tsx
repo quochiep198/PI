@@ -40,9 +40,10 @@ function getInitialCode() {
 type HomePageProps = {
   user: AuthUser;
   onLogout: () => Promise<void> | void;
+  onNavigatePractice: () => void;
 };
 
-export function HomePage({ user, onLogout }: HomePageProps) {
+export function HomePage({ user, onLogout, onNavigatePractice }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
   const {
@@ -330,6 +331,7 @@ export function HomePage({ user, onLogout }: HomePageProps) {
           xpData={xpData}
           xpLoading={xpLoading}
           pendingXpAnimation={pendingXpAnimation}
+          onNavigatePractice={onNavigatePractice}
         />
 
         <section className="lesson-layout">
