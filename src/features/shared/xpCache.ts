@@ -43,6 +43,17 @@ export function setCachedXp(data: XpLevel): void {
   listeners.forEach(listener => listener());
 }
 
+export function addXp(amount: number): XpLevel | null {
+  if (!cachedXpData.data) return null;
+  const newTotal = cachedXpData.data.totalXp + amount;
+  const newData = {
+    ...cachedXpData.data!,
+    totalXp: newTotal,
+  };
+  setCachedXp(newData);
+  return newData;
+}
+
 export function subscribeXpChanges(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
