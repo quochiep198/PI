@@ -1,6 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { getCachedXp, setCachedXp, subscribeXpChanges, isCacheValid, DEFAULT_XP } from '../shared/xpCache';
-import type { XpLevel } from './useXP';
 
 export function useXPCached() {
   // Use useSyncExternalStore for automatic re-renders when cache changes

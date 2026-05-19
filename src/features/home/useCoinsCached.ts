@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { getCachedCoins, setCachedCoins, subscribeCoinsChanges, isCacheValid, addCoins } from '../shared/coinsCache';
+import { getCachedCoins, setCachedCoins, subscribeCoinsChanges, isCacheValid } from '../shared/coinsCache';
 
 export function useCoinsCached() {
   const coins = useSyncExternalStore(
@@ -9,11 +9,11 @@ export function useCoinsCached() {
   );
 
   const [loading, setLoading] = useState(() => !isCacheValid());
- let active = true;
-  useEffect(() => {
-    if (!isCacheValid()) {
-      let active = true;
 
+  useEffect(() => {
+    let active = true;
+
+    if (!isCacheValid()) {
       async function loadCoins() {
         try {
           const response = await fetch('/api/coins');
@@ -41,5 +41,5 @@ export function useCoinsCached() {
     };
   }, []);
 
-  return { coins, loading, addCoins };
+  return { coins, loading };
 }
