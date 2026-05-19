@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { VI_MESSAGES } from '../../content/messages';
 import { addCoins } from '../shared/coinsCache';
-import { addXp } from '../shared/xpCache';
+import { setCachedXp } from '../shared/xpCache';
 
 export function useLessonProgress() {
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
@@ -60,13 +60,13 @@ export function useLessonProgress() {
 
       const data = await response.json();
       const coinsEarned = data?.coins ?? 0;
-      const xpEarned = data?.xp ?? 20;
+      const xpData = data?.xp;
 
       if (coinsEarned > 0) {
         addCoins(coinsEarned);
       }
-      if (xpEarned > 0) {
-        addXp(xpEarned);
+      if (xpData && typeof xpData === 'object' && 'totalXp' in xpData) {
+        setCachedXp(xpData);
       }
 
       setCompletedLessonIds((currentIds) =>
