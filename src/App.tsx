@@ -3,6 +3,11 @@ import { AuthPage } from './features/auth/AuthPage';
 import type { AuthUser } from './features/auth/types';
 import { HomePage } from './features/home/HomePage';
 import { PracticePage } from './features/practice/PracticePage';
+import { TopBar } from './features/layout/TopBar';
+import { SideNav } from './features/layout/SideNav';
+import { useXPCached } from './features/home/useXPCached';
+import { useOnlineLearners } from './features/home/useOnlineLearners';
+import { MobileNavigation } from './features/navigate/NavigateNavigation';
 
 type View = 'home' | 'practice';
 
@@ -13,11 +18,7 @@ type AuthMeResponse = {
 
 async function readJsonSafely<T>(response: Response): Promise<T | null> {
   const text = await response.text();
-
-  if (!text) {
-    return null;
-  }
-
+  if (!text) return null;
   try {
     return JSON.parse(text) as T;
   } catch {
@@ -29,6 +30,11 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [view, setView] = useState<View>('home');
+  const [coins, setCoins] = useState(1250);
+
+  // Shared hooks
+  const { xpData } = useXPCached();
+  const { onlineLearners, connected: onlineConnected, failed: onlineFailed } = useOnlineLearners();
 
   useEffect(() => {
     let active = true;
@@ -37,36 +43,22 @@ export default function App() {
       try {
         const response = await fetch('/api/auth/me');
         const data = await readJsonSafely<AuthMeResponse>(response);
-
-        if (!active) {
-          return;
-        }
-
+        if (!active) return;
         const authUser = response.ok && data?.authenticated ? data.user : null;
         setUser(authUser);
       } catch {
-        if (active) {
-          setUser(null);
-        }
+        if (active) setUser(null);
       } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }
 
     void loadSession();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-    });
-
+    await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   }
 
@@ -86,21 +78,32 @@ export default function App() {
   }
 
   return (
-    <>
-      {view === 'home' && (
-        <HomePage
-          user={user}
-          onLogout={handleLogout}
+    <div className="quest-page">
+      <TopBar
+        user={user}
+        xpData={xpData}
+        coins={coins}
+        onLogout={handleLogout}
+      />
+
+      <div className="quest-layout">
+        <SideNav
+          activeLabel={view === 'home' ? 'Lessons' : 'Daily Practice'}
+          onlineCount={onlineLearners}
+          onlineLoading={!onlineConnected && !onlineFailed}
+          onlineError={onlineFailed}
+          onNavigateLessons={() => setView('home')}
           onNavigatePractice={() => setView('practice')}
         />
-      )}
-      {view === 'practice' && (
-        <PracticePage
-          user={user}
-          onLogout={handleLogout}
-          onNavigateHome={() => setView('home')}
-        />
-      )}
-    </>
+
+        {view === 'home' ? (
+          <HomePage user={user} />
+        ) : (
+          <PracticePage user={user} />
+        )}
+      </div>
+
+      <MobileNavigation />
+    </div>
   );
 }

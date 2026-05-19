@@ -1,16 +1,4 @@
-import { mobileNavItems, sideNavItems, topNavItems, type IconNavItem } from './navigation';
-
-export function TopNavigation() {
-  return (
-    <nav className="topbar__nav" aria-label="Primary">
-      {topNavItems.map((item) => (
-        <a key={item.label} className={`topbar__link${item.active ? ' is-active' : ''}`} href={item.href}>
-          {item.label}
-        </a>
-      ))}
-    </nav>
-  );
-}
+import { mobileNavItems, sideNavItems, type IconNavItem } from './navigation';
 
 interface NavButtonProps {
   item: IconNavItem;

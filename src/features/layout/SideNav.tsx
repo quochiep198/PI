@@ -1,0 +1,94 @@
+export type SideNavProps = {
+  activeLabel?: string;
+  onlineCount?: number;
+  onlineLoading?: boolean;
+  onlineError?: boolean;
+  onNavigateLessons?: () => void;
+  onNavigatePractice?: () => void;
+};
+
+export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice }: SideNavProps) {
+  const handleNavigation = (label: string) => {
+    switch (label) {
+      case 'Lessons':
+        onNavigateLessons?.();
+        break;
+      case 'Daily Practice':
+        onNavigatePractice?.();
+        break;
+    }
+  };
+
+  const itemClickHandlers: Record<string, () => void> = {};
+  if (onNavigateLessons) itemClickHandlers['Lessons'] = onNavigateLessons;
+  if (onNavigatePractice) itemClickHandlers['Daily Practice'] = onNavigatePractice;
+
+  return (
+    <aside className="sidenav">
+      <div className="online-status">
+        <span
+          className={`online-status__dot${!onlineLoading && onlineCount > 0 ? ' is-live' : ''}${onlineError ? ' is-error' : ''}`}
+          aria-hidden="true"
+        />
+        <span className="online-status__text">
+          {onlineLoading
+            ? 'Đang cập nhật...'
+            : onlineError
+              ? 'Không thể cập nhật'
+              : `${onlineCount} người học online`}
+        </span>
+      </div>
+
+      <nav className="sidenav__nav" aria-label="Section navigation">
+        <button
+          className={`pressable sidenav__item${activeLabel === 'Lessons' ? ' is-active' : ''}`}
+          type="button"
+          onClick={() => handleNavigation('Lessons')}
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">menu_book</span>
+          <span>Lessons</span>
+        </button>
+
+        <button
+          className={`pressable sidenav__item${activeLabel === 'Daily Practice' ? ' is-active' : ''}`}
+          type="button"
+          onClick={() => handleNavigation('Daily Practice')}
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">event_repeat</span>
+          <span>Daily Practice</span>
+        </button>
+
+        <button
+          className={`pressable sidenav__item${activeLabel === 'Playground' ? ' is-active' : ''}`}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">code</span>
+          <span>Playground</span>
+        </button>
+
+        <button
+          className={`pressable sidenav__item${activeLabel === 'Achievements' ? ' is-active' : ''}`}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">military_tech</span>
+          <span>Achievements</span>
+        </button>
+
+        <button
+          className={`pressable sidenav__item${activeLabel === 'Settings' ? ' is-active' : ''}`}
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">settings</span>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div className="upgrade-card">
+        <p className="upgrade-card__title">Học không giới hạn!</p>
+        <button className="pressable upgrade-card__button" type="button">
+          Nâng cấp Pro
+        </button>
+      </div>
+    </aside>
+  );
+}

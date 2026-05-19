@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PythonQuest - Luyện tập hằng ngày</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chunky-button {
+            transition: all 0.1s ease;
+        }
+        .chunky-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: none !important;
+        }
+        .streak-fire {
+            animation: flicker 1.5s infinite alternate;
+        }
+        @keyframes flicker {
+            0% { transform: scale(1); filter: drop-shadow(0 0 2px #ffde59); }
+            100% { transform: scale(1.1); filter: drop-shadow(0 0 8px #ffde59); }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#3449e6",
+                        "on-secondary-container": "#756100",
+                        "on-primary-container": "#fcf9ff",
+                        "outline": "#757687",
+                        "on-primary-fixed-variant": "#0e29cf",
+                        "error": "#ba1a1a",
+                        "on-surface": "#1a1c1e",
+                        "inverse-surface": "#2f3133",
+                        "primary-fixed": "#dfe0ff",
+                        "on-tertiary-container": "#ebfff5",
+                        "on-secondary-fixed": "#221b00",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e8e8ea",
+                        "background": "#f9f9fc",
+                        "tertiary-fixed": "#b1efd8",
+                        "primary": "#3045e3",
+                        "surface-dim": "#dadadc",
+                        "on-tertiary-fixed-variant": "#0d503f",
+                        "on-secondary-fixed-variant": "#544600",
+                        "surface-container-low": "#f3f3f6",
+                        "surface-container": "#eeeef0",
+                        "secondary-container": "#ffde59",
+                        "surface-variant": "#e2e2e5",
+                        "inverse-on-surface": "#f0f0f3",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#ffe16e",
+                        "inverse-primary": "#bcc2ff",
+                        "on-primary-fixed": "#000b63",
+                        "tertiary": "#286553",
+                        "on-background": "#1a1c1e",
+                        "on-tertiary-fixed": "#002118",
+                        "on-error-container": "#93000a",
+                        "surface": "#f9f9fc",
+                        "surface-container-highest": "#e2e2e5",
+                        "surface-bright": "#f9f9fc",
+                        "outline-variant": "#c5c5d8",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#437e6b",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#bcc2ff",
+                        "secondary": "#705d00",
+                        "secondary-fixed-dim": "#e4c542",
+                        "tertiary-fixed-dim": "#96d3bd",
+                        "primary-container": "#4d61fc",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#444655"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1200px",
+                        "unit": "8px",
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "48px"
+                    },
+                    "fontFamily": {
+                        "label-code": ["JetBrains Mono"],
+                        "display-lg": ["Quicksand"],
+                        "body-lg": ["Quicksand"],
+                        "headline-lg": ["Quicksand"],
+                        "body-md": ["Quicksand"],
+                        "headline-md": ["Quicksand"]
+                    },
+                    "fontSize": {
+                        "label-code": ["15px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["20px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-secondary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 z-50 flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-4 h-20 bg-surface border-b-4 border-surface-container-highest shadow-[0_4px_0_0_rgba(226,222,229,1)]">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary">PythonQuest</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors">star</button>
+<div class="flex items-center gap-2 bg-surface-container-high px-4 py-2 rounded-full border-2 border-primary/10">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-bold text-primary">1,250</span>
+</div>
+<img alt="Junior Coder Avatar" class="w-10 h-10 rounded-full border-2 border-primary" data-alt="A friendly, stylized 3D avatar profile picture of a young coder wearing a blue tech hoodie and orange headphones. The character is rendered in a smooth, Pixar-like animation style against a soft pastel blue background, part of a modern ed-tech interface. High quality digital illustration with soft studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkLnxoQn6Mcw8-rz5jG9LreEHOkAmNS1vm9ymOcWCgOn2uPDNzZIC6XIw_5ck2LINS_QBcRzmU4pe3GhUP4cKWTbccyBTOJ7W4rbdIiBOeI3yrnuDn75wFwv2x0iX6reQTU5380RbQokPoGeHTrT2igIl4PcTWYxUKjaOyRb2re_HvKz7iZ9j_iEZ0PzRIVxXsFDhmPG1TFixtPy-eheVWCAM55LflmZzJzh5GowkQUhHdQCUVHZUYTTLfFaU3FinGclU6R5RgnSs2"/>
+</div>
+</header>
+<div class="flex pt-20">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-[calc(100vh-80px)] w-64 bg-surface-container-low border-r-4 border-surface-container-highest p-unit gap-4 sticky top-20 shadow-[4px_0_0_0_rgba(226,222,229,1)]">
+<div class="p-4 mb-4">
+<h2 class="font-headline-md text-headline-md text-primary font-bold">Level 5</h2>
+<p class="text-on-surface-variant font-medium">Code Explorer</p>
+<div class="w-full bg-surface-container-high h-4 rounded-full mt-2 overflow-hidden border-2 border-surface-container-highest">
+<div class="bg-tertiary-container h-full w-[65%] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]"></div>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-4 p-4 text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-headline-md">Lessons</span>
+</a>
+<a class="flex items-center gap-4 p-4 bg-primary-container text-on-primary-container rounded-xl shadow-[0_4px_0_0_rgba(0,11,99,0.2)] transition-all" href="#">
+<span class="material-symbols-outlined">event_repeat</span>
+<span class="font-headline-md">Daily Practice</span>
+</a>
+<a class="flex items-center gap-4 p-4 text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">code</span>
+<span class="font-headline-md">Playground</span>
+</a>
+<a class="flex items-center gap-4 p-4 text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">military_tech</span>
+<span class="font-headline-md">Achievements</span>
+</a>
+<a class="flex items-center gap-4 p-4 text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-headline-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto p-4">
+<button class="w-full chunky-button bg-secondary-container text-on-secondary-container font-headline-md py-4 rounded-2xl border-b-4 border-[#b29400] shadow-lg flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">bolt</span>
+                    Upgrade to Pro
+                </button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 p-margin-mobile md:p-margin-desktop grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Center Column -->
+<div class="lg:col-span-8 flex flex-col gap-10">
+<!-- Daily Streak Section -->
+<section class="bg-surface-container-lowest p-8 rounded-[32px] border-2 border-surface-container shadow-[8px_8px_0_0_rgba(238,238,240,1)]">
+<div class="flex items-center justify-between mb-8">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Chuỗi ngày rực rỡ</h2>
+<div class="flex items-center gap-2 bg-error-container text-on-error-container px-6 py-2 rounded-full border-2 border-error/20">
+<span class="material-symbols-outlined streak-fire" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="font-bold text-headline-md">12 Ngày</span>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-4">
+<!-- Monday (Done) -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-bold text-on-surface-variant">T2</span>
+<div class="w-14 h-14 rounded-2xl bg-secondary-container border-b-4 border-[#b29400] flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-on-secondary-container text-3xl" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+</div>
+<!-- Tuesday (Done) -->
+<div class="flex flex-col items-center gap-3">
+<span class="font-bold text-on-surface-variant">T3</span>
+<div class="w-14 h-14 rounded-2xl bg-secondary-container border-b-4 border-[#b29400] flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-on-secondary-container text-3xl" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+</div>
+<!-- Wednesday (Today) -->
+<div class="flex flex-col items-center gap-3 scale-110">
+<span class="font-bold text-primary">T4</span>
+<div class="w-14 h-14 rounded-2xl bg-primary border-b-4 border-[#1a2bb3] flex items-center justify-center shadow-md relative">
+<span class="material-symbols-outlined text-white text-3xl">star</span>
+<div class="absolute -top-1 -right-1 w-3 h-3 bg-error rounded-full border-2 border-white"></div>
+</div>
+</div>
+<!-- Rest of the week -->
+<div class="flex flex-col items-center gap-3 opacity-40">
+<span class="font-bold text-on-surface-variant">T5</span>
+<div class="w-14 h-14 rounded-2xl bg-surface-container border-b-4 border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">lock</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-3 opacity-40">
+<span class="font-bold text-on-surface-variant">T6</span>
+<div class="w-14 h-14 rounded-2xl bg-surface-container border-b-4 border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">lock</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-3 opacity-40">
+<span class="font-bold text-on-surface-variant">T7</span>
+<div class="w-14 h-14 rounded-2xl bg-surface-container border-b-4 border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">lock</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-3 opacity-40">
+<span class="font-bold text-on-surface-variant">CN</span>
+<div class="w-14 h-14 rounded-2xl bg-surface-container border-b-4 border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">lock</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Daily Challenges Section -->
+<section class="flex flex-col gap-6">
+<h2 class="font-headline-lg text-headline-lg text-on-surface px-2">Thử thách hôm nay</h2>
+<!-- Task 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-[24px] border-2 border-surface-container flex items-center justify-between shadow-[6px_6px_0_0_rgba(238,238,240,1)] hover:translate-x-2 transition-transform cursor-pointer">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 bg-primary-container/20 rounded-2xl flex items-center justify-center border-2 border-primary-container/30">
+<span class="material-symbols-outlined text-primary text-4xl">smart_toy</span>
+</div>
+<div>
+<h3 class="font-headline-md text-on-surface">Giải cứu Py-Bot</h3>
+<p class="text-on-surface-variant">Sử dụng lệnh <code class="font-label-code text-primary bg-primary/5 px-2 py-0.5 rounded">print()</code> để gọi đồng đội.</p>
+<div class="flex items-center gap-3 mt-2">
+<span class="bg-tertiary-container/10 text-tertiary px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-base">signal_cellular_alt_1_bar</span> Dễ
+                                    </span>
+<span class="text-secondary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">monetization_on</span> +50
+                                    </span>
+</div>
+</div>
+</div>
+<button class="chunky-button bg-primary text-white px-8 py-3 rounded-2xl border-b-4 border-[#1a2bb3] font-bold shadow-md">Bắt đầu</button>
+</div>
+<!-- Task 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-[24px] border-2 border-surface-container flex items-center justify-between shadow-[6px_6px_0_0_rgba(238,238,240,1)] hover:translate-x-2 transition-transform cursor-pointer">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 bg-secondary-container/20 rounded-2xl flex items-center justify-center border-2 border-secondary-container/30">
+<span class="material-symbols-outlined text-secondary text-4xl">diamond</span>
+</div>
+<div>
+<h3 class="font-headline-md text-on-surface">Thu thập kim cương</h3>
+<p class="text-on-surface-variant">Sử dụng vòng lặp <code class="font-label-code text-primary bg-primary/5 px-2 py-0.5 rounded">for</code> để lấy hết quà.</p>
+<div class="flex items-center gap-3 mt-2">
+<span class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-base">signal_cellular_alt_2_bar</span> Trung bình
+                                    </span>
+<span class="text-secondary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">monetization_on</span> +120
+                                    </span>
+</div>
+</div>
+</div>
+<button class="chunky-button bg-primary text-white px-8 py-3 rounded-2xl border-b-4 border-[#1a2bb3] font-bold shadow-md">Bắt đầu</button>
+</div>
+<!-- Task 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-[24px] border-2 border-surface-container flex items-center justify-between shadow-[6px_6px_0_0_rgba(238,238,240,1)] hover:translate-x-2 transition-transform cursor-pointer">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 bg-error-container/20 rounded-2xl flex items-center justify-center border-2 border-error-container/30">
+<span class="material-symbols-outlined text-error text-4xl">bug_report</span>
+</div>
+<div>
+<h3 class="font-headline-md text-on-surface">Sửa lỗi mã nguồn</h3>
+<p class="text-on-surface-variant">Tìm và sửa lỗi thụt lề trong đoạn code sau.</p>
+<div class="flex items-center gap-3 mt-2">
+<span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-base">signal_cellular_alt</span> Khó
+                                    </span>
+<span class="text-secondary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">monetization_on</span> +250
+                                    </span>
+</div>
+</div>
+</div>
+<button class="chunky-button bg-primary text-white px-8 py-3 rounded-2xl border-b-4 border-[#1a2bb3] font-bold shadow-md">Bắt đầu</button>
+</div>
+</section>
+<!-- Reward Store Section -->
+<section class="flex flex-col gap-6">
+<div class="flex items-center justify-between px-2">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Cửa hàng đổi quà</h2>
+<button class="text-primary font-bold hover:underline">Xem tất cả</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Store Item 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-[24px] border-2 border-surface-container shadow-md group">
+<div class="aspect-square bg-surface-container-high rounded-xl mb-4 overflow-hidden flex items-center justify-center relative">
+<img alt="Top Hat Accessory" class="w-24 group-hover:scale-110 transition-transform" data-alt="A detailed 3D cartoon accessory of a shiny black top hat with a bright purple ribbon. The hat is designed for a digital character avatar, rendered in a high-quality toy-like aesthetic with vibrant colors and soft rounded edges. Professional studio lighting on a neutral grey background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIhYr7z6DvB0qBwYWb3UYcikDHG-W5FiO1mT7WR39e0amba40WHMYg52S5OAWnkdmViC5wFSp14Du4pO0xJlJXVSpYV_uA1VXv6SqNVmJxofSBWMyA-ghrtnWGXysN9hYpvcAW15CVLpPE9uO6Xokdknmjm1xwC8rRa00TjaFTNgl1Sm5ChwQ8nt6Hk0NqsltqYqYnp6bGooTLkQ8zxFlgKA7rEuSsrNnVdy3XNCy7r1Y5pszNRMmezdgmKf2DAL_qFV9Vgz6FAKzr"/>
+<div class="absolute top-2 right-2 bg-secondary-container px-2 py-1 rounded-lg font-bold text-xs shadow-sm">MỚI!</div>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Mũ Quý Tộc</h4>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1 text-secondary font-bold">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span>450</span>
+</div>
+<button class="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+<!-- Store Item 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-[24px] border-2 border-surface-container shadow-md group border-t-4 border-secondary-container">
+<div class="aspect-square bg-surface-container-high rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+<img alt="Cyber Sunglasses" class="w-24 group-hover:scale-110 transition-transform" data-alt="A pair of vibrant neon-blue glowing futuristic cyber sunglasses for a game character. The design is chunky and friendly with thick frames and glowing lens effects. Rendered in a high-fidelity 3D cartoon style, sitting on a minimalist white platform. Part of a coding game reward store." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDt0Mesrz-f1SaRCH3abPnG16ERIKzFqN-w8PC5EHWxZnD9vJkeYaZgC4XOJa6m-Dw6WlKY-UXQM8LOpeNinCMznmSQ2i4XQQdG6kQ6dUZ4X85I_v36pcZvJtEif22O47dcZ7huX8CR4h4xdmHSPTWq0XxmbBa_V8CeHOk650ct_9j1aiJVNK6iHQ68qJ1vIGbrN95w-6626j4Q_wfjjcrMX6ZS4sdCYstkgBx9s9yhGOyPsy7mvZdIF_NKnIwsCrI_16sMMKo8qPPy"/>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Kính Cyber</h4>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1 text-secondary font-bold">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span>800</span>
+</div>
+<button class="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+<!-- Store Item 3 -->
+<div class="bg-surface-container-lowest p-4 rounded-[24px] border-2 border-surface-container shadow-md group">
+<div class="aspect-square bg-surface-container-high rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+<img alt="Rocket Backpack" class="w-24 group-hover:scale-110 transition-transform" data-alt="A cool 3D stylized rocket jetpack backpack for a character avatar. The jetpack is painted in bright red and white with yellow flame detailing. It has a smooth, shiny plastic texture typical of high-quality ed-tech game assets. Modern 3D digital illustration with soft ambient occlusion." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYTCEcwNZ9EyyDpZN9P6e2_bV1PPkrI3cH1dwlJVVZWc5vnQaWqNGRXQUkNlD9ohPCjxPNzV9rc0CmeICx43RgUKdwsnRVMmI5KhVQrtuDfl4bD9rUKcOObaUQ-bl7gnVBRmSnP4TghmrnipL3C3U06eq97t8dkcDT4NQ2xV7bAyayOjeAE8chxYM8LnzxhblFzZQJKCiYhm8pkhVS9xzozaxTRXmsU0eqf89kPsopfzIkOWnigegbOal6ioB-96iA7_wrQ8-XdMhq"/>
+</div>
+<h4 class="font-bold text-on-surface mb-1">Balo Tên Lửa</h4>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1 text-secondary font-bold">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span>1,200</span>
+</div>
+<button class="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column / Leaderboard Widget -->
+<div class="lg:col-span-4 flex flex-col gap-gutter">
+<section class="bg-surface-container-low p-6 rounded-[32px] border-2 border-surface-container shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-on-surface">Bảng xếp hạng</h3>
+<span class="material-symbols-outlined text-primary">leaderboard</span>
+</div>
+<div class="space-y-4">
+<!-- Top 1 -->
+<div class="flex items-center gap-4 p-3 bg-secondary-container/20 rounded-2xl border-2 border-secondary-container">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full border-2 border-secondary-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiUQ10OoYwrGRRRPNEx4mfJWTLIwDAT7DojIQf5rrgPUW_sRdebR5k8GzLPPMOmN6p-nYvFzIN01sIJ32WZO6s2slJbyKIJWTQhNc0XauOLopBFBXQL31x_y9YAp2Ut2A4UZznL4HnLUbve-ExZy1zaUU1Vz2jglxby_gCBDXS5FZ-IpLHyIivod9QTOIRq5vqzTsaD5kB-2gs51G9Fn8ngKSYfxKTFcrGCu1QvopdTVtPtiv1HixnyF3C3Hnpbr_wxHm_juV9Mwqq"/>
+<div class="absolute -top-2 -left-2 bg-secondary-container text-on-secondary-container w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">1</div>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface">Minh Anh</p>
+<p class="text-xs text-on-surface-variant">Lâu đài Python</p>
+</div>
+<p class="font-bold text-primary">4,250 XP</p>
+</div>
+<!-- Top 2 -->
+<div class="flex items-center gap-4 p-3 bg-surface-container-lowest rounded-2xl border-2 border-surface-container-high hover:border-primary/30 transition-colors cursor-pointer">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9FF1Z5_rBQXjZbb6V_EGmsem0IDp8hc7-s0VdS-oACRN3sXNpeEej4RHpRpMezfwn5QhmQiG-e5o0sLd4CJ2n4pXrBF0KJ3O1_REwedA8j94Y5c44aJi-SBoB0JAigXGT_icT8KGb3LD4zP928P9xVVzuS2dNY3VgoHwdkfFgu4foYRJYxsTdmayTFBAlt_eFelh5PVKMAEA-iHE_VtPmyE8wsKD0JCisqityJXfzNbXrYkN3ZqRBtBwjtrfPlRRww4hysFE0RF75"/>
+<div class="absolute -top-2 -left-2 bg-slate-300 text-slate-800 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">2</div>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface">Bảo Nam</p>
+<p class="text-xs text-on-surface-variant">Thung lũng Loop</p>
+</div>
+<p class="font-bold text-primary">3,980 XP</p>
+</div>
+<!-- Top 3 -->
+<div class="flex items-center gap-4 p-3 bg-surface-container-lowest rounded-2xl border-2 border-surface-container-high">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmMIvrwEGCeF0rI8ELjYXgBUW1fHr1cqRYskOoSfiJ-iYLcUohnNr0lvAfrsC9p5MG6yk7RDSCyFYQ7It9bJVTDRqx0Ctscq9ipDuIW_cSLOO_krJc3sXGO_hWrw8u7nVyNIJPTs2pYTr6EBw-faSzga7pWHlTCPgHdPrt3eOqLyJJR9aI2zYbZiy0CbDc87WvhurZ0ahaauYvv0qKOEYfzHGHvuet2BE1D_DQk1UHgtVOgalqaJ8fa6FvJsSZYG6IXtzwgbpEPq6w"/>
+<div class="absolute -top-2 -left-2 bg-orange-300 text-orange-900 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">3</div>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface">Linh Chi</p>
+<p class="text-xs text-on-surface-variant">Rừng Biến số</p>
+</div>
+<p class="font-bold text-primary">3,720 XP</p>
+</div>
+<!-- User Position (Highlight) -->
+<div class="mt-6 pt-6 border-t-2 border-surface-container-highest">
+<div class="flex items-center gap-4 p-3 bg-primary-container/10 rounded-2xl border-2 border-primary-container border-dashed">
+<div class="relative">
+<img alt="User Avatar" class="w-12 h-12 rounded-full border-2 border-primary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVwFLztDmlH7FtEv3_OBl31Yp_tXDVTQNtSv0F5gwRvWux6xj0hzHQeSgOp5u64PPldaZGBzrPfIO8tEjZUWsAzbzQEN70osrsKEvIv5S7Yr-Vn_8PpKLB9b8WRLkINrBGUwCGbUH_f3XfTNbazRt4kKWBtB4dTr710AJWss6fnB-Azz9XTnhsxVCktU4D581WZLXxAUM6ZTL-bJaqoZe5HqwkyREM0JcFprDTfiDKpP9gpr81cl4E7pB4_kVMf6BM_bFaXmKTqYVo"/>
+<div class="absolute -top-2 -left-2 bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">15</div>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface">Bạn (Junior Coder)</p>
+<p class="text-xs text-on-surface-variant">Tiến lên nào!</p>
+</div>
+<p class="font-bold text-primary">1,250 XP</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-3 font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors">Xem toàn bộ bảng</button>
+</section>
+<!-- Tip Widget -->
+<div class="bg-tertiary-container text-on-tertiary-container p-6 rounded-[32px] relative overflow-hidden">
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-8xl opacity-20 rotate-12">lightbulb</span>
+<h4 class="font-headline-md mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined">tips_and_updates</span> Mẹo nhỏ
+                    </h4>
+<p class="text-sm leading-relaxed opacity-90">
+                        Hoàn thành "Thử thách hôm nay" trước 12h trưa để nhận được nhân đôi (X2) điểm kinh nghiệm đấy!
+                    </p>
+</div>
+</div>
+</main>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        document.querySelectorAll('.chunky-button').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.classList.add('translate-y-0.5', 'translate-x-0.5');
+            });
+            button.addEventListener('mouseup', () => {
+                button.classList.remove('translate-y-0.5', 'translate-x-0.5');
+            });
+            button.addEventListener('mouseleave', () => {
+                button.classList.remove('translate-y-0.5', 'translate-x-0.5');
+            });
+        });
+
+        // Simple store purchase simulation
+        const coinsElement = document.querySelector('.text-primary.font-bold');
+        document.querySelectorAll('.material-symbols-outlined').forEach(icon => {
+            if(icon.textContent === 'add_shopping_cart') {
+                icon.parentElement.addEventListener('click', function() {
+                    const price = parseInt(this.parentElement.querySelector('span:last-child').textContent.replace(',', ''));
+                    let currentCoins = parseInt(coinsElement.textContent.replace(',', ''));
+                    
+                    if(currentCoins >= price) {
+                        currentCoins -= price;
+                        coinsElement.textContent = currentCoins.toLocaleString();
+                        alert('Chúc mừng! Bạn đã mua vật phẩm thành công.');
+                        this.disabled = true;
+                        this.classList.add('bg-tertiary', 'text-white');
+                        this.innerHTML = '<span class="material-symbols-outlined">check</span>';
+                    } else {
+                        alert('Bạn không đủ xu rồi! Hãy hoàn thành thêm thử thách nhé.');
+                    }
+                });
+            }
+        });
+    </script>
+</body></html>

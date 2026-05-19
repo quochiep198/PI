@@ -3,15 +3,11 @@ import { VI_MESSAGES } from '../../content/messages';
 import type { AuthUser } from '../auth/types';
 import { LessonPanel } from './components/LessonPanel';
 import { WorkspacePanel } from './components/WorkspacePanel';
-import { HomeHeader } from './components/HomeHeader';
-import { HomeSideNav } from './components/HomeSideNav';
 import { LevelUpModal } from './components/LevelUpModal';
 import { useLessons, type Lesson } from './useLessons';
 import { useLessonProgress } from './useLessonProgress';
-import { useOnlineLearners } from './useOnlineLearners';
 import { usePyodideRunner } from './usePyodideRunner';
 import { useXP } from './useXP';
-import { MobileNavigation } from '../navigate/NavigateNavigation';
 
 type OutputTone = 'idle' | 'success' | 'error';
 type RuntimeFeedback = {
@@ -39,24 +35,17 @@ function getInitialCode() {
 
 type HomePageProps = {
   user: AuthUser;
-  onLogout: () => Promise<void> | void;
-  onNavigatePractice: () => void;
+  onLogout?: () => Promise<void> | void;
+  onNavigatePractice?: () => void;
 };
 
-export function HomePage({ user, onLogout, onNavigatePractice }: HomePageProps) {
+export function HomePage({ user }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
-  const {
-    onlineLearners,
-    connected: onlinePresenceConnected,
-    failed: onlinePresenceFailed,
-  } = useOnlineLearners();
   const { runCode, startupMessage, status } = usePyodideRunner();
   const {
     xpData,
-    loading: xpLoading,
     showLevelUpModal,
-    pendingXpAnimation,
     recordFirstSuccess,
     dismissLevelUpModal,
   } = useXP();
@@ -320,19 +309,9 @@ export function HomePage({ user, onLogout, onNavigatePractice }: HomePageProps) 
   }
 
   return (
-    <div className="quest-page">
-      <HomeHeader user={user} onLogout={onLogout} />
-
+    <>
       <main className="quest-layout">
-        <HomeSideNav
-          onlineLearners={onlineLearners}
-          onlinePresenceConnected={onlinePresenceConnected}
-          onlinePresenceFailed={onlinePresenceFailed}
-          xpData={xpData}
-          xpLoading={xpLoading}
-          pendingXpAnimation={pendingXpAnimation}
-          onNavigatePractice={onNavigatePractice}
-        />
+        {/* TopBar and SideNav are already rendered in App.tsx */}
 
         <section className="lesson-layout">
           <LessonPanel
@@ -371,8 +350,6 @@ export function HomePage({ user, onLogout, onNavigatePractice }: HomePageProps) 
         newLevel={xpData}
         onDismiss={dismissLevelUpModal}
       />
-
-      <MobileNavigation />
-    </div>
+    </>
   );
 }

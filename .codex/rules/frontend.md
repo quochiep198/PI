@@ -5,7 +5,7 @@
 ### File Organization
 ```
 src/
-├── App.tsx                    # Root component
+├── App.tsx                    # Root component - renders shared layout
 ├── main.tsx                   # Entry point
 ├── content/
 │   ├── messages.ts            # All UI text/messages in Vietnamese
@@ -16,8 +16,12 @@ src/
     │   ├── authApi.ts         # Auth API calls
     │   ├── types.ts           # Auth type definitions
     │   └── useAuthForm.ts     # Auth form hook
+    ├── layout/                # Shared layout components
+    │   ├── TopBar.tsx         # Shared header (XP, Coins, User, Logout)
+    │   ├── SideNav.tsx        # Shared sidebar (Nav items)
+    │   └── index.ts
     ├── home/
-    │   ├── HomePage.tsx       # Main learning interface
+    │   ├── HomePage.tsx       # Main learning interface (content only)
     │   ├── index.ts           # Feature exports
     │   ├── useLessons.ts      # Lessons data hook
     │   ├── useLessonProgress.ts
@@ -26,13 +30,103 @@ src/
     │   └── components/
     │       ├── LessonPanel.tsx
     │       ├── WorkspacePanel.tsx
-    │       ├── HomeHeader.tsx
-    │       ├── HomeSideNav.tsx
-    │       └── index.ts
-    └── navigate/
-        ├── NavigateNavigation.tsx
-        ├── navigation.ts
-        └── index.ts
+    │       └── LevelUpModal.tsx
+    ├── practice/
+    │   ├── PracticePage.tsx   # Practice interface (content only)
+    │   ├── components/
+    │   │   ├── StreakCalendar.tsx
+    │   │   ├── CelebrationModal.tsx
+    │   │   └── DayCell.tsx
+    │   ├── api/
+    │   │   └── streakApi.ts
+    │   ├── hooks/
+    │   │   └── useStreak.ts
+    │   └── types/
+    │       └── streak.ts
+    ├── navigate/
+    │   ├── NavigateNavigation.tsx
+    │   ├── navigation.ts
+    │   └── index.ts
+```
+
+### Shared Layout Architecture
+
+#### Rule: Shared Components Are in `features/layout/`
+
+**DO:**
+```typescript
+// App.tsx - renders layout once
+import { TopBar } from './features/layout/TopBar';
+import { SideNav } from './features/layout/SideNav';
+import { MobileNavigation } from './features/navigate/NavigateNavigation';
+
+function App() {
+  return (
+    <div className="quest-page">
+      <TopBar user={user} xpData={xpData} coins={coins} onLogout={handleLogout} />
+      <div className="quest-layout">
+        <SideNav activeLabel="Lessons" onNavigatePractice={() => setView('practice')} />
+        {view === 'home' ? <HomePage user={user} /> : <PracticePage user={user} />}
+      </div>
+      <MobileNavigation />
+    </div>
+  );
+}
+```
+
+**DON'T:**
+```typescript
+// ❌ Page components should NOT render TopBar/SideNav
+// ❌ Don't duplicate layouts in each page
+// ❌ Don't use page-specific headers (HomeHeader, PracticeHeader)
+```
+
+#### Page Components: Content Only
+
+Page components (HomePage, PracticePage) should ONLY contain their specific content:
+```typescript
+// ✅ HomePage.tsx - Only lesson content
+export function HomePage({ user }: { user: AuthUser }) {
+  return (
+    <>
+      <main className="quest-layout">
+        {/* No TopBar, SideNav, or MobileNavigation here */}
+        <section className="lesson-layout">
+          <LessonPanel ... />
+          <WorkspacePanel ... />
+        </section>
+      </main>
+      <LevelUpModal ... />
+    </>
+  );
+}
+```
+
+#### Shared Layout Components
+
+**TopBar** (`features/layout/TopBar.tsx`):
+- Displays: XP points, Coins, Username, Avatar, Logout button
+- Props: `user`, `xpData`, `coins`, `onLogout`
+- Icon: `social_leaderboard` for XP, `monetization_on` for coins
+
+**SideNav** (`features/layout/SideNav.tsx`):
+- Displays: Online status, Navigation items, Upgrade CTA
+- Props: `activeLabel`, `onlineCount`, `onNavigateLessons`, `onNavigatePractice`
+- Handles navigation between views
+
+#### State Management for Shared Layout
+
+All shared state lives in App.tsx:
+```typescript
+function App() {
+  const [view, setView] = useState<'home' | 'practice'>('home');
+  const [coins, setCoins] = useState(1250);
+  const { xpData } = useXPCached();
+  const { onlineLearners } = useOnlineLearners();
+
+  // Pass down only if children need it
+  return <PageComponent user={user} />;
+}
 ```
 
 ### Directory Conventions

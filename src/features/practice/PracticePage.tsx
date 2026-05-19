@@ -1,21 +1,15 @@
-import { MobileNavigation } from '../navigate/NavigateNavigation';
-import { PracticeHeader } from './PracticeHeader';
-import { PracticeSideNav } from './PracticeSideNav';
+import { StreakCalendar } from './components/StreakCalendar';
 import type { AuthUser } from '../auth/types';
 
 type PracticePageProps = {
   user: AuthUser;
-  onLogout: () => Promise<void> | void;
-  onNavigateHome: () => void;
 };
 
-export function PracticePage({ user, onLogout, onNavigateHome }: PracticePageProps) {
+export function PracticePage({ user }: PracticePageProps) {
   return (
-    <div className="quest-page">
-      <PracticeHeader user={user} onLogout={onLogout} />
-
+    <>
       <div className="quest-layout">
-        <PracticeSideNav onNavigateHome={onNavigateHome} />
+        {/* SideNav is already rendered in App.tsx */}
 
         {/* Main Content */}
         <main className="practice-main">
@@ -23,60 +17,7 @@ export function PracticePage({ user, onLogout, onNavigateHome }: PracticePagePro
             {/* Left Column */}
             <div className="practice-center">
               {/* Daily Streak Section */}
-              <section className="practice-streak">
-                <div className="practice-streak__header">
-                  <h2 className="practice-streak__title">Chuỗi ngày rực rỡ</h2>
-                  <div className="practice-streak__badge">
-                    <span className="material-symbols-outlined practice-streak__fire streak-fire">local_fire_department</span>
-                    <span>12 Ngày</span>
-                  </div>
-                </div>
-                <div className="practice-streak__calendar">
-                  <div className="practice-streak__day">
-                    <span className="practice-streak__day-label">T2</span>
-                    <div className="practice-streak__day-box practice-streak__day-box--done">
-                      <span className="material-symbols-outlined">local_fire_department</span>
-                    </div>
-                  </div>
-                  <div className="practice-streak__day">
-                    <span className="practice-streak__day-label">T3</span>
-                    <div className="practice-streak__day-box practice-streak__day-box--done">
-                      <span className="material-symbols-outlined">local_fire_department</span>
-                    </div>
-                  </div>
-                  <div className="practice-streak__day practice-streak__day--today">
-                    <span className="practice-streak__day-label">T4</span>
-                    <div className="practice-streak__day-box practice-streak__day-box--today">
-                      <span className="material-symbols-outlined">star</span>
-                      <div className="practice-streak__day-today-dot" />
-                    </div>
-                  </div>
-                  <div className="practice-streak__day practice-streak__day--locked">
-                    <span className="practice-streak__day-label">T5</span>
-                    <div className="practice-streak__day-box practice-streak__day-box--locked">
-                      <span className="material-symbols-outlined">lock</span>
-                    </div>
-                  </div>
-                  <div className="practice-streak__day practice-streak__day--locked">
-                    <span className="practice-streak__day-label">T6</span>
-                    <div className="practice-streak__day-box practice-streak__day-box--locked">
-                      <span className="material-symbols-outlined">lock</span>
-                    </div>
-                  </div>
-                  <div className="practice-streak__day practice-streak__day--locked">
-                    <span className="practice-streak__day-label">T7</span>
-                    <div className="practice-streak__day-box practice-streak__day-box--locked">
-                      <span className="material-symbols-outlined">lock</span>
-                    </div>
-                  </div>
-                  <div className="practice-streak__day practice-streak__day--locked">
-                    <span className="practice-streak__day-label">CN</span>
-                    <div className="practice-streak__day-box practice-streak__day-box--locked">
-                      <span className="material-symbols-outlined">lock</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
+              <StreakCalendar userId={user.id} />
 
               {/* Daily Challenges Section */}
               <section className="practice-challenges">
@@ -310,8 +251,6 @@ export function PracticePage({ user, onLogout, onNavigateHome }: PracticePagePro
           </div>
         </main>
       </div>
-
-      <MobileNavigation />
-    </div>
+    </>
   );
 }
