@@ -32,6 +32,9 @@ const XP_FIRST_SUCCESS_RUN = 10;
 const XP_DAILY_CHALLENGE = 30;
 const XP_DAILY_CHALLENGE_BONUS = 30;
 
+// Coins System Constants
+const COINS_LESSON_COMPLETE = 100;
+
 const LEVEL_THRESHOLDS = [
   { level: 1, name: 'Người mới', minXp: 0 },
   { level: 2, name: 'Học viên', minXp: 100 },
@@ -429,6 +432,28 @@ async function addUserXp(userId, xpAmount, source, lessonId = null) {
   await query(
     `INSERT INTO user_xp_log (user_id, xp_amount, source, lesson_id) VALUES ($1, $2, $3, $4)`,
     [userId, xpAmount, source, lessonId || null],
+  );
+}
+
+async function ensureUserCoins(userId) {
+  await query(
+    `INSERT INTO user_coins (user_id, coins) VALUES ($1, 0) ON CONFLICT (user_id) DO NOTHING`,
+    [userId],
+  );
+}
+
+async function getUserCoins(userId) {
+  const result = await query(
+    `SELECT coins FROM user_coins WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return result[0]?.coins ?? 0;
+}
+
+async function addUserCoins(userId, coinsAmount) {
+  await query(
+    `INSERT INTO user_coins (user_id, coins) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET coins = user_coins.coins + $2`,
+    [userId, coinsAmount],
   );
 }
 
@@ -1097,6 +1122,8 @@ export async function completeProgressHandler(request, response) {
     await ensureUserXp(user.id);
     let xpData = null;
     const alreadyClaimed = await hasUserClaimedLessonXp(user.id, lessonId, XP_SOURCES.LESSON_COMPLETE_FIRST);
+    let coinsEarned = 0;
+
     if (!alreadyClaimed) {
       await addUserXp(user.id, XP_LESSON_COMPLETE_FIRST, XP_SOURCES.LESSON_COMPLETE_FIRST, lessonId);
       xpData = await getUserXp(user.id);
@@ -1104,7 +1131,11 @@ export async function completeProgressHandler(request, response) {
       xpData = await getUserXp(user.id);
     }
 
-    response.status(201).json({ ok: true, xp: xpData });
+    await ensureUserCoins(user.id);
+    await addUserCoins(user.id, COINS_LESSON_COMPLETE);
+    coinsEarned = COINS_LESSON_COMPLETE;
+
+    response.status(201).json({ ok: true, xp: xpData, coins: coinsEarned });
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to save lesson progress.',
@@ -1550,6 +1581,25 @@ export async function postXpHandler(request, response) {
     return recordFirstSuccessHandler(request, response);
   }
   return addXpHandler(request, response);
+}
+
+export async function getCoinsHandler(request, response) {
+  try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      response.status(401).json({ message: 'Authentication required.' });
+      return;
+    }
+
+    await ensureAppSchema();
+    await ensureUserCoins(user.id);
+    const coins = await getUserCoins(user.id);
+    response.json({ coins });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to load coins.',
+    });
+  }
 }
 
 export async function recordFirstSuccessHandler(request, response) {

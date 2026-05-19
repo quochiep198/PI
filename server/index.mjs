@@ -16,6 +16,7 @@ import {
   progressHandler,
   registerHandler,
   postXpHandler,
+  getCoinsHandler,
 } from './handlers.mjs';
 import { ensureAppSchema } from './db.mjs';
 
@@ -43,6 +44,7 @@ app.get('/api/progress', progressHandler);
 app.post('/api/progress/complete', completeProgressHandler);
 app.get('/api/xp', getXpHandler);
 app.post('/api/xp', postXpHandler);
+app.get('/api/coins', getCoinsHandler);
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 app.post('/api/lessons', createLessonHandler);

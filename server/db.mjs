@@ -147,6 +147,14 @@ export async function ensureAppSchema() {
   `);
 
   await execute(`
+    CREATE TABLE IF NOT EXISTS user_coins (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+      coins INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
+  await execute(`
     CREATE TABLE IF NOT EXISTS user_lesson_first_success (
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
