@@ -6,6 +6,7 @@ import { PracticePage } from './features/practice/PracticePage';
 import { TopBar } from './features/layout/TopBar';
 import { SideNav } from './features/layout/SideNav';
 import { useXPCached } from './features/home/useXPCached';
+import { useCoinsCached } from './features/home/useCoinsCached';
 import { useOnlineLearners } from './features/home/useOnlineLearners';
 import { MobileNavigation } from './features/navigate/NavigateNavigation';
 
@@ -30,7 +31,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [view, setView] = useState<View>('home');
-  const coins = 1250;
+  const { coins } = useCoinsCached();
 
   // Shared hooks
   const { xpData } = useXPCached();

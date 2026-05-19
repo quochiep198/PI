@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { VI_MESSAGES } from '../../content/messages';
+import { addCoins } from '../shared/coinsCache';
 
 export function useLessonProgress() {
   const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
@@ -40,24 +41,37 @@ export function useLessonProgress() {
     };
   }, []);
 
-  async function markLessonCompleted(lessonId: number) {
-    const response = await fetch('/api/progress/complete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        lessonId,
-      }),
-    });
+  async function markLessonCompleted(lessonId: number): Promise<{ coinsEarned?: number }> {
+    try {
+      const response = await fetch('/api/progress/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lessonId,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(VI_MESSAGES.progress.saveFailed);
+      if (!response.ok) {
+        throw new Error(VI_MESSAGES.progress.saveFailed);
+      }
+
+      const data = await response.json();
+      const coinsEarned = data?.coins ?? 0;
+
+      if (coinsEarned > 0) {
+        addCoins(coinsEarned);
+      }
+
+      setCompletedLessonIds((currentIds) =>
+        currentIds.includes(lessonId) ? currentIds : [...currentIds, lessonId],
+      );
+
+      return { coinsEarned };
+    } catch (err) {
+      throw err instanceof Error ? err : new Error(VI_MESSAGES.progress.saveFailed);
     }
-
-    setCompletedLessonIds((currentIds) =>
-      currentIds.includes(lessonId) ? currentIds : [...currentIds, lessonId],
-    );
   }
 
   return {

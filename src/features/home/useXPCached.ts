@@ -1,60 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { getCachedXp, setCachedXp, subscribeXpChanges, isCacheValid, DEFAULT_XP } from '../shared/xpCache';
 import type { XpLevel } from './useXP';
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-const cachedXpData = {
-  data: null as XpLevel | null,
-  timestamp: 0,
-};
-
 export function useXPCached() {
-  const [xpData, setXpData] = useState<XpLevel>(
-    cachedXpData.data ?? {
-      level: 1,
-      name: 'Người mới',
-      minXp: 0,
-      totalXp: 0,
-      xpInCurrentLevel: 0,
-      xpToNextLevel: 100,
-      progressPercent: 0,
-    }
+  // Use useSyncExternalStore for automatic re-renders when cache changes
+  const xpData = useSyncExternalStore(
+    subscribeXpChanges,
+    getCachedXp,
+    getCachedXp, // SSR fallback
   );
-  const [loading, setLoading] = useState(!cachedXpData.data);
+
+  // Fetch initial data if cache is invalid
+  const [loading, setLoading] = useState(() => !isCacheValid());
 
   useEffect(() => {
-    const now = Date.now();
-
-    if (cachedXpData.data && (now - cachedXpData.timestamp) < CACHE_DURATION) {
-      setXpData(cachedXpData.data);
-      setLoading(false);
-      return;
-    }
-
     let active = true;
 
-    async function loadXp() {
-      try {
-        const response = await fetch('/api/xp');
-        if (!response.ok) {
-          setLoading(false);
-          return;
+    if (!isCacheValid()) {
+      async function loadXp() {
+        try {
+          const response = await fetch('/api/xp');
+          if (!response.ok) {
+            setCachedXp(DEFAULT_XP);
+            if (active) setLoading(false);
+            return;
+          }
+          const data = await response.json();
+          if (active) {
+            setCachedXp(data);
+            setLoading(false);
+          }
+        } catch {
+          if (active) {
+            setCachedXp(DEFAULT_XP);
+            setLoading(false);
+          }
         }
-        const data = await response.json();
-        if (!active) return;
-
-        cachedXpData.data = data;
-        cachedXpData.timestamp = now;
-
-        setXpData(data);
-      } catch {
-        // keep cached or default
-      } finally {
-        if (active) setLoading(false);
       }
-    }
 
-    void loadXp();
+      void loadXp();
+    }
 
     return () => {
       active = false;
