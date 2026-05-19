@@ -30,7 +30,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [view, setView] = useState<View>('home');
-  const [coins, setCoins] = useState(1250);
+  const coins = 1250;
 
   // Shared hooks
   const { xpData } = useXPCached();

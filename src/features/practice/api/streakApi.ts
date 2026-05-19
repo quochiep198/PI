@@ -18,7 +18,6 @@ function generateWeekDays(checkedInDates: string[]): StreakData['weekDays'] {
     date.setDate(monday.getDate() + i);
     const dateStr = date.toISOString().split('T')[0];
     const isToday = dateStr === today.toISOString().split('T')[0];
-    const isPast = date < today && !isToday;
     const isFuture = date > today;
 
     const isCompleted = checkedInDates.includes(dateStr);

@@ -97,7 +97,7 @@ export const StreakCalendar: FC<StreakCalendarProps> = ({ userId }) => {
         </div>
 
         <div className="practice-streak__calendar" role="grid" aria-label="Lịch streak tuần">
-          {streakData.weekDays.map((day, index) => (
+          {streakData.weekDays.map((day) => (
             <DayCell
               key={day.date}
               day={day}
