@@ -1460,7 +1460,7 @@ Phong cach:
         },
         {
           role: 'user',
-          content: hintPrompt,
+          content: systemPrompt,
         },
       ],
       modelOrder: entitlement.modelOrder,
