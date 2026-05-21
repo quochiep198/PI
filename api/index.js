@@ -7,6 +7,7 @@ import {
   createLessonHandler,
   errorFeedbackHandler,
   forgotPasswordHandler,
+  getChallengesHandler,
   getCoinsHandler,
   getLeaderboardHandler,
   getStreakHandler,
@@ -21,6 +22,7 @@ import {
   progressHandler,
   registerHandler,
   resetPasswordHandler,
+  submitChallengeHandler,
   updateAvatarHandler,
   updateSettingsHandler,
 } from '../server/handlers.mjs';
