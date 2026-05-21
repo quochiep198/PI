@@ -1024,7 +1024,7 @@ export async function loginHandler(request, response) {
 
     if (!userRecord || !isValid) {
       response.status(401).json({
-        message: 'Thﾃｴng tin ﾄ惰ハg nh蘯ｭp khﾃｴng h盻｣p l盻・',
+        message: 'Thông tin đăng nhập không hợp lệ.',
       });
       return;
     }

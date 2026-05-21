@@ -220,6 +220,11 @@ type UseStreakReturn = {
 };
 ```
 
+### 5.6 thiết lập quan hệ giữa user và Streak
+- Nếu user đã Streak rồi thì sẽ không được Streak lại dù có reload lại page
+- Tạo bảng quan hệ giữa Streak à User
+- Nếu user đã Streak rồi thì phải cập nhật coin liền, không phải reload lại mới cập nhật
+
 ---
 
 ## 6. Challenges Section
