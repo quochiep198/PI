@@ -654,90 +654,103 @@ async function generateHintWithFallback({ messages, modelOrder, maxCompletionTok
   throw lastError || new Error('Failed to generate hint.');
 }
 
-async function analyzeLessonError({ lesson, code, errorOutput, errorHistory }) {
+async function analyzeLessonError({ lesson, code, errorOutput, errorHistory = [] }) {
   const historySummary =
     errorHistory.length > 0
       ? errorHistory
           .map((item, index) => {
             const tags = extractMistakeTags(item.mistakeTags).join(', ') || 'không có tag';
-            return `${index + 1}. Lỗi: ${item.errorMessage}\nGiải thích cũ: ${item.aiExplanation}\nGợi ý cũ: ${item.aiGuidance}\nTag: ${tags}`;
+
+            return [
+              `${index + 1}. Lỗi: ${item.errorMessage || 'Không rõ lỗi'}`,
+              `Giải thích cũ: ${item.aiExplanation || 'Không có'}`,
+              `Gợi ý cũ: ${item.aiGuidance || 'Không có'}`,
+              `Tag: ${tags}`,
+            ].join('\n');
           })
           .join('\n\n')
       : 'Chưa có lịch sử lỗi trước đó.';
 
   const systemPrompt = `
-B蘯｡n lﾃ tr盻｣ lﾃｽ d蘯｡y Python cho h盻皇 sinh l盻孅 6.
+Bạn là trợ lý dạy Python cho học sinh lớp 6.
 
-Ngu盻渡 phﾃ｢n tﾃｭch chﾃｭnh:
-- ﾆｯu tiﾃｪn ﾄ黛ｻ皇 k盻ｹ Traceback/l盻擁 Python ﾄ柁ｰ盻｣c cung c蘯･p.
-- Khﾃｴng ﾄ双ﾃ｡n b盻ｫa n蘯ｿu Traceback ﾄ妥｣ ch盻・rﾃｵ nguyﾃｪn nhﾃ｢n.
-- Ph蘯｣i nﾃｳi rﾃｵ l盻擁 n蘯ｱm 盻・ﾄ妥｢u, vﾃｬ sao Python bﾃ｡o l盻擁 ﾄ妥ｳ, vﾃ h盻皇 sinh c蘯ｧn chﾃｺ ﾃｽ ﾄ訴盻ノ nﾃo.
+Nguyên tắc phân tích chính:
+- Ưu tiên đọc kỹ Traceback/lỗi Python được cung cấp.
+- Không đoán bừa nếu Traceback đã chỉ rõ nguyên nhân.
+- Phải nói rõ lỗi nằm ở đâu, vì sao Python báo lỗi đó, và học sinh cần chú ý điều nào.
 
-M盻･c tiﾃｪu ph蘯｣n h盻妬:
-- Gi蘯｣i thﾃｭch th蘯ｭt rﾃｵ rﾃng nhﾆｰng ng蘯ｯn g盻肱, d盻・hi盻ブ v盻嬖 h盻皇 sinh 11-12 tu盻品.
-- Dﾃｹng gi盻肱g khuy蘯ｿn khﾃｭch, giﾃｺp h盻皇 sinh th蘯･y l盻擁 lﾃ bﾃｬnh thﾆｰ盻拵g vﾃ cﾃｳ th盻・s盻ｭa ﾄ柁ｰ盻｣c.
-- Ch盻・ra l盻擁 ﾄ疎ng l蘯ｷp l蘯｡i n蘯ｿu l盻議h s盻ｭ l盻擁 cho th蘯･y ﾄ訴盻「 ﾄ妥ｳ.
-- Luﾃｴn thﾃｪm cﾃ｡ch trﾃ｡nh b盻・l蘯｡i l蘯ｧn sau.
-- Khﾃｴng ﾄ柁ｰa full ﾄ妥｡p ﾃ｡n hoﾃn ch盻穎h.
+Mục tiêu phản hồi:
+- Giải thích thật rõ ràng nhưng ngắn gọn, dễ hiểu với học sinh 11-12 tuổi.
+- Dùng giọng khuyến khích, giúp học sinh thấy lỗi là bình thường và có thể sửa được.
+- Chỉ ra lỗi đang lặp lại nếu lịch sử lỗi cho thấy điều đó.
+- Luôn thêm cách tránh bị lặp lại lỗi lần sau.
+- Không đưa full đáp án hoàn chỉnh.
 
-Yﾃｪu c蘯ｧu ﾄ黛ｺｧu ra:
-- Tr蘯｣ v盻・JSON h盻｣p l盻・
-- Dﾃｹng ﾄ妥ｺng schema:
-  {
-    "explanation": "string",
-    "fixFocus": "string",
-    "preventionTip": "string",
-    "guidance": "string",
-    "mistakeTags": ["string"]
-  }
+Yêu cầu đầu ra:
+- Chỉ trả về JSON hợp lệ.
+- Không bọc JSON trong markdown.
+- Không thêm giải thích bên ngoài JSON.
+- Dùng đúng schema:
 
-Rﾃng bu盻冂 n盻冓 dung:
-- \`explanation\` g盻杜 2-4 cﾃ｢u, gi蘯｣i thﾃｭch d盻ｱa trﾃｪn Traceback, nﾃｪu nguyﾃｪn nhﾃ｢n vﾃ v盻・trﾃｭ/ng盻ｯ c蘯｣nh l盻擁.
-- \`fixFocus\` g盻杜 1-3 cﾃ｢u, nﾃｳi rﾃｵ h盻皇 sinh nﾃｪn nhﾃｬn vﾃo ch盻・nﾃo ﾄ黛ｻ・s盻ｭa.
-- \`preventionTip\` g盻杜 1-3 cﾃ｢u, mang tﾃｭnh khuy蘯ｿn khﾃｭch vﾃ ch盻・cﾃ｡ch ﾄ黛ｻ・trﾃ｡nh l蘯ｷp l蘯｡i l盻擁 l蘯ｧn sau.
-- \`guidance\` lﾃ b蘯｣n g盻冪 ng蘯ｯn c盻ｧa \`fixFocus\` vﾃ \`preventionTip\`.
-- N蘯ｿu lﾃ l盻擁 l蘯ｷp l蘯｡i, hﾃ｣y nﾃｳi nh蘯ｹ nhﾃng r蘯ｱng h盻皇 sinh ﾄ疎ng g蘯ｷp l蘯｡i l盻擁 quen thu盻冂 nﾃy.
-- \`mistakeTags\` g盻杜 1-5 nhﾃ｣n ng蘯ｯn nhﾆｰ "syntax", "indentation", "variable-name", "print", "colon".
+{
+  "explanation": "string",
+  "fixFocus": "string",
+  "preventionTip": "string",
+  "guidance": "string",
+  "mistakeTags": ["string"]
+}
+
+Ràng buộc nội dung:
+- "explanation" gồm 2-4 câu, giải thích dựa trên Traceback, nêu nguyên nhân và vị trí/ngữ cảnh lỗi.
+- "fixFocus" gồm 1-3 câu, nói rõ học sinh nên nhìn vào chỗ nào để sửa.
+- "preventionTip" gồm 1-3 câu, mang tính khuyến khích và chỉ cách tránh lặp lại lỗi lần sau.
+- "guidance" là bản gợi ý ngắn, kết hợp "fixFocus" và "preventionTip".
+- Nếu là lỗi lặp lại, hãy nói nhẹ nhàng rằng học sinh đang gặp lại lỗi quen thuộc này.
+- "mistakeTags" gồm 1-5 nhãn ngắn như "syntax", "indentation", "variable-name", "print", "colon", "parentheses", "string", "input", "loop", "condition".
 `.trim();
+
+  const userPrompt = [
+    `Bài học: ${lesson?.title || 'Không rõ bài học'}`,
+    `Mục tiêu: ${lesson?.objective || 'Không rõ mục tiêu'}`,
+    lesson?.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
+    `Code hiện tại:\n${code || ''}`,
+    `Traceback / lỗi Python:\n${errorOutput || 'Không có traceback cụ thể.'}`,
+    `Lịch sử lỗi gần đây của học sinh:\n${historySummary}`,
+    'Hãy phân tích bám sát Traceback trước, rồi trả lời bằng JSON hợp lệ theo đúng schema.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   const content = await callGroqChat(
     [
       { role: 'system', content: systemPrompt },
-      {
-        role: 'user',
-        content: [
-          `Bﾃi h盻皇: ${lesson.title}`,
-          `M盻･c tiﾃｪu: ${lesson.objective}`,
-          lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
-          `Code hi盻㌻ t蘯｡i:\n${code}`,
-          `Traceback / l盻擁 Python:\n${errorOutput}`,
-          `L盻議h s盻ｭ l盻擁 g蘯ｧn ﾄ妥｢y c盻ｧa h盻皇 sinh:\n${historySummary}`,
-          'Hﾃ｣y phﾃ｢n tﾃｭch bﾃ｡m sﾃ｡t Traceback trﾆｰ盻嫩, r盻妬 tr蘯｣ l盻拱 th蘯ｭt rﾃｵ rﾃng, tﾃｭch c盻ｱc, vﾃ cﾃｳ m蘯ｹo ﾄ黛ｻ・khﾃｴng b盻・l蘯｡i l蘯ｧn sau.',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      },
+      { role: 'user', content: userPrompt },
     ],
     0.2,
   );
 
   const parsed = safeJsonParse(content);
+
   const explanation =
     parsed && typeof parsed.explanation === 'string' && parsed.explanation.trim()
       ? parsed.explanation.trim()
-      : 'Code ﾄ疎ng g蘯ｷp l盻擁 Python. Khﾃｴng sao c蘯｣, mﾃｬnh s盻ｭa t盻ｫng chﾃｺt lﾃ ﾄ柁ｰ盻｣c. Hﾃ｣y nhﾃｬn k盻ｹ dﾃｲng bﾃ｡o l盻擁 cu盻訴 cﾃｹng vﾃｬ ﾄ妥ｳ thﾆｰ盻拵g lﾃ manh m盻訴 quan tr盻肱g nh蘯･t.';
-  const guidance =
-    parsed && typeof parsed.guidance === 'string' && parsed.guidance.trim()
-      ? parsed.guidance.trim()
-      : 'Em hﾃ｣y ki盻ノ tra l蘯｡i d蘯･u ngo蘯ｷc, d蘯･u hai ch蘯･m, tﾃｪn bi蘯ｿn vﾃ cﾃ｡ch th盻･t l盻・盻・g蘯ｧn dﾃｲng bﾃ｡o l盻擁. L蘯ｧn sau, sau m盻擁 l蘯ｧn vi蘯ｿt m盻冲 ﾄ双蘯｡n ng蘯ｯn, em ch蘯｡y th盻ｭ ngay ﾄ黛ｻ・phﾃ｡t hi盻㌻ l盻擁 s盻嬶 hﾆ｡n.';
+      : 'Code đang gặp lỗi Python. Không sao cả, lỗi này có thể sửa từng chút một. Hãy nhìn kỹ dòng báo lỗi cuối cùng vì đó thường là manh mối quan trọng nhất.';
+
   const fixFocus =
     parsed && typeof parsed.fixFocus === 'string' && parsed.fixFocus.trim()
       ? parsed.fixFocus.trim()
-      : 'Em hﾃ｣y nhﾃｬn vﾃo dﾃｲng g蘯ｧn ch盻・Python bﾃ｡o l盻擁 nh蘯･t, r盻妬 ki盻ノ tra l蘯｡i d蘯･u ngo蘯ｷc, d蘯･u hai ch蘯･m vﾃ tﾃｪn bi蘯ｿn 盻・ﾄ双蘯｡n ﾄ妥ｳ.';
+      : 'Em hãy nhìn vào dòng gần chỗ Python báo lỗi nhất, rồi kiểm tra lại dấu ngoặc, dấu hai chấm, tên biến và cách thụt lề.';
+
   const preventionTip =
     parsed && typeof parsed.preventionTip === 'string' && parsed.preventionTip.trim()
       ? parsed.preventionTip.trim()
-      : 'Khﾃｴng sao c蘯｣, l盻擁 nﾃy s盻ｭa ﾄ柁ｰ盻｣c. L蘯ｧn sau em hﾃ｣y vi蘯ｿt t盻ｫng ﾄ双蘯｡n ng蘯ｯn r盻妬 ch蘯｡y th盻ｭ ngay ﾄ黛ｻ・b蘯ｯt l盻擁 s盻嬶 hﾆ｡n.';
+      : 'Không sao cả, lỗi này sửa được. Lần sau em hãy viết từng đoạn ngắn rồi chạy thử ngay để phát hiện lỗi sớm hơn.';
+
+  const guidance =
+    parsed && typeof parsed.guidance === 'string' && parsed.guidance.trim()
+      ? parsed.guidance.trim()
+      : `${fixFocus} ${preventionTip}`;
+
   const mistakeTags = extractMistakeTags(parsed?.mistakeTags);
 
   return {
@@ -748,6 +761,7 @@ Rﾃng bu盻冂 n盻冓 dung:
     mistakeTags: mistakeTags.length > 0 ? mistakeTags : ['python-error'],
   };
 }
+
 
 function hashSessionToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
