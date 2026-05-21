@@ -66,4 +66,8 @@ app.post('/api/streak/:userId/checkin', checkInHandler);
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 
+// Challenge routes
+app.get('/api/challenges', getChallengesHandler);
+app.post('/api/challenges/submit', submitChallengeHandler);
+
 export default app;

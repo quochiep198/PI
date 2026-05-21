@@ -1,164 +1,186 @@
-import { useState } from 'react';
-import type { AccessoriesTab } from './types';
-
-const DEFAULT_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCIkAiQkgSAnU6vT1eJbdd29RFBKCvirjBnjNFsbvtTYJOIoPqMDkzoGgeeMQbtOWZ1QsotjNXoRQRlfPJRtx_RqWNJX8TJuj95nAeZPhEt4u2W4NboSi5oi0bTO1bevMSPHeAoDqmC0xXCSEya7HFfa-hkhgpZpLhJhQYnC5p8Dh0_upeGYKLTOqWJGPxaBRbnzR8a3vcPh8sE8yW9rqrn9uH6gQT-Ycc9mEm72iSk57LF4B_07q7u2MaajmO2Lgh9fmJsFRpX3WUl';
-
-const TABS: { id: AccessoriesTab; label: string; icon: string }[] = [
-  { id: 'all', label: 'Tất cả', icon: 'apps' },
-  { id: 'hats', label: 'Mũ/Tóc', icon: 'style' },
-  { id: 'glasses', label: 'Kính', icon: 'visibility' },
-  { id: 'clothes', label: 'Trang phục', icon: 'apparel' },
-  { id: 'back', label: 'Phụ kiện lưng', icon: 'backpack' },
+const ASSET_TYPES = [
+  { value: 'hat', label: 'Hat' },
+  { value: 'jacket', label: 'Jacket' },
+  { value: 'glasses', label: 'Glasses' },
+  { value: 'pet', label: 'Pet' },
+  { value: 'keyboard', label: 'Keyboard' },
+  { value: 'backpack', label: 'Backpack' },
 ];
 
-const SAMPLE_ACCESSORIES = [
-  { id: '1', name: 'Mũ Quý Tộc', icon: 'fort', rarity: 'rare' as const, equipped: true, category: 'hats' as AccessoriesTab },
-  { id: '2', name: 'Vương Miện Vàng', icon: 'crown', rarity: 'legendary' as const, equipped: false, category: 'hats' as AccessoriesTab },
-  { id: '3', name: 'Kính Cyber', icon: 'smart_toy', rarity: 'common' as const, equipped: false, category: 'glasses' as AccessoriesTab },
-  { id: '4', name: 'Tai Nghe Neon', icon: 'headphones', rarity: 'common' as const, equipped: false, category: 'glasses' as AccessoriesTab },
-  { id: '5', name: 'Giáp Python', icon: 'shield', rarity: 'rare' as const, equipped: false, category: 'clothes' as AccessoriesTab },
-  { id: '6', name: 'Áo Choàng Rồng', icon: 'psychology', rarity: 'epic' as const, equipped: false, category: 'clothes' as AccessoriesTab },
-  { id: '7', name: 'Balo Tên Lửa', icon: 'rocket_launch', rarity: 'epic' as const, equipped: false, category: 'back' as AccessoriesTab },
-  { id: '8', name: 'Cánh Thiên Thần', icon: 'flight', rarity: 'legendary' as const, equipped: false, category: 'back' as AccessoriesTab },
-];
+const RARITY_TIERS = ['common', 'rare', 'epic', 'legendary'] as const;
 
 const RARITY_COLORS: Record<string, string> = {
-  common: 'var(--color-outline)',
-  rare: 'var(--color-secondary)',
-  epic: 'var(--color-tertiary-container)',
-  legendary: 'var(--color-primary)',
-};
-
-const RARITY_LABELS: Record<string, string> = {
-  common: 'C',
-  rare: 'H',
-  epic: 'E',
-  legendary: 'L',
-};
-
-const RARITY_NAMES: Record<string, string> = {
-  common: 'Thường',
-  rare: 'Hiếm',
-  epic: 'Epic',
-  legendary: 'Huyền Thoại',
+  common: '#757687',
+  rare: '#437e6b',
+  epic: '#705d00',
+  legendary: '#3045e3',
 };
 
 export function AccessoriesPage() {
-  const [activeTab, setActiveTab] = useState<AccessoriesTab>('all');
-
-  const filteredItems = activeTab === 'all'
-    ? SAMPLE_ACCESSORIES
-    : SAMPLE_ACCESSORIES.filter((item) => item.category === activeTab);
-
   return (
     <div className="accessories-layout">
-      {/* Left: Character Preview */}
-      <section className="accessories-character">
-        <div className="accessories-character__bg" />
-        <h2 className="accessories-character__title">Nhân Vật Của Bạn</h2>
+      <header className="accessories-header-section">
+        <h2 className="accessories-header-section__title">Upload New Asset</h2>
+        <p className="accessories-header-section__subtitle">
+          Expand the PythonQuest world with a brand new physical or digital artifact.
+        </p>
+      </header>
 
-        <div className="accessories-character__stage">
-          <div className="accessories-character__glow" />
-          <div className="accessories-character__bot">
-            <img
-              alt="Py-Bot"
-              className="accessories-character__bot-image"
-              src={DEFAULT_AVATAR}
-            />
-            <div className="accessories-character__equipped-badge">
-              <span className="material-symbols-outlined">verified</span>
+      <div className="accessories-grid">
+        {/* Left Column: Primary Details */}
+        <div className="accessories-main-column">
+          {/* Basic Info Card */}
+          <div className="accessories-card">
+            <div className="accessories-form-grid">
+              <div className="accessories-form-group accessories-form-group--full">
+                <label className="accessories-form-label">Asset Name</label>
+                <input
+                  className="accessories-input"
+                  placeholder="e.g. Glowing Syntax Scarf"
+                  type="text"
+                />
+              </div>
+
+              <div className="accessories-form-group">
+                <label className="accessories-form-label">Asset Type</label>
+                <select className="accessories-select">
+                  {ASSET_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="accessories-form-group">
+                <label className="accessories-form-label">Rarity Tier</label>
+                <div className="accessories-rarity-group">
+                  {RARITY_TIERS.map((tier, index) => (
+                    <button
+                      key={tier}
+                      className={`accessories-rarity-btn${index === 0 ? ' is-active' : ''}`}
+                      type="button"
+                      style={{
+                        '--rarity-color': RARITY_COLORS[tier],
+                      } as React.CSSProperties}
+                    >
+                      {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="accessories-form-group accessories-form-group--full">
+                <label className="accessories-form-label">Description</label>
+                <textarea
+                  className="accessories-textarea"
+                  placeholder="How does this item help the Python Quest hero?"
+                  rows={4}
+                />
+              </div>
             </div>
           </div>
-          <div className="accessories-character__shadow" />
-        </div>
 
-        <div className="accessories-character__name-plate">
-          <span className="accessories-character__player-name">PyMaster_2024</span>
-          <span className="accessories-character__level">Cấp 42</span>
-        </div>
-
-        <div className="accessories-character__stats">
-          <div className="accessories-stat">
-            <span className="accessories-stat__value">8</span>
-            <span className="accessories-stat__label">Vật phẩm</span>
-          </div>
-          <div className="accessories-stat">
-            <span className="accessories-stat__value">3</span>
-            <span className="accessories-stat__label">Đã trang bị</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Right: Accessories Grid */}
-      <section className="accessories-grid-section">
-        <div className="accessories-header">
-          <div className="accessories-header__title-row">
-            <h3 className="accessories-header__title">Phụ Kiện & Trang Bị</h3>
-            <span className="accessories-header__count">{filteredItems.length} vật phẩm</span>
-          </div>
-
-          <div className="accessories-tabs">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                className={`accessories-tab${activeTab === tab.id ? ' is-active' : ''}`}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <span className="material-symbols-outlined">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="accessories-items-container">
-          <div className="accessories-items">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className={`accessories-item${item.equipped ? ' is-equipped' : ''}`}
-              >
-                <div className="accessories-item__rarity-badge" style={{ backgroundColor: RARITY_COLORS[item.rarity] }}>
-                  {RARITY_LABELS[item.rarity]}
-                </div>
-                {item.equipped && (
-                  <div className="accessories-item__equipped-check">
-                    <span className="material-symbols-outlined">check</span>
-                  </div>
-                )}
-                <div className="accessories-item__icon">
-                  <span className="material-symbols-outlined" style={{ color: RARITY_COLORS[item.rarity] }}>
-                    {item.icon}
-                  </span>
-                </div>
-                <p className="accessories-item__name">{item.name}</p>
-                <p className="accessories-item__rarity">{RARITY_NAMES[item.rarity]}</p>
+          {/* Image Upload Area */}
+          <div className="accessories-card accessories-upload-card">
+            <div className="accessories-upload-stripe" />
+            <label className="accessories-form-label">Visual Asset</label>
+            <div className="accessories-dropzone">
+              <div className="accessories-dropzone__icon">
+                <span className="material-symbols-outlined">cloud_upload</span>
               </div>
-            ))}
+              <h3 className="accessories-dropzone__title">Drag and drop your asset file</h3>
+              <p className="accessories-dropzone__hint">
+                Supports PNG, SVG, and WEBP (Recommended 1024x1024)
+              </p>
+              <button className="accessories-dropzone__browse" type="button">
+                Browse Files
+              </button>
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="accessories-mobile-nav">
-        <button className="accessories-mobile-nav__item" type="button">
-          <span className="material-symbols-outlined">map</span>
-          <span>Map</span>
-        </button>
-        <button className="accessories-mobile-nav__item" type="button">
-          <span className="material-symbols-outlined">code</span>
-          <span>Luyện tập</span>
-        </button>
-        <button className="accessories-mobile-nav__item" type="button">
-          <span className="material-symbols-outlined">military_tech</span>
-          <span>Phụ kiện</span>
-        </button>
-        <button className="accessories-mobile-nav__item" type="button">
-          <span className="material-symbols-outlined">account_circle</span>
-          <span>Hồ sơ</span>
-        </button>
-      </nav>
+        {/* Right Column: Stats & Actions */}
+        <div className="accessories-side-column">
+          {/* Stats Configurator Card */}
+          <div className="accessories-card accessories-stats-card">
+            <h3 className="accessories-stats-title">
+              <span className="material-symbols-outlined">query_stats</span>
+              Stats Config
+            </h3>
+
+            <div className="accessories-stats-list">
+              <div className="accessories-stat-row">
+                <div className="accessories-stat-header">
+                  <label className="accessories-stat-label">Coding Speed</label>
+                  <span className="accessories-stat-value">85</span>
+                </div>
+                <div className="accessories-slider-track">
+                  <div className="accessories-slider-fill accessories-slider-fill--gold" style={{ width: '85%' }} />
+                </div>
+                <input className="accessories-slider" type="range" defaultValue="85" />
+              </div>
+
+              <div className="accessories-stat-row">
+                <div className="accessories-stat-header">
+                  <label className="accessories-stat-label">Logic Power</label>
+                  <span className="accessories-stat-value">42</span>
+                </div>
+                <div className="accessories-slider-track">
+                  <div className="accessories-slider-fill accessories-slider-fill--mint" style={{ width: '42%' }} />
+                </div>
+                <input className="accessories-slider" type="range" defaultValue="42" />
+              </div>
+
+              <div className="accessories-stat-row">
+                <div className="accessories-stat-header">
+                  <label className="accessories-stat-label">Debug Defense</label>
+                  <span className="accessories-stat-value">60</span>
+                </div>
+                <div className="accessories-slider-track">
+                  <div className="accessories-slider-fill" style={{ width: '60%' }} />
+                </div>
+                <input className="accessories-slider" type="range" defaultValue="60" />
+              </div>
+            </div>
+
+            <div className="accessories-rank-footer">
+              <div className="accessories-rank-badge">
+                A+
+              </div>
+              <div className="accessories-rank-info">
+                <p className="accessories-rank-info__title">Calculated Rank</p>
+                <p className="accessories-rank-info__subtitle">Based on power levels</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview Card */}
+          <div className="accessories-preview-card">
+            <p className="accessories-preview-label">Live Preview</p>
+            <div className="accessories-preview-stage">
+              <img
+                alt="Asset preview"
+                className="accessories-preview-image"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHw5hExUAL2xDOXgAmJvZR_EhVpSYcLHMLwu6mBUYz07CTVntP3WnndTYDjPX984Jp9F_0jV2x2-xe90zLeDUifcuZZ4aaheG34qLtr4k8jh289pX4SnB5B5MhB5XfSogo9OngK3dAbNQnayQ5ePwR_8O_Q8q_pTaBrAIy2xa9DJkxDny9PRswBA5HJUEvH8n2y94Ra9UJ351dXh05v87mmyAD0eSV1tB5YxJBRF6Qm9CX4KrtIggQsEvbKiJD9EmC1OM-_eAxwcry"
+              />
+              <div className="accessories-preview-badge">PREVIEW</div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="accessories-actions">
+            <button className="accessories-btn accessories-btn--primary" type="button">
+              <span className="material-symbols-outlined">rocket_launch</span>
+              Publish to Game
+            </button>
+            <button className="accessories-btn accessories-btn--danger" type="button">
+              <span className="material-symbols-outlined">delete_forever</span>
+              Discard
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
