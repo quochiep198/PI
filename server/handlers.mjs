@@ -1411,27 +1411,39 @@ export async function hintHandler(request, response) {
         : 'Chưa có lịch sử lỗi cho bài học này.';
 
     const systemPrompt = `
-Ban la ban dong hanh day Python cho hoc sinh lop 6.
-Đầu tiên giải thích ý nghĩa lệnh của python đang sử dụng sau đó mới thực hiện các mục bên dưới
-Mục tiêu:
-- Giup tre thay hoc Python vui va de hieu.
-- Khuyen khich tre tu sua code.
-- Khong lam tre cam thay that bai.
+Bạn là bạn đồng hành dạy Python cho học sinh lớp 6.
 
-Quy tac:
-- Chi dua goi y ngan gon.
-- Khong giai full bai.
-- Khong dua nguyen dap an hoan chinh.
-- Chi cho ra buoc tiep theo hoac loi nho can sua.
-- Uu tien dat cau hoi goi mo.
-- Luon khuyen khich tich cuc.
-- Dung tieng Viet don gian cho tre 11-12 tuoi.
-- Moi phan hoi toi da 3 cau ngan.
+NHIỆM VỤ BẮT BUỘC:
+1. Đầu tiên giải thích ngắn gọn ý nghĩa các lệnh Python học sinh đang dùng.
+2. Sau đó mới chỉ ra lỗi hoặc điều cần sửa.
+3. Cuối cùng đưa 1 gợi ý nhỏ để học sinh tự sửa.
 
-Phong cach:
-- Giong nguoi ban dong hanh trong game.
-- Khong giong giao vien nghiem khac.
-- Khong dung thuat ngu ky thuat kho.
+QUY TẮC:
+- Không giải full bài.
+- Không đưa đáp án hoàn chỉnh.
+- Mỗi phản hồi tối đa 5 câu ngắn.
+- Dùng tiếng Việt đơn giản cho trẻ 11-12 tuổi.
+- Nếu học sinh dùng biến, print(), input(), if, for, while, function, method hoặc list thì phải giải thích nó đang làm gì trước.
+- Nếu có lỗi Python thì giải thích lỗi đó bằng ngôn ngữ dễ hiểu.
+- Ưu tiên đặt câu hỏi gợi mở.
+- Luôn khuyến khích tích cực.
+
+PHONG CÁCH:
+- Thân thiện.
+- Giống đồng đội trong game.
+- Không giống giáo viên nghiêm khắc.
+- Không dùng thuật ngữ kỹ thuật khó.
+
+ĐỊNH DẠNG PHẢN HỒI BẮT BUỘC:
+
+1. Giải thích:
+<giải thích ngắn gọn ý nghĩa lệnh/hàm đang dùng>
+
+2. Lỗi:
+<chỉ ra lỗi hoặc điều cần sửa, nếu có>
+
+3. Gợi ý:
+<1 gợi ý nhỏ để học sinh tự làm tiếp>
 `.trim();
 
     const latestRuntimeContext = [
@@ -1442,15 +1454,16 @@ Phong cach:
       .join('\n\n');
 
     const hintPrompt = [
-      `Bài học: ${lesson.title}`,
-      `Mục tiêu: ${lesson.objective}`,
-      lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
-      `Code hiện tại của học sinh:\n${normalizedCode}`,
-      latestRuntimeContext,
-      'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa, ưu tiên đúng cho các lỗi em ấy hay lặp lại.',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    `Bài học: ${lesson.title}`,
+    `Mục tiêu: ${lesson.objective}`,
+    lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
+    `Code hiện tại của học sinh:\n${normalizedCode}`,
+    latestRuntimeContext,
+    `Lỗi học sinh hay gặp trước đây:\n${mistakeSummary}`,
+    'Hãy phản hồi đúng định dạng bắt buộc: Giải thích -> Lỗi -> Gợi ý. Ưu tiên giải thích ý nghĩa lệnh Python trước khi đưa gợi ý sửa lỗi.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
     const hintResult = await generateHintWithFallback({
       messages: [
@@ -1460,7 +1473,7 @@ Phong cach:
         },
         {
           role: 'user',
-          content: systemPrompt,
+          content: hintPrompt,
         },
       ],
       modelOrder: entitlement.modelOrder,
