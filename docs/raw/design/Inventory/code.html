@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Py-Learner | Kho đồ &amp; Tạo nhân vật</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+        .active-item {
+            box-shadow: 0 0 0 4px #3045e3, 4px 4px 0 0 rgba(48, 69, 227, 0.2);
+        }
+        .chunky-button {
+            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.2);
+        }
+        .chunky-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f3f3f6;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c5c5d8;
+            border-radius: 10px;
+        }
+        .bot-glow {
+            filter: drop-shadow(0 0 15px rgba(48, 69, 227, 0.3));
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary": "#ffffff",
+                      "on-primary-container": "#fcf9ff",
+                      "inverse-surface": "#2f3133",
+                      "error-container": "#ffdad6",
+                      "error": "#ba1a1a",
+                      "on-secondary-container": "#756100",
+                      "on-secondary": "#ffffff",
+                      "primary": "#3045e3",
+                      "primary-fixed": "#dfe0ff",
+                      "surface-container-high": "#e8e8ea",
+                      "on-secondary-fixed": "#221b00",
+                      "on-primary-fixed-variant": "#0e29cf",
+                      "primary-container": "#4d61fc",
+                      "surface-container-highest": "#e2e2e5",
+                      "on-secondary-fixed-variant": "#544600",
+                      "background": "#f9f9fc",
+                      "surface-container-low": "#f3f3f6",
+                      "on-error": "#ffffff",
+                      "surface-container": "#eeeef0",
+                      "on-primary-fixed": "#000b63",
+                      "outline-variant": "#c5c5d8",
+                      "on-tertiary-container": "#ebfff5",
+                      "tertiary-container": "#437e6b",
+                      "tertiary-fixed": "#b1efd8",
+                      "secondary-fixed-dim": "#e4c542",
+                      "on-surface-variant": "#444655",
+                      "inverse-on-surface": "#f0f0f3",
+                      "inverse-primary": "#bcc2ff",
+                      "secondary": "#705d00",
+                      "on-tertiary-fixed-variant": "#0d503f",
+                      "on-error-container": "#93000a",
+                      "on-surface": "#1a1c1e",
+                      "tertiary": "#286553",
+                      "tertiary-fixed-dim": "#96d3bd",
+                      "surface-tint": "#3449e6",
+                      "primary-fixed-dim": "#bcc2ff",
+                      "secondary-fixed": "#ffe16e",
+                      "surface-variant": "#e2e2e5",
+                      "on-tertiary-fixed": "#002118",
+                      "surface-bright": "#f9f9fc",
+                      "secondary-container": "#ffde59",
+                      "outline": "#757687",
+                      "on-background": "#1a1c1e",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "surface-dim": "#dadadc",
+                      "surface": "#f9f9fc"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-desktop": "48px",
+                      "container-max": "1200px",
+                      "unit": "8px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Quicksand"],
+                      "display-lg": ["Quicksand"],
+                      "body-md": ["Quicksand"],
+                      "body-lg": ["Quicksand"],
+                      "headline-md": ["Quicksand"],
+                      "headline-lg": ["Quicksand"],
+                      "label-code": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                      "body-lg": ["20px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "label-code": ["15px", {"lineHeight": "1.4", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="bg-background shadow-[0_4px_0_0_rgba(48,69,227,0.1)] flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 w-full h-20 z-50">
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all active:scale-95" onclick="history.back()">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg font-black text-primary">Py-Learner</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex gap-4">
+<div class="flex items-center gap-2 bg-secondary-container px-4 py-2 rounded-full border-b-4 border-on-secondary-container/20">
+<span class="material-symbols-outlined text-on-secondary-container" data-weight="fill">monetization_on</span>
+<span class="font-bold text-on-secondary-container">2,450</span>
+</div>
+<div class="flex items-center gap-2 bg-primary-container px-4 py-2 rounded-full border-b-4 border-on-primary-fixed-variant/20">
+<span class="material-symbols-outlined text-on-primary" data-weight="fill">star</span>
+<span class="font-bold text-on-primary">Level 12</span>
+</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-outline-variant overflow-hidden border-2 border-primary">
+<img alt="Avatar" data-alt="A cute, friendly robot avatar with large digital eyes and a sleek white body, set against a vibrant blue circular background. The style is 3D render, polished and modern for a high-end educational application designed for children. Soft lighting emphasizes the smooth curves and metallic textures." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFMUwTNQXuCslPf033CkYK-Kiszy7MMu6p33D6eiaKhAMhdVRWlYKmHKgW_tuTex5r0pJu4FFX7-1z1roKVp22jQcfkHxeQBdfYRtjK39-R9Y5UA6MaDYvmoyXjy8ftFlA_74S-_kKJs5A6Ea3Qgj561bbuDWwI1wuPhSpk5iUNvKDxLfFEgHN1z-0va2qd8S-3cODN4fcB5E_iK98k_7YNn_RAAsl7M2Q0FBIkHuZ3wxHbl9iKSv2YS-H8uWkkPtP-nGeEfjdaYgV"/>
+</div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="hidden md:flex flex-col h-full w-64 bg-surface-container-low border-r-2 border-outline-variant p-4 gap-4">
+<div class="flex items-center gap-3 p-2 mb-4">
+<img alt="Bot" class="w-12 h-12 rounded-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIkAiQkgSAnU6vT1eJbdd29RFBKCvirjBnjNFsbvtTYJOIoPqMDkzoGgeeMQbtOWZ1QsotjNXoRQRlfPJRtx_RqWNJX8TJuj95nAeZPhEt4u2W4NboSi5oi0bTO1bevMSPHeAoDqmC0xXCSEya7HFfa-hkhgpZpLhJhQYnC5p8Dh0_upeGYKLTOqWJGPxaBRbnzR8a3vcPh8sE8yW9rqrn9uH6gQT-Ycc9mEm72iSk57LF4B_07q7u2MaajmO2Lgh9fmJsFRpX3WUl"/>
+<div>
+<p class="font-headline-md text-[18px] text-primary font-bold">Py-Bot</p>
+<p class="text-on-surface-variant text-sm">Level 12 Coder</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 p-4 text-on-surface-variant font-body-md hover:text-primary hover:bg-surface-container-highest transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span> Map
+                </a>
+<a class="flex items-center gap-3 p-4 text-on-surface-variant font-body-md hover:text-primary hover:bg-surface-container-highest transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="code">code</span> Practice
+                </a>
+<a class="flex items-center gap-3 p-4 text-on-surface-variant font-body-md hover:text-primary hover:bg-surface-container-highest transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="sports_esports">sports_esports</span> Arena
+                </a>
+<a class="flex items-center gap-3 p-4 bg-primary-container text-on-primary-container font-headline-md rounded-xl shadow-[4px_4px_0_0_rgba(0,11,99,0.2)]" href="#">
+<span class="material-symbols-outlined" data-icon="inventory">inventory</span> Inventory
+                </a>
+<a class="flex items-center gap-3 p-4 text-on-surface-variant font-body-md hover:text-primary hover:bg-surface-container-highest transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span> Settings
+                </a>
+</nav>
+</aside>
+<!-- Content Canvas -->
+<div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+<!-- Left: Character Preview (Bento Section) -->
+<section class="w-full md:w-1/2 p-6 flex flex-col gap-6 items-center justify-center relative bg-white md:bg-transparent">
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#3045e3 1px, transparent 1px); background-size: 24px 24px;"></div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface text-center mb-2 z-10">Tạo Nhân Vật</h2>
+<!-- Character Display Box -->
+<div class="relative w-full max-w-md aspect-[4/5] bg-surface-container-low rounded-[40px] border-4 border-white shadow-[0_12px_40px_-12px_rgba(48,69,227,0.3)] flex items-center justify-center overflow-hidden z-10 group">
+<!-- Background Decoration -->
+<div class="absolute inset-0 bg-gradient-to-b from-primary/5 to-primary/20"></div>
+<div class="absolute bottom-0 w-full h-1/3 bg-primary/10 rounded-[100%] scale-150 blur-3xl"></div>
+<!-- Bot Model Container -->
+<div class="relative z-20 transition-transform duration-500 hover:scale-105" id="character-stage">
+<img alt="Py-Bot Base" class="w-64 h-64 bot-glow" data-alt="A futuristic and friendly robot character with a sleek, white modular body and glowing blue digital eyes. It is standing in a brightly lit, modern 3D laboratory environment with soft shadows and cinematic lighting. The aesthetic is high-end EdTech, clean and professional yet playful for kids." id="bot-base" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXqdRO6SjMOvckH7v5nZuYJQHYG5y5FtuGan2T4KfSejVa9SNn5nANq5q-_SsBR-NvlyaYO9Mw6nnLabHT8eYrTvf4ad8MO_O7On3FUniYNrIvbbAlLVh-e3syV8Oc-JY9-86xxyj6zNQYJ1jkBShR-eh-n2nu6PBQvHlEPNVHBYSr4ZD_HJtz_PQyIOiwEhXa-Okd_oLele8Q_rQ2ppqyBNoy6ByFxlNEd_SP5kzq9ig4R7VVbwj5xS9aIWiR57LFqVeHzaq7blUu"/>
+<!-- Overlay Items (Simulated with position absolute) -->
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 w-32 h-32 pointer-events-none transition-all duration-300 transform scale-0" id="equipped-hat">
+<span class="material-symbols-outlined text-6xl text-primary drop-shadow-lg">fort</span>
+</div>
+</div>
+<!-- Floor shadow -->
+<div class="absolute bottom-12 w-40 h-6 bg-black/10 rounded-full blur-md"></div>
+</div>
+<button class="z-10 group relative px-12 py-4 bg-primary text-on-primary rounded-2xl font-headline-md text-headline-md shadow-[0_6px_0_0_#0e29cf] hover:translate-y-[2px] hover:shadow-[0_4px_0_0_#0e29cf] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-3">
+<span class="material-symbols-outlined">save</span>
+                    Lưu Nhân Vật
+                </button>
+</section>
+<!-- Right: Inventory Tabs & Grid -->
+<section class="w-full md:w-1/2 p-6 bg-surface-container-lowest md:rounded-tl-[40px] shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] flex flex-col gap-6 overflow-hidden z-20">
+<!-- Inventory Header & Tabs -->
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md text-on-surface">Kho Đồ Của Bạn</h3>
+<span class="text-on-surface-variant font-medium">48/100 Vật phẩm</span>
+</div>
+<div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+<button class="tab-btn px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap bg-primary text-on-primary shadow-[0_4px_0_0_#0e29cf]" onclick="switchTab(this, 'head')">
+<span class="material-symbols-outlined">style</span> Mũ/Tóc
+                        </button>
+<button class="tab-btn px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap bg-surface-container text-on-surface-variant hover:bg-surface-container-high" onclick="switchTab(this, 'glass')">
+<span class="material-symbols-outlined">visibility</span> Kính
+                        </button>
+<button class="tab-btn px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap bg-surface-container text-on-surface-variant hover:bg-surface-container-high" onclick="switchTab(this, 'body')">
+<span class="material-symbols-outlined">apparel</span> Trang phục
+                        </button>
+<button class="tab-btn px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap bg-surface-container text-on-surface-variant hover:bg-surface-container-high" onclick="switchTab(this, 'back')">
+<span class="material-symbols-outlined">backpack</span> Phụ kiện lưng
+                        </button>
+</div>
+</div>
+<!-- Grid View -->
+<div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-4" id="inventory-grid">
+<!-- Item Card 1 (Equipped) -->
+<div class="item-card relative group p-4 rounded-[24px] bg-white border-2 border-outline-variant hover:border-primary transition-all cursor-pointer active-item overflow-hidden" onclick="toggleEquip(this, 'hat')">
+<div class="absolute top-3 right-3 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-md checkmark">
+<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'wght' 700">check</span>
+</div>
+<div class="w-full aspect-square bg-surface-container-low rounded-xl mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-5xl text-primary">fort</span>
+</div>
+<p class="font-bold text-center text-on-surface">Mũ Quý Tộc</p>
+<p class="text-xs text-center text-on-surface-variant">Rarity: Hiếm</p>
+</div>
+<!-- Item Card 2 -->
+<div class="item-card relative group p-4 rounded-[24px] bg-white border-2 border-outline-variant hover:border-primary transition-all cursor-pointer overflow-hidden" onclick="toggleEquip(this)">
+<div class="absolute top-3 right-3 w-6 h-6 bg-primary rounded-full hidden items-center justify-center shadow-md checkmark">
+<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'wght' 700">check</span>
+</div>
+<div class="w-full aspect-square bg-surface-container-low rounded-xl mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-5xl text-secondary">rocket_launch</span>
+</div>
+<p class="font-bold text-center text-on-surface">Balo Tên Lửa</p>
+<p class="text-xs text-center text-on-surface-variant">Rarity: Sử Thi</p>
+</div>
+<!-- Item Card 3 -->
+<div class="item-card relative group p-4 rounded-[24px] bg-white border-2 border-outline-variant hover:border-primary transition-all cursor-pointer overflow-hidden" onclick="toggleEquip(this)">
+<div class="absolute top-3 right-3 w-6 h-6 bg-primary rounded-full hidden items-center justify-center shadow-md checkmark">
+<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'wght' 700">check</span>
+</div>
+<div class="w-full aspect-square bg-surface-container-low rounded-xl mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-5xl text-tertiary-container">smart_toy</span>
+</div>
+<p class="font-bold text-center text-on-surface">Kính Cyber</p>
+<p class="text-xs text-center text-on-surface-variant">Rarity: Thường</p>
+</div>
+<!-- More Cards (Placeholders) -->
+<div class="item-card relative group p-4 rounded-[24px] bg-white border-2 border-outline-variant hover:border-primary transition-all cursor-pointer opacity-80">
+<div class="w-full aspect-square bg-surface-container-low rounded-xl mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-5xl text-outline">headphones</span>
+</div>
+<p class="font-bold text-center text-on-surface">Tai Nghe Neon</p>
+</div>
+<div class="item-card relative group p-4 rounded-[24px] bg-white border-2 border-outline-variant hover:border-primary transition-all cursor-pointer opacity-80">
+<div class="w-full aspect-square bg-surface-container-low rounded-xl mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-5xl text-outline">shield</span>
+</div>
+<p class="font-bold text-center text-on-surface">Giáp Python</p>
+</div>
+<div class="item-card relative group p-4 rounded-[24px] bg-white border-2 border-outline-variant hover:border-primary transition-all cursor-pointer opacity-80">
+<div class="w-full aspect-square bg-surface-container-low rounded-xl mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-5xl text-outline">crown</span>
+</div>
+<p class="font-bold text-center text-on-surface">Vương Miện</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Mobile Navigation -->
+<nav class="md:hidden bg-background border-t-2 border-outline-variant flex justify-around items-center py-2 px-4 h-16 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">map</span>
+<span class="text-[10px]">Map</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">code</span>
+<span class="text-[10px]">Luyện tập</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" data-weight="fill">inventory</span>
+<span class="text-[10px] font-bold">Kho đồ</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="text-[10px]">Hồ sơ</span>
+</button>
+</nav>
+<script>
+        function toggleEquip(element, type) {
+            // Remove active state from all cards (simulating selection)
+            // Note: In a real app, this would only remove from the same category
+            const cards = document.querySelectorAll('.item-card');
+            const equippedHat = document.getElementById('equipped-hat');
+
+            if (element.classList.contains('active-item')) {
+                element.classList.remove('active-item');
+                element.querySelector('.checkmark').classList.add('hidden');
+                element.querySelector('.checkmark').classList.remove('flex');
+                if(type === 'hat') equippedHat.classList.add('scale-0');
+            } else {
+                element.classList.add('active-item');
+                element.querySelector('.checkmark').classList.remove('hidden');
+                element.querySelector('.checkmark').classList.add('flex');
+                if(type === 'hat') equippedHat.classList.remove('scale-0');
+            }
+        }
+
+        function switchTab(btn, category) {
+            // Reset all buttons
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('bg-primary', 'text-on-primary', 'shadow-[0_4px_0_0_#0e29cf]');
+                b.classList.add('bg-surface-container', 'text-on-surface-variant');
+            });
+            
+            // Set active button
+            btn.classList.add('bg-primary', 'text-on-primary', 'shadow-[0_4px_0_0_#0e29cf]');
+            btn.classList.remove('bg-surface-container', 'text-on-surface-variant');
+
+            // Atmospheric logic: shake the bot slightly when switching tabs
+            const stage = document.getElementById('character-stage');
+            stage.classList.add('scale-95');
+            setTimeout(() => stage.classList.remove('scale-95'), 150);
+        }
+
+        // Initialize view
+        window.onload = () => {
+            const equippedHat = document.getElementById('equipped-hat');
+            equippedHat.classList.remove('scale-0');
+        };
+    </script>
+</body></html>

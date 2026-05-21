@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { AuthPage } from './features/auth/AuthPage';
 import type { AuthUser } from './features/auth/types';
 import { HomePage } from './features/home/HomePage';
+import { InventoryPage } from './features/inventory/InventoryPage';
+import { AccessoriesPage } from './features/accessories/AccessoriesPage';
 import { PracticePage } from './features/practice/PracticePage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { TopBar } from './features/layout/TopBar';
@@ -13,7 +15,7 @@ import { MobileNavigation } from './features/navigate/NavigateNavigation';
 import { clearCachedXp } from './features/shared/xpCache';
 import { clearCachedCoins } from './features/shared/coinsCache';
 
-type View = 'home' | 'practice' | 'settings';
+type View = 'home' | 'practice' | 'inventory' | 'accessories' | 'settings';
 
 type AuthMeResponse = {
   authenticated: boolean;
@@ -117,12 +119,14 @@ export default function App() {
 
       <div className="quest-layout">
         <SideNav
-          activeLabel={view === 'home' ? 'Lessons' : view === 'practice' ? 'Daily Practice' : 'Settings'}
+          activeLabel={view === 'home' ? 'Lessons' : view === 'practice' ? 'Daily Practice' : view === 'inventory' ? 'Inventory' : view === 'accessories' ? 'Achievements' : 'Settings'}
           onlineCount={onlineLearners}
           onlineLoading={!onlineConnected && !onlineFailed}
           onlineError={onlineFailed}
           onNavigateLessons={() => setView('home')}
           onNavigatePractice={() => setView('practice')}
+          onNavigateInventory={() => setView('inventory')}
+          onNavigateAccessories={() => setView('accessories')}
           onNavigateSettings={() => setView('settings')}
         />
 
@@ -130,7 +134,11 @@ export default function App() {
           ? <HomePage user={user} />
           : view === 'practice'
             ? <PracticePage user={user} />
-            : <SettingsPage user={user} onUserUpdated={handleUserUpdated} onLogout={handleLogout} />}
+            : view === 'inventory'
+              ? <InventoryPage />
+              : view === 'accessories'
+                ? <AccessoriesPage />
+                : <SettingsPage user={user} onUserUpdated={handleUserUpdated} onLogout={handleLogout} />}
       </div>
 
       <MobileNavigation />

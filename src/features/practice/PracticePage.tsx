@@ -1,37 +1,15 @@
+import { useState } from 'react';
 import type { AuthUser } from '../auth/types';
 import { Leaderboard } from './components/Leaderboard';
 import { StreakCalendar } from './components/StreakCalendar';
+import { ChallengeCard } from './components/ChallengeCard';
+import { ChallengeWorkspace } from './components/ChallengeWorkspace';
+import { useChallenges } from './hooks/useChallenges';
+import type { Challenge } from './types/challenge';
 
 type PracticePageProps = {
   user: AuthUser;
 };
-
-const challenges = [
-  {
-    name: 'Bot Tra Loi Nhanh',
-    description: 'Viet ham xu ly tin nhan va tra ve cau tra loi phu hop.',
-    difficulty: 'easy' as const,
-    reward: 20,
-    icon: 'smart_toy',
-    iconClass: 'practice-challenge-card__icon--primary',
-  },
-  {
-    name: 'Kho Bau Kim Cuong',
-    description: 'Dung vong lap de tim duong di co tong diem cao nhat.',
-    difficulty: 'medium' as const,
-    reward: 35,
-    icon: 'diamond',
-    iconClass: 'practice-challenge-card__icon--secondary',
-  },
-  {
-    name: 'San Bug Ban Dem',
-    description: 'Doc log loi va sua doan code dang gay sai ket qua.',
-    difficulty: 'hard' as const,
-    reward: 50,
-    icon: 'bug_report',
-    iconClass: 'practice-challenge-card__icon--error',
-  },
-];
 
 const storeItems = [
   { name: 'Theme Ocean', price: 120, image: 'OCEAN', featured: true },
@@ -40,48 +18,62 @@ const storeItems = [
 ];
 
 export function PracticePage({ user }: PracticePageProps) {
+  const { challenges, loading, error, markCompleted } = useChallenges();
+  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
+
+  const handleStartChallenge = (challenge: Challenge) => {
+    setActiveChallenge(challenge);
+  };
+
+  const handleCloseWorkspace = () => {
+    setActiveChallenge(null);
+  };
+
+  const handleChallengeComplete = (challengeId: number) => {
+    markCompleted(challengeId);
+  };
+
   return (
-    <main className="practice-main">
+    <>
+      <main className="practice-main">
       <div className="practice-content">
         <div className="practice-center">
           <StreakCalendar userId={user.id} />
 
           <section className="practice-challenges">
-            <h2 className="practice-challenges__title">Thu thach hom nay</h2>
-            {challenges.map((challenge) => (
-              <article key={challenge.name} className="practice-challenge-card">
-                <div className="practice-challenge-card__content">
-                  <div className={`practice-challenge-card__icon ${challenge.iconClass}`}>
-                    <span className="material-symbols-outlined">{challenge.icon}</span>
-                  </div>
-
-                  <div className="practice-challenge-card__info">
-                    <h3 className="practice-challenge-card__name">{challenge.name}</h3>
-                    <p className="practice-challenge-card__desc">{challenge.description}</p>
-                    <div className="practice-challenge-card__meta">
-                      <span className={`practice-challenge-card__difficulty practice-challenge-card__difficulty--${challenge.difficulty}`}>
-                        {challenge.difficulty}
-                      </span>
-                      <span className="practice-challenge-card__reward">
-                        <span className="material-symbols-outlined">monetization_on</span>
-                        {challenge.reward}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <button type="button" className="practice-challenge-card__btn pressable">
-                  Bat dau
-                </button>
-              </article>
+            <h2 className="practice-challenges__title">Thử thách hôm nay</h2>
+            {loading && (
+              <div className="practice-challenges__loading">
+                <span className="material-symbols-outlined animated-spin">progress_activity</span>
+                <p>Đang tải thử thách...</p>
+              </div>
+            )}
+            {error && (
+              <div className="practice-challenges__error">
+                <span className="material-symbols-outlined">error</span>
+                <p>{error}</p>
+              </div>
+            )}
+            {!loading && !error && challenges.length === 0 && (
+              <div className="practice-challenges__empty">
+                <span className="material-symbols-outlined">school</span>
+                <p>Hoàn thành các bài học để mở khóa thử thách!</p>
+              </div>
+            )}
+            {!loading && !error && challenges.length > 0 && challenges.map((challenge) => (
+              <ChallengeCard
+                key={challenge.id}
+                challenge={challenge}
+                onStart={handleStartChallenge}
+              />
             ))}
           </section>
 
           <section className="practice-store">
             <div className="practice-store__header">
-              <h2 className="practice-store__title">Doi qua bang coins</h2>
+              <h2 className="practice-store__title">Đổi qua bằng coin</h2>
               <button type="button" className="practice-store__view-all">
-                Xem tat ca
+                Xem tất cả
               </button>
             </div>
 
@@ -118,14 +110,22 @@ export function PracticePage({ user }: PracticePageProps) {
             <div className="practice-tip__icon">
               <span className="material-symbols-outlined">lightbulb</span>
             </div>
-            <h2 className="practice-tip__title">Meo luyen tap</h2>
+            <h2 className="practice-tip__title">Mẹo luyện tập</h2>
             <p className="practice-tip__content">
-              Neu bi mac o bai kho, hay tach bai toan thanh cac ham nho va kiem tra tung phan
-              bang output don gian truoc khi toi uu.
+              Nếu bị mắc ở bài khó, hay tách bài toán thành các hàm nhỏ và kiểm tra từng phần
+              bằng output đơn giản trước khi tối ưu.
             </p>
           </section>
         </aside>
       </div>
     </main>
+
+    <ChallengeWorkspace
+      challenge={activeChallenge}
+      isOpen={activeChallenge !== null}
+      onClose={handleCloseWorkspace}
+      onComplete={handleChallengeComplete}
+    />
+    </>
   );
 }

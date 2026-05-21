@@ -42,7 +42,7 @@ export function Leaderboard() {
   return (
     <section className="practice-leaderboard">
       <div className="practice-leaderboard__header">
-        <h2 className="practice-leaderboard__title">Bang xep hang</h2>
+        <h2 className="practice-leaderboard__title">Bảng Xếp Hạng</h2>
         <span className="material-symbols-outlined practice-leaderboard__icon">
           social_leaderboard
         </span>
@@ -52,8 +52,8 @@ export function Leaderboard() {
         <div className="practice-leaderboard__list">
           <article className="practice-leaderboard__item">
             <div className="practice-leaderboard__item-info">
-              <p className="practice-leaderboard__item-name">Dang tai bang xep hang...</p>
-              <p className="practice-leaderboard__item-zone">Dang dong bo XP va coins</p>
+              <p className="practice-leaderboard__item-name">Đang tải bảng xếp hạng...</p>
+              <p className="practice-leaderboard__item-zone">Đang đồng bộ XP và coins</p>
             </div>
           </article>
         </div>
@@ -63,7 +63,7 @@ export function Leaderboard() {
         <div className="practice-leaderboard__list">
           <article className="practice-leaderboard__item">
             <div className="practice-leaderboard__item-info">
-              <p className="practice-leaderboard__item-name">Khong tai duoc bang xep hang</p>
+              <p className="practice-leaderboard__item-name">Không tải được bảng xếp hạng</p>
               <p className="practice-leaderboard__item-zone">{error}</p>
             </div>
             <button
@@ -89,7 +89,7 @@ export function Leaderboard() {
             className="practice-leaderboard__view-all"
             onClick={() => void refetch()}
           >
-            Lam moi
+            Làm mới
           </button>
         </>
       ) : null}

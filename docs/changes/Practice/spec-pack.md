@@ -244,7 +244,33 @@ type UseStreakReturn = {
 | `--easy` | tertiary (xanh lá) |
 | `--medium` | cam |
 | `--hard` | đỏ |
-
+-Tạo bảng db Challenges để lưu thử thách  (dữ liệu tạo mẫu giúp tôi)
+-Lấy thông tin dữ liệu từ Challenges để hiển thị
+-Challenges sẽ có 3 cấp độ easy, medium, hard
+-Khi nhấn vào bắt đầu thì sẽ hiển thị modal loadPyodide để thực hiện code, giao diện .workspace-panel
+- Cập nhật lại số điểm xp và coin mỗi khi hoàn thành thử thách
+  - **Hệ thống thưởng XP/Coins:**
+    | Cấp độ | XP thưởng | Coins thưởng |
+    |--------|-----------|-------------|
+    | Easy   | 30 XP     | 50 coins    |
+    | Medium | 50 XP     | 120 coins   |
+    | Hard   | 80 XP     | 250 coins   |
+  - **Quy tắc nhận thưởng:**
+    - User hoàn thành lần đầu → nhận đủ XP/coins
+    - Đã hoàn thành rồi → không nhận thưởng (alreadyCompleted: true), hiển thị thông báo "Bạn đã hoàn thành thử thách này rồi!"
+  - **Cập nhật UI:**
+    - Sau khi submit thành công → gọi API `/api/challenges/submit`
+    - Server trả về `{ success, xpEarned, coinsEarned, totalXp, xpData }`
+    - Cập nhật TopBar: hiển thị XP mới + animation "+XP"
+    - Cập nhật Coins: hiển thị coins mới + animation "+Coins"
+    - Nếu level up → hiện notification "Chúc mừng! Bạn đã lên level X!"
+  - **Backend flow:**
+    ```
+    POST /api/challenges/submit
+    1. Kiểm tra user đã hoàn thành chưa (user_challenge_progress)
+    2. Nếu chưa → INSERT progress + cập nhật user_xp + user_coins
+    3. Trả về kết quả { success, xpEarned, coinsEarned, totalXp }
+    ```
 ---
 
 ## 7. Store Section

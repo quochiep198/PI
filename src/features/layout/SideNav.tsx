@@ -5,10 +5,12 @@ export type SideNavProps = {
   onlineError?: boolean;
   onNavigateLessons?: () => void;
   onNavigatePractice?: () => void;
+  onNavigateInventory?: () => void;
+  onNavigateAccessories?: () => void;
   onNavigateSettings?: () => void;
 };
 
-export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice, onNavigateSettings }: SideNavProps) {
+export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice, onNavigateInventory, onNavigateAccessories, onNavigateSettings }: SideNavProps) {
   const handleNavigation = (label: string) => {
     switch (label) {
       case 'Lessons':
@@ -16,6 +18,12 @@ export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, o
         break;
       case 'Daily Practice':
         onNavigatePractice?.();
+        break;
+      case 'Inventory':
+        onNavigateInventory?.();
+        break;
+      case 'Achievements':
+        onNavigateAccessories?.();
         break;
       case 'Settings':
         onNavigateSettings?.();
@@ -26,6 +34,8 @@ export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, o
   const itemClickHandlers: Record<string, () => void> = {};
   if (onNavigateLessons) itemClickHandlers['Lessons'] = onNavigateLessons;
   if (onNavigatePractice) itemClickHandlers['Daily Practice'] = onNavigatePractice;
+  if (onNavigateInventory) itemClickHandlers['Inventory'] = onNavigateInventory;
+  if (onNavigateAccessories) itemClickHandlers['Achievements'] = onNavigateAccessories;
   if (onNavigateSettings) itemClickHandlers['Settings'] = onNavigateSettings;
 
   return (
@@ -63,17 +73,27 @@ export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, o
           <span>Daily Practice</span>
         </button>
 
-        <button
+        {/* <button
           className={`pressable sidenav__item${activeLabel === 'Playground' ? ' is-active' : ''}`}
           type="button"
         >
           <span aria-hidden="true" className="material-symbols-outlined">code</span>
           <span>Playground</span>
+        </button> */}
+
+        <button
+          className={`pressable sidenav__item${activeLabel === 'Inventory' ? ' is-active' : ''}`}
+          type="button"
+          onClick={() => handleNavigation('Inventory')}
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">inventory_2</span>
+          <span>Inventory</span>
         </button>
 
         <button
           className={`pressable sidenav__item${activeLabel === 'Achievements' ? ' is-active' : ''}`}
           type="button"
+          onClick={() => handleNavigation('Achievements')}
         >
           <span aria-hidden="true" className="material-symbols-outlined">military_tech</span>
           <span>Achievements</span>

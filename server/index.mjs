@@ -24,6 +24,8 @@ import {
   getStreakHandler,
   updateAvatarHandler,
   updateSettingsHandler,
+  getChallengesHandler,
+  submitChallengeHandler,
 } from './handlers.mjs';
 import { runMigrations } from './db.mjs';
 
@@ -59,6 +61,8 @@ app.get('/api/coins', getCoinsHandler);
 app.get('/api/leaderboard', getLeaderboardHandler);
 app.get('/api/streak/:userId', getStreakHandler);
 app.post('/api/streak/:userId/checkin', checkInHandler);
+app.get('/api/challenges', getChallengesHandler);
+app.post('/api/challenges/submit', submitChallengeHandler);
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 app.post('/api/lessons', createLessonHandler);
