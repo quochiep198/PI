@@ -23,6 +23,8 @@ export interface CheckInResult {
   reward: number;
   achievement?: string;
   message: string;
+  totalCoins?: number;
+  streakData?: StreakData;
 }
 
 export interface StreakBadgeProps {

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { fetchStreakData, checkIn as checkInApi } from '../api/streakApi';
 import type { StreakData, CheckInResult, UseStreakReturn } from '../types/streak';
+import { setCachedCoins } from '../../shared/coinsCache';
 
 export function useStreak(userId: number): UseStreakReturn {
   const [streakData, setStreakData] = useState<StreakData | null>(null);
@@ -34,27 +35,11 @@ export function useStreak(userId: number): UseStreakReturn {
       try {
         const result = await checkInApi(userId);
 
-        if (result.success) {
-          setStreakData(prev => {
-            if (!prev) return null;
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            const updatedWeekDays = prev.weekDays.map(day => {
-              if (day.date === todayStr) {
-                return { ...day, status: 'completed' as const };
-              }
-              return day;
-            });
-
-            return {
-              ...prev,
-              currentStreak: result.newStreak,
-              lastCheckIn: todayStr,
-              isCheckedInToday: true,
-              weekDays: updatedWeekDays,
-              totalCheckIns: prev.totalCheckIns + 1,
-            };
-          });
+        if (result.streakData) {
+          setStreakData(result.streakData);
+        }
+        if (typeof result.totalCoins === 'number') {
+          setCachedCoins(result.totalCoins);
         }
 
         setState('success');
@@ -73,7 +58,7 @@ export function useStreak(userId: number): UseStreakReturn {
       reward: 0,
       message: 'Bạn đã check-in hôm nay rồi!',
     };
-  }, [userId, streakData?.isCheckedInToday]);
+  }, [userId, streakData?.currentStreak, streakData?.isCheckedInToday]);
 
   return {
     streakData,

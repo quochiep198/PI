@@ -49,6 +49,13 @@ const XP_SOURCES = {
   DAILY_CHALLENGE_BONUS: 'daily_challenge_bonus',
 };
 
+const STREAK_MILESTONE_ACHIEVEMENTS = {
+  7: 'Tuần lễ đầu tiên!',
+  14: 'Hai tuần kiên trì!',
+  30: 'Một tháng champion!',
+  100: '100 ngày huyền thoại!',
+};
+
 function getLevelFromXp(xp) {
   let currentLevel = LEVEL_THRESHOLDS[0];
   for (const threshold of LEVEL_THRESHOLDS) {
@@ -275,6 +282,69 @@ function getUtcDayBounds(reference = new Date()) {
     startIso: start.toISOString(),
     endIso: end.toISOString(),
   };
+}
+
+function getUtcDateString(reference = new Date()) {
+  return reference.toISOString().slice(0, 10);
+}
+
+function getPreviousUtcDateString(dateString) {
+  const date = new Date(`${dateString}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return getUtcDateString(date);
+}
+
+function getWeekStartUtc(reference = new Date()) {
+  const date = new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate()));
+  const dayOfWeek = date.getUTCDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  date.setUTCDate(date.getUTCDate() + mondayOffset);
+  return date;
+}
+
+function buildWeekDays(checkedInDates, reference = new Date()) {
+  const dayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const completedDates = new Set(checkedInDates);
+  const todayStr = getUtcDateString(reference);
+  const weekStart = getWeekStartUtc(reference);
+  const days = [];
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const date = new Date(weekStart);
+    date.setUTCDate(weekStart.getUTCDate() + offset);
+    const dateStr = getUtcDateString(date);
+    const isToday = dateStr === todayStr;
+    const isFuture = dateStr > todayStr;
+    const isCompleted = completedDates.has(dateStr);
+
+    days.push({
+      date: dateStr,
+      label: dayLabels[date.getUTCDay()],
+      status: isCompleted ? 'completed' : isToday ? 'today' : isFuture ? 'future' : 'locked',
+      isToday,
+      dayOfWeek: date.getUTCDay(),
+    });
+  }
+
+  return days;
+}
+
+function getEffectiveCurrentStreak(streakRow, todayStr = getUtcDateString()) {
+  const lastCheckInDate = streakRow?.lastCheckInDate || streakRow?.last_check_in_date || null;
+  if (!lastCheckInDate) {
+    return 0;
+  }
+
+  const previousDate = getPreviousUtcDateString(todayStr);
+  if (lastCheckInDate === todayStr || lastCheckInDate === previousDate) {
+    return Number(streakRow.currentStreak || streakRow.current_streak || 0);
+  }
+
+  return 0;
+}
+
+function getStreakReward(streak) {
+  return 10 + streak * 2;
 }
 
 async function getHintIpRateLimitStatus(request) {
@@ -520,6 +590,74 @@ async function addUserCoins(userId, coinsAmount) {
     `INSERT INTO user_coins (user_id, coins) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET coins = user_coins.coins + $2`,
     [userId, coinsAmount],
   );
+}
+
+async function ensureUserStreak(userId) {
+  await query(
+    `
+      INSERT INTO user_streaks (user_id)
+      VALUES ($1)
+      ON CONFLICT (user_id) DO NOTHING
+    `,
+    [userId],
+  );
+}
+
+async function getUserStreakRow(userId) {
+  const rows = await query(
+    `
+      SELECT
+        user_id AS "userId",
+        current_streak AS "currentStreak",
+        longest_streak AS "longestStreak",
+        last_check_in_date::text AS "lastCheckInDate",
+        total_check_ins AS "totalCheckIns"
+      FROM user_streaks
+      WHERE user_id = $1
+      LIMIT 1
+    `,
+    [userId],
+  );
+
+  return rows[0] ?? null;
+}
+
+async function getWeekCheckInDates(userId, startDate, endDate) {
+  const rows = await query(
+    `
+      SELECT check_in_date::text AS "checkInDate"
+      FROM user_streak_checkins
+      WHERE user_id = $1
+        AND check_in_date >= $2::date
+        AND check_in_date <= $3::date
+      ORDER BY check_in_date ASC
+    `,
+    [userId, startDate, endDate],
+  );
+
+  return rows.map((row) => row.checkInDate);
+}
+
+async function buildUserStreakData(userId, reference = new Date()) {
+  await ensureUserStreak(userId);
+
+  const streakRow = await getUserStreakRow(userId);
+  const todayStr = getUtcDateString(reference);
+  const weekStart = getWeekStartUtc(reference);
+  const weekStartStr = getUtcDateString(weekStart);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+  const weekEndStr = getUtcDateString(weekEnd);
+  const checkedInDates = await getWeekCheckInDates(userId, weekStartStr, weekEndStr);
+
+  return {
+    currentStreak: getEffectiveCurrentStreak(streakRow, todayStr),
+    longestStreak: Number(streakRow?.longestStreak || 0),
+    lastCheckIn: streakRow?.lastCheckInDate ?? null,
+    weekDays: buildWeekDays(checkedInDates, reference),
+    totalCheckIns: Number(streakRow?.totalCheckIns || 0),
+    isCheckedInToday: streakRow?.lastCheckInDate === todayStr,
+  };
 }
 
 async function markFirstSuccessRun(userId, lessonId) {
@@ -1751,6 +1889,135 @@ export async function getCoinsHandler(request, response) {
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to load coins.',
+    });
+  }
+}
+
+export async function getStreakHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const requestedUserId = Number(request.params?.userId);
+    if (!requestedUserId || requestedUserId !== user.id) {
+      response.status(403).json({ message: 'Cannot access another user streak.' });
+      return;
+    }
+
+    const streakData = await buildUserStreakData(user.id);
+    response.json(streakData);
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to load streak.',
+    });
+  }
+}
+
+export async function checkInStreakHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const requestedUserId = Number(request.params?.userId);
+    if (!requestedUserId || requestedUserId !== user.id) {
+      response.status(403).json({ message: 'Cannot modify another user streak.' });
+      return;
+    }
+
+    await ensureUserCoins(user.id);
+    await ensureUserStreak(user.id);
+
+    const streakRow = await getUserStreakRow(user.id);
+    const todayStr = getUtcDateString();
+
+    if (streakRow?.lastCheckInDate === todayStr) {
+      const streakData = await buildUserStreakData(user.id);
+      const totalCoins = await getUserCoins(user.id);
+
+      response.json({
+        success: false,
+        newStreak: streakData.currentStreak,
+        reward: 0,
+        message: 'Bạn đã check-in hôm nay rồi!',
+        totalCoins,
+        streakData,
+      });
+      return;
+    }
+
+    const reward = getStreakReward(
+      streakRow?.lastCheckInDate === getPreviousUtcDateString(todayStr)
+        ? Number(streakRow?.currentStreak || 0) + 1
+        : 1,
+    );
+
+    const insertRows = await query(
+      `
+        INSERT INTO user_streak_checkins (user_id, check_in_date, reward_coins)
+        VALUES ($1, $2::date, $3)
+        ON CONFLICT (user_id, check_in_date) DO NOTHING
+        RETURNING check_in_date::text AS "checkInDate"
+      `,
+      [user.id, todayStr, reward],
+    );
+
+    if (insertRows.length === 0) {
+      const streakData = await buildUserStreakData(user.id);
+      const totalCoins = await getUserCoins(user.id);
+
+      response.json({
+        success: false,
+        newStreak: streakData.currentStreak,
+        reward: 0,
+        message: 'Bạn đã check-in hôm nay rồi!',
+        totalCoins,
+        streakData,
+      });
+      return;
+    }
+
+    const previousDate = getPreviousUtcDateString(todayStr);
+    const previousCurrentStreak = Number(streakRow?.currentStreak || 0);
+    const newStreak = streakRow?.lastCheckInDate === previousDate ? previousCurrentStreak + 1 : 1;
+    const newLongestStreak = Math.max(Number(streakRow?.longestStreak || 0), newStreak);
+    const newTotalCheckIns = Number(streakRow?.totalCheckIns || 0) + 1;
+
+    await query(
+      `
+        UPDATE user_streaks
+        SET
+          current_streak = $2,
+          longest_streak = $3,
+          last_check_in_date = $4::date,
+          total_check_ins = $5,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = $1
+      `,
+      [user.id, newStreak, newLongestStreak, todayStr, newTotalCheckIns],
+    );
+
+    await addUserCoins(user.id, reward);
+
+    const totalCoins = await getUserCoins(user.id);
+    const streakData = await buildUserStreakData(user.id);
+    const achievement = STREAK_MILESTONE_ACHIEVEMENTS[newStreak];
+
+    response.json({
+      success: true,
+      newStreak,
+      reward,
+      achievement,
+      message: achievement || `+${reward} coins! Tiếp tục giữ vững phong độ!`,
+      totalCoins,
+      streakData,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to check in streak.',
     });
   }
 }

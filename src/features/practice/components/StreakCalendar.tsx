@@ -9,7 +9,7 @@ type StreakCalendarProps = {
 };
 
 export const StreakCalendar: FC<StreakCalendarProps> = ({ userId }) => {
-  const { streakData, state, error, checkIn } = useStreak(userId);
+  const { streakData, state, error, checkIn, refetch } = useStreak(userId);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationData, setCelebrationData] = useState<CheckInResult | null>(null);
@@ -62,7 +62,7 @@ export const StreakCalendar: FC<StreakCalendarProps> = ({ userId }) => {
           <button
             type="button"
             className="pressable practice-streak__retry"
-            onClick={() => void checkIn()}
+            onClick={() => void refetch()}
           >
             Thử lại
           </button>
@@ -113,7 +113,7 @@ export const StreakCalendar: FC<StreakCalendarProps> = ({ userId }) => {
               type="button"
               className={`practice-streak__checkin-btn pressable ${isCheckingIn ? 'is-loading' : ''}`}
               onClick={handleCheckIn}
-              disabled={isCheckingIn}
+              disabled={isCheckingIn || isCheckedInToday}
             >
               {isCheckingIn ? (
                 <>

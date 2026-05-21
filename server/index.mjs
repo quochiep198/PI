@@ -5,6 +5,7 @@ import {
   authMeHandler,
   completeProgressHandler,
   createLessonHandler,
+  checkInStreakHandler,
   errorFeedbackHandler,
   getXpHandler,
   healthHandler,
@@ -17,6 +18,7 @@ import {
   registerHandler,
   postXpHandler,
   getCoinsHandler,
+  getStreakHandler,
 } from './handlers.mjs';
 import { runMigrations } from './db.mjs';
 
@@ -45,6 +47,8 @@ app.post('/api/progress/complete', completeProgressHandler);
 app.get('/api/xp', getXpHandler);
 app.post('/api/xp', postXpHandler);
 app.get('/api/coins', getCoinsHandler);
+app.get('/api/streak/:userId', getStreakHandler);
+app.post('/api/streak/:userId/checkin', checkInStreakHandler);
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 app.post('/api/lessons', createLessonHandler);
