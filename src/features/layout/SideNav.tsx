@@ -5,9 +5,10 @@ export type SideNavProps = {
   onlineError?: boolean;
   onNavigateLessons?: () => void;
   onNavigatePractice?: () => void;
+  onNavigateSettings?: () => void;
 };
 
-export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice }: SideNavProps) {
+export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice, onNavigateSettings }: SideNavProps) {
   const handleNavigation = (label: string) => {
     switch (label) {
       case 'Lessons':
@@ -16,12 +17,16 @@ export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, o
       case 'Daily Practice':
         onNavigatePractice?.();
         break;
+      case 'Settings':
+        onNavigateSettings?.();
+        break;
     }
   };
 
   const itemClickHandlers: Record<string, () => void> = {};
   if (onNavigateLessons) itemClickHandlers['Lessons'] = onNavigateLessons;
   if (onNavigatePractice) itemClickHandlers['Daily Practice'] = onNavigatePractice;
+  if (onNavigateSettings) itemClickHandlers['Settings'] = onNavigateSettings;
 
   return (
     <aside className="sidenav">
@@ -77,6 +82,7 @@ export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, o
         <button
           className={`pressable sidenav__item${activeLabel === 'Settings' ? ' is-active' : ''}`}
           type="button"
+          onClick={() => handleNavigation('Settings')}
         >
           <span aria-hidden="true" className="material-symbols-outlined">settings</span>
           <span>Settings</span>

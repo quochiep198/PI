@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#000b63",
+                    "primary-container": "#4d61fc",
+                    "background": "#f9f9fc",
+                    "surface-bright": "#f9f9fc",
+                    "secondary-fixed": "#ffe16e",
+                    "on-tertiary-fixed": "#002118",
+                    "primary-fixed": "#dfe0ff",
+                    "tertiary": "#286553",
+                    "on-secondary-container": "#756100",
+                    "tertiary-container": "#437e6b",
+                    "on-secondary-fixed-variant": "#544600",
+                    "on-surface": "#1a1c1e",
+                    "error-container": "#ffdad6",
+                    "on-secondary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "surface-container-high": "#e8e8ea",
+                    "on-secondary-fixed": "#221b00",
+                    "on-primary": "#ffffff",
+                    "surface-dim": "#dadadc",
+                    "on-primary-container": "#fcf9ff",
+                    "surface-container-highest": "#e2e2e5",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-surface-variant": "#444655",
+                    "error": "#ba1a1a",
+                    "surface-container": "#eeeef0",
+                    "on-tertiary-fixed-variant": "#0d503f",
+                    "surface-container-low": "#f3f3f6",
+                    "secondary": "#705d00",
+                    "inverse-surface": "#2f3133",
+                    "inverse-primary": "#bcc2ff",
+                    "inverse-on-surface": "#f0f0f3",
+                    "tertiary-fixed-dim": "#96d3bd",
+                    "on-background": "#1a1c1e",
+                    "secondary-container": "#ffde59",
+                    "outline": "#757687",
+                    "secondary-fixed-dim": "#e4c542",
+                    "surface": "#f9f9fc",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-variant": "#e2e2e5",
+                    "on-tertiary-container": "#ebfff5",
+                    "primary": "#3045e3",
+                    "outline-variant": "#c5c5d8",
+                    "surface-tint": "#3449e6",
+                    "tertiary-fixed": "#b1efd8",
+                    "on-primary-fixed-variant": "#0e29cf",
+                    "primary-fixed-dim": "#bcc2ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "8px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "48px",
+                    "container-max": "1200px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "label-code": ["JetBrains Mono"],
+                    "headline-md": ["Quicksand"],
+                    "headline-lg": ["Quicksand"],
+                    "body-lg": ["Quicksand"],
+                    "display-lg": ["Quicksand"],
+                    "body-md": ["Quicksand"],
+                    "headline-lg-mobile": ["Quicksand"]
+            },
+            "fontSize": {
+                    "label-code": ["15px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "body-lg": ["20px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Quicksand', sans-serif; }
+        .chunky-shadow { shadow: 4px 4px 0 0 rgba(0,0,0,0.1); }
+        .btn-chunky { 
+            transition: all 0.2s; 
+            box-shadow: 0 4px 0 0 currentColor;
+        }
+        .btn-chunky:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 currentColor;
+        }
+        .card-shadow {
+            box-shadow: 4px 4px 0 0 #e2e2e5;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col md:flex-row">
+<!-- SideNavBar (Desktop) -->
+<aside class="hidden md:flex flex-col h-screen sticky top-0 w-64 bg-surface-container-low border-r-2 border-outline-variant p-unit gap-unit shadow-[4px_0_0_0_#e2e2e5] z-30">
+<div class="mb-8 px-4">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">PythonQuest</h1>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="text-on-surface-variant flex items-center gap-4 p-4 hover:bg-surface-container-high rounded-xl transition-transform hover:scale-105" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="font-headline-md text-headline-md">Lessons</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-4 p-4 hover:bg-surface-container-high rounded-xl transition-transform hover:scale-105" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="font-headline-md text-headline-md">Playground</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-4 p-4 hover:bg-surface-container-high rounded-xl transition-transform hover:scale-105" href="#">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="font-headline-md text-headline-md">Achievements</span>
+</a>
+<a class="bg-primary-container text-on-primary-container rounded-xl shadow-[4px_4px_0_0_#0e29cf] flex items-center gap-4 p-4 transition-transform hover:scale-105" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-headline-md text-headline-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto p-4 bg-secondary-container rounded-xl card-shadow flex flex-col gap-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-on-secondary-container flex items-center justify-center text-white font-bold">12</div>
+<div>
+<p class="font-headline-md text-headline-md text-on-secondary-container leading-none">Code Ninja</p>
+<p class="font-body-md text-body-md text-on-secondary-container opacity-80">Level 12</p>
+</div>
+</div>
+<button class="w-full py-2 bg-on-secondary-container text-white rounded-lg font-bold mt-2">Go Premium</button>
+</div>
+</aside>
+<!-- TopAppBar (Mobile) -->
+<header class="md:hidden flex justify-between items-center w-full px-margin-mobile py-unit bg-surface-container shadow-[0_4px_0_0_rgba(0,0,0,0.05)] sticky top-0 z-40">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">PythonQuest</h1>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="military_tech">military_tech</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border-2 border-primary">
+<img alt="Avatar" data-alt="A friendly 3D cartoon avatar of a young explorer wearing a tech-inspired jumpsuit and blue visor. The character has a cheerful expression and is set against a clean, vibrant blue background that matches the educational technology brand's color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSFmIyeFkmsw8J2L3Dfy_eEMVYeiRod3ubvERzSYTVlnHjnZmHR4qR4g8MQbswQZ3ZyK8YvNTF-KFvsqJnamoQjYyH7anaLfBHXkB77QVXQ86aMbADps_K6K4R3fskGdPbs6R8xjsyFFfaOFenJNQ6EJYehA3jpZyiYCtwCcw7eaz6-pKOaHE3vnOVx9dFl3VMZQcnGZIqj2IiNBohDjF91qdcr9eq0o9Imk6gJa5QDE-TH85HsMoj19WXsW7obfPc0iaZA-fgKdPd"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12">
+<!-- Header Section -->
+<header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+<div>
+<h2 class="font-display-lg text-display-lg text-primary mb-2">Cài đặt</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg">Tùy chỉnh hành trình học lập trình của bạn để có trải nghiệm tốt nhất!</p>
+</div>
+<!-- Py-Bot Bubble -->
+<div class="flex items-center gap-4 bg-surface-container-highest p-4 rounded-2xl card-shadow relative animate-bounce-slow">
+<div class="w-16 h-16 flex-shrink-0 bg-primary-container rounded-full overflow-hidden border-4 border-white">
+<img alt="Py-Bot" data-alt="A cute, friendly 3D robot character named Py-Bot with big glowing digital eyes and a sleek white and electric blue body. The robot has a welcoming and helpful posture, appearing as a digital companion in a bright, futuristic learning environment with soft studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAPHAHh5RESROfJz7silhkCtpTjeR4DhtCWtmbqOsl7fJaaRUr7sxtkrFhabr2K0ekL3dUwOtPmKn5aK59VvJnMk2SfES1F41gvTxJs3HPg-1J6_eCBrZoA5D7yTFV4DLOto7Z50XEM62Sv9ylMv6Db0mvEO2UcXqGzkQINzvCvcjxNKZH5v-VYG_Uq1fHdPVMScHBhjI6JeLmIRt00hCIH66QpFMuRIv4vzS6KQTPPpIBKsngbKbWmZj4D3pVGOUa-JCaAUOwA_1zm"/>
+</div>
+<div class="flex flex-col">
+<p class="font-body-md text-body-md font-bold text-primary">Py-Bot đang đợi!</p>
+<p class="font-body-md text-body-md text-on-surface-variant">"Cần mình giúp chỉnh gì không?"</p>
+</div>
+</div>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Personal Info -->
+<section class="lg:col-span-7 flex flex-col gap-gutter">
+<!-- Section 1: Thông tin cá nhân -->
+<div class="bg-white p-8 rounded-[24px] border border-outline-variant card-shadow">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="person">person</span>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Thông tin cá nhân</h3>
+</div>
+<div class="flex flex-col md:flex-row gap-8 items-center mb-8">
+<div class="relative group">
+<div class="w-32 h-32 rounded-full overflow-hidden border-4 border-primary-container shadow-lg">
+<img alt="Profile" data-alt="A high-quality 3D rendered avatar of a young student with glasses, smiling confidently. The lighting is warm and cinematic, highlighting the friendly facial features and modern hairstyle, perfectly suited for a premium educational platform's user profile section." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC60u63b4tm5IXoS_skcoWxGx7BIljwbfiO4fsQxvNUi5VVRO_3XsOwurnnD_c1Yks1zU--xkICXd0EVKkT3urGD0xH0W2RdINazu2m1nh8Z6zC6CzUbgnLTVphIncfR0Mhkl0moFom1UDpaucvWCx509x1LIIaj0__nH42PNmxikHXlOzVPrQA5lls2kzdrNZC17LUQASpggJSZ1RlI4y1q77-tDms14voB3jcEhsDhtjM24v9zhjfXdCr0sRnhUj1t36UobmxC5_Z"/>
+</div>
+<button class="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full border-2 border-white shadow-md hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+</button>
+</div>
+<div class="flex-1 w-full space-y-4">
+<div>
+<label class="block font-headline-md text-on-surface-variant mb-1 ml-2">Tên hiển thị</label>
+<input class="w-full h-[56px] px-6 rounded-xl border-2 border-outline-variant focus:border-primary focus:ring-0 font-body-lg outline-none transition-all" type="text" value="CodeNinja_2024"/>
+</div>
+<div>
+<label class="block font-headline-md text-on-surface-variant mb-1 ml-2">Email</label>
+<input class="w-full h-[56px] px-6 rounded-xl border-2 border-outline-variant focus:border-primary focus:ring-0 font-body-lg outline-none transition-all" type="email" value="ninja@pythonquest.edu"/>
+</div>
+</div>
+</div>
+<button class="w-full py-4 rounded-xl border-2 border-primary text-primary font-bold btn-chunky hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="lock_reset">lock_reset</span>
+                        Đổi mật khẩu
+                    </button>
+</div>
+<!-- Section 2: Quyền riêng tư & Bảo mật -->
+<div class="bg-white p-8 rounded-[24px] border border-outline-variant card-shadow">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-tertiary text-3xl" data-icon="shield">shield</span>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Quyền riêng tư &amp; Bảo mật</h3>
+</div>
+<div class="space-y-6">
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-xl">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="public">public</span>
+<div>
+<p class="font-headline-md text-on-surface">Hiển thị hồ sơ công khai</p>
+<p class="font-body-md text-on-surface-variant">Cho phép các bạn khác xem thành tích của bạn</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-14 h-8 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-tertiary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-xl">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="mail">mail</span>
+<div>
+<p class="font-headline-md text-on-surface">Nhận thông báo qua email</p>
+<p class="font-body-md text-on-surface-variant">Cập nhật các bài học mới và sự kiện</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-14 h-8 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-tertiary"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Experience & Actions -->
+<section class="lg:col-span-5 flex flex-col gap-gutter">
+<!-- Section 3: Tùy chỉnh trải nghiệm -->
+<div class="bg-white p-8 rounded-[24px] border border-outline-variant card-shadow">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="tune">tune</span>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Trải nghiệm</h3>
+</div>
+<div class="space-y-8">
+<!-- Volume Control -->
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="volume_up">volume_up</span>
+<span class="font-headline-md">Âm thanh</span>
+</div>
+<span class="font-label-code text-primary">80%</span>
+</div>
+<div class="h-4 w-full bg-surface-container rounded-full relative overflow-hidden">
+<div class="absolute h-full bg-primary-container rounded-full w-[80%]"></div>
+<div class="absolute h-6 w-6 bg-white border-4 border-primary rounded-full top-1/2 -translate-y-1/2 left-[80%] -translate-x-1/2 cursor-pointer shadow-md"></div>
+</div>
+</div>
+<!-- Music Toggle -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="music_note">music_note</span>
+<span class="font-headline-md">Nhạc nền</span>
+</div>
+<button class="w-12 h-6 bg-primary rounded-full relative transition-colors duration-200" onclick="toggleSwitch(this)">
+<div class="absolute w-4 h-4 bg-white rounded-full top-1 right-1 transition-all duration-200"></div>
+</button>
+</div>
+<!-- Theme Selection -->
+<div class="space-y-4">
+<p class="font-headline-md text-on-surface">Chế độ giao diện</p>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex flex-col items-center gap-2 p-4 rounded-xl border-4 border-primary bg-primary-fixed shadow-md">
+<span class="material-symbols-outlined text-3xl" data-icon="light_mode">light_mode</span>
+<span class="font-bold">Sáng</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-outline-variant bg-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="dark_mode">dark_mode</span>
+<span class="font-bold">Tối</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Danger Zone / Logout -->
+<div class="flex flex-col gap-4">
+<button class="w-full py-4 bg-primary text-white rounded-[20px] font-bold text-headline-md btn-chunky border-on-primary-fixed flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="save">save</span>
+                        Lưu thay đổi
+                    </button>
+<button class="w-full py-4 bg-error-container text-error rounded-[20px] font-bold text-headline-md flex items-center justify-center gap-2 hover:bg-error hover:text-white transition-all">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                        Đăng xuất khỏi tài khoản
+                    </button>
+</div>
+<!-- Progress Highlight -->
+<div class="p-6 bg-tertiary-container text-white rounded-[24px] card-shadow border-4 border-white overflow-hidden relative">
+<div class="relative z-10">
+<h4 class="font-headline-lg text-headline-lg mb-2">Thử thách hàng ngày</h4>
+<p class="font-body-md text-body-md opacity-90 mb-4">Hoàn thành 3 bài tập Python để nhận huy hiệu "Code Master"!</p>
+<div class="w-full bg-white/20 h-4 rounded-full mb-2">
+<div class="bg-secondary-fixed h-full w-[66%] rounded-full"></div>
+</div>
+<p class="font-label-code text-sm">2/3 bài tập đã hoàn thành</p>
+</div>
+<!-- Decorative Circle -->
+<div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full"></div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-outline-variant flex justify-around items-center py-2 px-margin-mobile z-50">
+<a class="flex flex-col items-center gap-1 text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="text-[10px] font-bold">Lessons</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="text-[10px] font-bold">Code</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="text-[10px] font-bold">Awards</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary p-2 border-t-4 border-primary -mt-1" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</a>
+</nav>
+<script>
+        function toggleSwitch(btn) {
+            const circle = btn.querySelector('div');
+            const isActive = btn.classList.contains('bg-primary');
+            
+            if(isActive) {
+                btn.classList.remove('bg-primary');
+                btn.classList.add('bg-outline-variant');
+                circle.classList.remove('right-1');
+                circle.classList.add('left-1');
+            } else {
+                btn.classList.add('bg-primary');
+                btn.classList.remove('bg-outline-variant');
+                circle.classList.add('right-1');
+                circle.classList.remove('left-1');
+            }
+        }
+
+        // Simple animation for the Py-Bot
+        const bot = document.querySelector('.animate-bounce-slow');
+        if(bot) {
+            bot.style.animation = 'floating 3s ease-in-out infinite';
+        }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes floating {
+                0% { transform: translateY(0px) translateX(0px); }
+                50% { transform: translateY(-10px) translateX(5px); }
+                100% { transform: translateY(0px) translateX(0px); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body></html>

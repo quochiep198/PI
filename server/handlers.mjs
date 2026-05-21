@@ -1,10 +1,15 @@
 ﻿import crypto from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { execute, query } from './db.mjs';
 
 const scryptAsync = promisify(crypto.scrypt);
 const SESSION_COOKIE_NAME = 'python_adventure_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const AVATAR_UPLOAD_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads/avatars');
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqPrimaryModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const groqSmallModel = process.env.GROQ_SMALL_MODEL || 'llama-3.1-8b-instant';
@@ -33,6 +38,14 @@ const XP_DAILY_CHALLENGE_BONUS = 30;
 
 // Coins System Constants
 const COINS_LESSON_COMPLETE = 100;
+const COINS_STREAK_BASE = 10;
+const COINS_STREAK_STEP = 2;
+const STREAK_ACHIEVEMENTS = {
+  7: 'Tuần lễ đầu tiên!',
+  14: 'Hai tuần kiên trì!',
+  30: 'Một tháng champion!',
+  100: '100 ngày huyền thoại!',
+};
 
 const LEVEL_THRESHOLDS = [
   { level: 1, name: 'Người mới', minXp: 0 },
@@ -47,13 +60,6 @@ const XP_SOURCES = {
   FIRST_SUCCESS_RUN: 'first_success_run',
   DAILY_CHALLENGE: 'daily_challenge',
   DAILY_CHALLENGE_BONUS: 'daily_challenge_bonus',
-};
-
-const STREAK_MILESTONE_ACHIEVEMENTS = {
-  7: 'Tuần lễ đầu tiên!',
-  14: 'Hai tuần kiên trì!',
-  30: 'Một tháng champion!',
-  100: '100 ngày huyền thoại!',
 };
 
 function getLevelFromXp(xp) {
@@ -288,63 +294,52 @@ function getUtcDateString(reference = new Date()) {
   return reference.toISOString().slice(0, 10);
 }
 
-function getPreviousUtcDateString(dateString) {
+function addUtcDays(dateString, days) {
   const date = new Date(`${dateString}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() - 1);
+  date.setUTCDate(date.getUTCDate() + days);
   return getUtcDateString(date);
 }
 
-function getWeekStartUtc(reference = new Date()) {
-  const date = new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate()));
-  const dayOfWeek = date.getUTCDay();
+function getUtcWeekBounds(reference = new Date()) {
+  const dayOfWeek = reference.getUTCDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  date.setUTCDate(date.getUTCDate() + mondayOffset);
-  return date;
+  const monday = new Date(Date.UTC(
+    reference.getUTCFullYear(),
+    reference.getUTCMonth(),
+    reference.getUTCDate() + mondayOffset,
+  ));
+  const nextMonday = new Date(monday);
+  nextMonday.setUTCDate(nextMonday.getUTCDate() + 7);
+
+  return {
+    startDate: getUtcDateString(monday),
+    endDate: getUtcDateString(nextMonday),
+  };
 }
 
-function buildWeekDays(checkedInDates, reference = new Date()) {
+function buildWeekDaysFromCheckins(checkedInDates, reference = new Date()) {
   const dayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-  const completedDates = new Set(checkedInDates);
-  const todayStr = getUtcDateString(reference);
-  const weekStart = getWeekStartUtc(reference);
-  const days = [];
+  const checkedInSet = new Set(checkedInDates);
+  const { startDate } = getUtcWeekBounds(reference);
+  const monday = new Date(`${startDate}T00:00:00.000Z`);
+  const todayDate = getUtcDateString(reference);
 
-  for (let offset = 0; offset < 7; offset += 1) {
-    const date = new Date(weekStart);
-    date.setUTCDate(weekStart.getUTCDate() + offset);
-    const dateStr = getUtcDateString(date);
-    const isToday = dateStr === todayStr;
-    const isFuture = dateStr > todayStr;
-    const isCompleted = completedDates.has(dateStr);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setUTCDate(monday.getUTCDate() + index);
+    const dateString = getUtcDateString(date);
+    const isToday = dateString === todayDate;
+    const isFuture = dateString > todayDate;
+    const isCompleted = checkedInSet.has(dateString);
 
-    days.push({
-      date: dateStr,
+    return {
+      date: dateString,
       label: dayLabels[date.getUTCDay()],
       status: isCompleted ? 'completed' : isToday ? 'today' : isFuture ? 'future' : 'locked',
       isToday,
       dayOfWeek: date.getUTCDay(),
-    });
-  }
-
-  return days;
-}
-
-function getEffectiveCurrentStreak(streakRow, todayStr = getUtcDateString()) {
-  const lastCheckInDate = streakRow?.lastCheckInDate || streakRow?.last_check_in_date || null;
-  if (!lastCheckInDate) {
-    return 0;
-  }
-
-  const previousDate = getPreviousUtcDateString(todayStr);
-  if (lastCheckInDate === todayStr || lastCheckInDate === previousDate) {
-    return Number(streakRow.currentStreak || streakRow.current_streak || 0);
-  }
-
-  return 0;
-}
-
-function getStreakReward(streak) {
-  return 10 + streak * 2;
+    };
+  });
 }
 
 async function getHintIpRateLimitStatus(request) {
@@ -577,21 +572,6 @@ async function ensureUserCoins(userId) {
   );
 }
 
-async function getUserCoins(userId) {
-  const result = await query(
-    `SELECT coins FROM user_coins WHERE user_id = $1 LIMIT 1`,
-    [userId],
-  );
-  return result[0]?.coins ?? 0;
-}
-
-async function addUserCoins(userId, coinsAmount) {
-  await query(
-    `INSERT INTO user_coins (user_id, coins) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET coins = user_coins.coins + $2`,
-    [userId, coinsAmount],
-  );
-}
-
 async function ensureUserStreak(userId) {
   await query(
     `
@@ -603,61 +583,137 @@ async function ensureUserStreak(userId) {
   );
 }
 
-async function getUserStreakRow(userId) {
-  const rows = await query(
-    `
-      SELECT
-        user_id AS "userId",
-        current_streak AS "currentStreak",
-        longest_streak AS "longestStreak",
-        last_check_in_date::text AS "lastCheckInDate",
-        total_check_ins AS "totalCheckIns"
-      FROM user_streaks
-      WHERE user_id = $1
-      LIMIT 1
-    `,
-    [userId],
-  );
-
-  return rows[0] ?? null;
-}
-
-async function getWeekCheckInDates(userId, startDate, endDate) {
-  const rows = await query(
-    `
-      SELECT check_in_date::text AS "checkInDate"
-      FROM user_streak_checkins
-      WHERE user_id = $1
-        AND check_in_date >= $2::date
-        AND check_in_date <= $3::date
-      ORDER BY check_in_date ASC
-    `,
-    [userId, startDate, endDate],
-  );
-
-  return rows.map((row) => row.checkInDate);
-}
-
-async function buildUserStreakData(userId, reference = new Date()) {
+async function getUserStreakData(userId) {
   await ensureUserStreak(userId);
 
-  const streakRow = await getUserStreakRow(userId);
-  const todayStr = getUtcDateString(reference);
-  const weekStart = getWeekStartUtc(reference);
-  const weekStartStr = getUtcDateString(weekStart);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
-  const weekEndStr = getUtcDateString(weekEnd);
-  const checkedInDates = await getWeekCheckInDates(userId, weekStartStr, weekEndStr);
+  const { startDate, endDate } = getUtcWeekBounds();
+  const [streakRows, checkinRows] = await Promise.all([
+    query(
+      `
+        SELECT
+          current_streak AS "currentStreak",
+          longest_streak AS "longestStreak",
+          total_check_ins AS "totalCheckIns",
+          last_check_in_date::text AS "lastCheckIn"
+        FROM user_streaks
+        WHERE user_id = $1
+        LIMIT 1
+      `,
+      [userId],
+    ),
+    query(
+      `
+        SELECT check_in_date::text AS date
+        FROM user_streak_checkins
+        WHERE user_id = $1
+          AND check_in_date >= $2::date
+          AND check_in_date < $3::date
+        ORDER BY check_in_date ASC
+      `,
+      [userId, startDate, endDate],
+    ),
+  ]);
+
+  const streak = streakRows[0] ?? {
+    currentStreak: 0,
+    longestStreak: 0,
+    totalCheckIns: 0,
+    lastCheckIn: null,
+  };
+  const checkedInDates = checkinRows.map((row) => row.date);
+  const todayDate = getUtcDateString();
 
   return {
-    currentStreak: getEffectiveCurrentStreak(streakRow, todayStr),
-    longestStreak: Number(streakRow?.longestStreak || 0),
-    lastCheckIn: streakRow?.lastCheckInDate ?? null,
-    weekDays: buildWeekDays(checkedInDates, reference),
-    totalCheckIns: Number(streakRow?.totalCheckIns || 0),
-    isCheckedInToday: streakRow?.lastCheckInDate === todayStr,
+    currentStreak: Number(streak.currentStreak || 0),
+    longestStreak: Number(streak.longestStreak || 0),
+    lastCheckIn: streak.lastCheckIn || null,
+    weekDays: buildWeekDaysFromCheckins(checkedInDates),
+    totalCheckIns: Number(streak.totalCheckIns || 0),
+    isCheckedInToday: checkedInDates.includes(todayDate),
   };
+}
+
+function getStreakAchievement(streak) {
+  return STREAK_ACHIEVEMENTS[streak];
+}
+
+function getStreakReward(streak) {
+  return COINS_STREAK_BASE + streak * COINS_STREAK_STEP;
+}
+
+async function getUserCoins(userId) {
+  const result = await query(
+    `SELECT coins FROM user_coins WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return result[0]?.coins ?? 0;
+}
+
+async function getLeaderboardEntries(currentUserId, limit = 3) {
+  const rows = await query(
+    `
+      WITH ranked_users AS (
+        SELECT
+          users.id,
+          users.username,
+          users.is_pro AS "isPro",
+          users.avatar_url AS "avatarUrl",
+          COALESCE(user_xp.total_xp, 0) AS xp,
+          COALESCE(user_coins.coins, 0) AS coins,
+          ROW_NUMBER() OVER (
+            ORDER BY COALESCE(user_xp.total_xp, 0) DESC, COALESCE(user_coins.coins, 0) DESC, users.username ASC
+          ) AS rank
+        FROM users
+        LEFT JOIN user_xp ON user_xp.user_id = users.id
+        LEFT JOIN user_coins ON user_coins.user_id = users.id
+      ),
+      top_users AS (
+        SELECT *
+        FROM ranked_users
+        WHERE rank <= $2
+      ),
+      current_user_entry AS (
+        SELECT *
+        FROM ranked_users
+        WHERE id = $1
+      )
+      SELECT DISTINCT ON (id)
+        id,
+        username,
+        "isPro",
+        "avatarUrl",
+        xp,
+        coins,
+        rank
+      FROM (
+        SELECT * FROM top_users
+        UNION ALL
+        SELECT * FROM current_user_entry
+      ) combined
+      ORDER BY id, rank
+    `,
+    [currentUserId, limit],
+  );
+
+  return rows
+    .map((row) => ({
+      id: Number(row.id),
+      username: row.username,
+      title: Number(row.id) === currentUserId ? 'Ban' : row.isPro ? 'Pro Learner' : 'Explorer',
+      avatarUrl: row.avatarUrl || null,
+      xp: Number(row.xp || 0),
+      coins: Number(row.coins || 0),
+      rank: Number(row.rank || 0),
+      isCurrentUser: Number(row.id) === currentUserId,
+    }))
+    .sort((left, right) => left.rank - right.rank);
+}
+
+async function addUserCoins(userId, coinsAmount) {
+  await query(
+    `INSERT INTO user_coins (user_id, coins) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET coins = user_coins.coins + $2`,
+    [userId, coinsAmount],
+  );
 }
 
 async function markFirstSuccessRun(userId, lessonId) {
@@ -938,7 +994,55 @@ function sanitizeUser(user) {
     username: user.username,
     email: user.email,
     isPro: Boolean(user.isPro ?? user.is_pro),
+    avatarUrl: user.avatarUrl ?? user.avatar_url ?? null,
+    theme: user.theme === 'dark' ? 'dark' : 'light',
+    profileVisible: Boolean(user.profileVisible ?? user.profile_visible ?? true),
+    emailNotifications: Boolean(user.emailNotifications ?? user.email_notifications ?? false),
+    musicEnabled: Boolean(user.musicEnabled ?? user.music_enabled ?? true),
+    soundVolume: Number.isFinite(Number(user.soundVolume ?? user.sound_volume))
+      ? Math.min(100, Math.max(0, Number(user.soundVolume ?? user.sound_volume)))
+      : 80,
   };
+}
+
+function parseAvatarDataUrl(value) {
+  const match = String(value || '').match(/^data:(image\/(?:png|jpeg|jpg|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const mimeType = match[1];
+  const base64Payload = match[2];
+  const buffer = Buffer.from(base64Payload, 'base64');
+
+  if (!buffer.length || buffer.length > MAX_AVATAR_BYTES) {
+    return null;
+  }
+
+  const extension = mimeType === 'image/jpeg' || mimeType === 'image/jpg'
+    ? 'jpg'
+    : mimeType.replace('image/', '');
+
+  return {
+    buffer,
+    extension,
+  };
+}
+
+async function saveAvatarForUser(userId, avatarDataUrl) {
+  const parsedAvatar = parseAvatarDataUrl(avatarDataUrl);
+  if (!parsedAvatar) {
+    throw new Error('Avatar must be a valid image under 2MB.');
+  }
+
+  await mkdir(AVATAR_UPLOAD_DIR, { recursive: true });
+
+  const filename = `user-${userId}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${parsedAvatar.extension}`;
+  const filePath = path.join(AVATAR_UPLOAD_DIR, filename);
+  const avatarUrl = `/uploads/avatars/${filename}`;
+
+  await writeFile(filePath, parsedAvatar.buffer);
+  return avatarUrl;
 }
 
 async function deleteExpiredSessions() {
@@ -983,7 +1087,13 @@ async function getAuthenticatedUser(request) {
         users.id,
         users.username,
         users.email,
-        users.is_pro AS "isPro"
+        users.is_pro AS "isPro",
+        users.avatar_url AS "avatarUrl",
+        users.theme,
+        users.profile_visible AS "profileVisible",
+        users.email_notifications AS "emailNotifications",
+        users.music_enabled AS "musicEnabled",
+        users.sound_volume AS "soundVolume"
       FROM user_sessions
       INNER JOIN users ON users.id = user_sessions.user_id
       WHERE user_sessions.session_token_hash = $1
@@ -1031,6 +1141,218 @@ export async function authMeHandler(request, response) {
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to load auth session.',
+    });
+  }
+}
+
+export async function updateAvatarHandler(request, response) {
+  const { avatarDataUrl } = getRequestBody(request);
+
+  if (!avatarDataUrl) {
+    response.status(400).json({
+      message: 'Missing avatarDataUrl.',
+    });
+    return;
+  }
+
+  const parsedAvatar = parseAvatarDataUrl(avatarDataUrl);
+  if (!parsedAvatar) {
+    response.status(400).json({
+      message: 'Avatar must be a valid image under 2MB.',
+    });
+    return;
+  }
+
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const avatarUrl = await saveAvatarForUser(user.id, avatarDataUrl);
+
+    const rows = await query(
+      `
+        UPDATE users
+        SET avatar_url = $2
+        WHERE id = $1
+        RETURNING
+          id,
+          username,
+          email,
+          is_pro AS "isPro",
+          avatar_url AS "avatarUrl",
+          theme,
+          profile_visible AS "profileVisible",
+          email_notifications AS "emailNotifications",
+          music_enabled AS "musicEnabled",
+          sound_volume AS "soundVolume"
+      `,
+      [user.id, avatarUrl],
+    );
+
+    response.json({
+      user: sanitizeUser(rows[0]),
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to update avatar.',
+    });
+  }
+}
+
+export async function updateSettingsHandler(request, response) {
+  const {
+    username,
+    email,
+    avatarDataUrl,
+    currentPassword,
+    newPassword,
+    theme,
+    profileVisible,
+    emailNotifications,
+    musicEnabled,
+    soundVolume,
+  } = getRequestBody(request);
+
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const normalizedUsername = normalizeIdentifier(username || user.username);
+    const normalizedEmail = normalizeIdentifier(email || user.email);
+
+    if (!normalizedUsername || !normalizedEmail) {
+      response.status(400).json({
+        message: 'Ten hien thi va email khong duoc de trong.',
+      });
+      return;
+    }
+
+    const existingUsers = await query(
+      `
+        SELECT id
+        FROM users
+        WHERE (username = $1 OR email = $2)
+          AND id <> $3
+        LIMIT 1
+      `,
+      [normalizedUsername, normalizedEmail, user.id],
+    );
+
+    if (existingUsers.length > 0) {
+      response.status(409).json({
+        message: 'Ten hien thi hoac email da duoc su dung.',
+      });
+      return;
+    }
+
+    let avatarUrl = user.avatarUrl ?? null;
+
+    if (avatarDataUrl) {
+      avatarUrl = await saveAvatarForUser(user.id, avatarDataUrl);
+    }
+
+    let nextPasswordHash = null;
+    const trimmedNewPassword = String(newPassword || '');
+    const trimmedCurrentPassword = String(currentPassword || '');
+
+    if (trimmedNewPassword) {
+      if (trimmedNewPassword.length < 8) {
+        response.status(400).json({
+          message: 'Mat khau moi phai co it nhat 8 ky tu.',
+        });
+        return;
+      }
+
+      if (!trimmedCurrentPassword) {
+        response.status(400).json({
+          message: 'Can nhap mat khau hien tai de doi mat khau.',
+        });
+        return;
+      }
+
+      const passwordRows = await query(
+        `
+          SELECT password_hash AS "passwordHash"
+          FROM users
+          WHERE id = $1
+          LIMIT 1
+        `,
+        [user.id],
+      );
+
+      const passwordHash = passwordRows[0]?.passwordHash;
+      const isValid = passwordHash
+        ? await verifyPassword(trimmedCurrentPassword, passwordHash)
+        : false;
+
+      if (!isValid) {
+        response.status(401).json({
+          message: 'Mat khau hien tai khong dung.',
+        });
+        return;
+      }
+
+      nextPasswordHash = await hashPassword(trimmedNewPassword);
+    }
+
+    const normalizedTheme = theme === 'dark' ? 'dark' : 'light';
+    const normalizedProfileVisible = typeof profileVisible === 'boolean' ? profileVisible : user.profileVisible ?? true;
+    const normalizedEmailNotifications = typeof emailNotifications === 'boolean' ? emailNotifications : user.emailNotifications ?? false;
+    const normalizedMusicEnabled = typeof musicEnabled === 'boolean' ? musicEnabled : user.musicEnabled ?? true;
+    const normalizedSoundVolume = Number.isFinite(Number(soundVolume))
+      ? Math.min(100, Math.max(0, Number(soundVolume)))
+      : user.soundVolume ?? 80;
+
+    const rows = await query(
+      `
+        UPDATE users
+        SET
+          username = $2,
+          email = $3,
+          avatar_url = $4,
+          theme = $5,
+          profile_visible = $6,
+          email_notifications = $7,
+          music_enabled = $8,
+          sound_volume = $9,
+          password_hash = COALESCE($10, password_hash)
+        WHERE id = $1
+        RETURNING
+          id,
+          username,
+          email,
+          is_pro AS "isPro",
+          avatar_url AS "avatarUrl",
+          theme,
+          profile_visible AS "profileVisible",
+          email_notifications AS "emailNotifications",
+          music_enabled AS "musicEnabled",
+          sound_volume AS "soundVolume"
+      `,
+      [
+        user.id,
+        normalizedUsername,
+        normalizedEmail,
+        avatarUrl,
+        normalizedTheme,
+        normalizedProfileVisible,
+        normalizedEmailNotifications,
+        normalizedMusicEnabled,
+        normalizedSoundVolume,
+        nextPasswordHash,
+      ],
+    );
+
+    response.json({
+      user: sanitizeUser(rows[0]),
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to save settings.',
     });
   }
 }
@@ -1129,7 +1451,7 @@ export async function registerHandler(request, response) {
       `
         INSERT INTO users (username, email, password_hash)
         VALUES ($1, $2, $3)
-        RETURNING id, username, email, is_pro AS "isPro"
+        RETURNING id, username, email, is_pro AS "isPro", avatar_url AS "avatarUrl"
       `,
       [normalizedUsername, normalizedEmail, passwordHash],
     );
@@ -1163,7 +1485,7 @@ export async function loginHandler(request, response) {
   try {
     const users = await query(
       `
-        SELECT id, username, email, is_pro AS "isPro", password_hash AS "passwordHash"
+        SELECT id, username, email, is_pro AS "isPro", avatar_url AS "avatarUrl", password_hash AS "passwordHash"
         FROM users
         WHERE username = $1 OR email = $1
         LIMIT 1
@@ -1875,6 +2197,176 @@ export async function postXpHandler(request, response) {
   return addXpHandler(request, response);
 }
 
+export async function getStreakHandler(request, response) {
+  const requestedUserId = Number(request.params?.userId);
+
+  if (!Number.isInteger(requestedUserId) || requestedUserId <= 0) {
+    response.status(400).json({ message: 'Invalid user id.' });
+    return;
+  }
+
+  try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      response.status(401).json({ message: 'Authentication required.' });
+      return;
+    }
+
+    if (user.id !== requestedUserId) {
+      response.status(403).json({ message: 'You can only access your own streak.' });
+      return;
+    }
+
+    const streakData = await getUserStreakData(user.id);
+    response.json(streakData);
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to load streak data.',
+    });
+  }
+}
+
+export async function checkInHandler(request, response) {
+  const requestedUserId = Number(request.params?.userId);
+
+  if (!Number.isInteger(requestedUserId) || requestedUserId <= 0) {
+    response.status(400).json({ message: 'Invalid user id.' });
+    return;
+  }
+
+  try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      response.status(401).json({ message: 'Authentication required.' });
+      return;
+    }
+
+    if (user.id !== requestedUserId) {
+      response.status(403).json({ message: 'You can only check in for your own account.' });
+      return;
+    }
+
+    await ensureUserStreak(user.id);
+    await ensureUserCoins(user.id);
+
+    const todayDate = getUtcDateString();
+    const yesterdayDate = addUtcDays(todayDate, -1);
+
+    const resultRows = await query(
+      `
+        WITH streak_row AS (
+          SELECT
+            current_streak,
+            longest_streak,
+            total_check_ins,
+            last_check_in_date
+          FROM user_streaks
+          WHERE user_id = $1
+        ),
+        checkin_insert AS (
+          INSERT INTO user_streak_checkins (user_id, check_in_date, reward_coins)
+          VALUES ($1, $2::date, 0)
+          ON CONFLICT (user_id, check_in_date) DO NOTHING
+          RETURNING 1
+        ),
+        streak_values AS (
+          SELECT
+            CASE
+              WHEN (SELECT COUNT(*) FROM checkin_insert) = 0 THEN COALESCE((SELECT current_streak FROM streak_row), 0)
+              WHEN (SELECT last_check_in_date FROM streak_row) = $3::date THEN COALESCE((SELECT current_streak FROM streak_row), 0) + 1
+              ELSE 1
+            END AS new_current_streak,
+            GREATEST(
+              COALESCE((SELECT longest_streak FROM streak_row), 0),
+              CASE
+                WHEN (SELECT COUNT(*) FROM checkin_insert) = 0 THEN COALESCE((SELECT current_streak FROM streak_row), 0)
+                WHEN (SELECT last_check_in_date FROM streak_row) = $3::date THEN COALESCE((SELECT current_streak FROM streak_row), 0) + 1
+                ELSE 1
+              END
+            ) AS new_longest_streak,
+            CASE
+              WHEN (SELECT COUNT(*) FROM checkin_insert) = 0 THEN COALESCE((SELECT total_check_ins FROM streak_row), 0)
+              ELSE COALESCE((SELECT total_check_ins FROM streak_row), 0) + 1
+            END AS new_total_check_ins,
+            CASE
+              WHEN (SELECT COUNT(*) FROM checkin_insert) = 0 THEN 0
+              ELSE $4 + (
+                CASE
+                  WHEN (SELECT last_check_in_date FROM streak_row) = $3::date THEN (COALESCE((SELECT current_streak FROM streak_row), 0) + 1) * $5
+                  ELSE $5
+                END
+              )
+            END AS reward_coins
+        ),
+        streak_update AS (
+          UPDATE user_streaks
+          SET
+            current_streak = (SELECT new_current_streak FROM streak_values),
+            longest_streak = (SELECT new_longest_streak FROM streak_values),
+            total_check_ins = (SELECT new_total_check_ins FROM streak_values),
+            last_check_in_date = CASE
+              WHEN (SELECT COUNT(*) FROM checkin_insert) = 0 THEN last_check_in_date
+              ELSE $2::date
+            END,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = $1
+          RETURNING
+            current_streak AS "currentStreak",
+            longest_streak AS "longestStreak",
+            total_check_ins AS "totalCheckIns",
+            last_check_in_date::text AS "lastCheckIn"
+        ),
+        coins_upsert AS (
+          INSERT INTO user_coins (user_id, coins)
+          VALUES ($1, (SELECT reward_coins FROM streak_values))
+          ON CONFLICT (user_id)
+          DO UPDATE SET coins = user_coins.coins + EXCLUDED.coins
+          RETURNING coins
+        ),
+        checkin_reward_update AS (
+          UPDATE user_streak_checkins
+          SET reward_coins = (SELECT reward_coins FROM streak_values)
+          WHERE user_id = $1
+            AND check_in_date = $2::date
+            AND EXISTS (SELECT 1 FROM checkin_insert)
+          RETURNING reward_coins
+        )
+        SELECT
+          EXISTS (SELECT 1 FROM checkin_insert) AS success,
+          COALESCE((SELECT "currentStreak" FROM streak_update), 0) AS "currentStreak",
+          COALESCE((SELECT "longestStreak" FROM streak_update), 0) AS "longestStreak",
+          COALESCE((SELECT "totalCheckIns" FROM streak_update), 0) AS "totalCheckIns",
+          (SELECT "lastCheckIn" FROM streak_update) AS "lastCheckIn",
+          COALESCE((SELECT reward_coins FROM streak_values), 0) AS reward,
+          COALESCE((SELECT coins FROM coins_upsert), 0) AS "totalCoins"
+      `,
+      [user.id, todayDate, yesterdayDate, COINS_STREAK_BASE, COINS_STREAK_STEP],
+    );
+
+    const result = resultRows[0];
+    const success = Boolean(result?.success);
+    const currentStreak = Number(result?.currentStreak || 0);
+    const reward = success ? getStreakReward(currentStreak) : 0;
+
+    const streakData = await getUserStreakData(user.id);
+    const totalCoins = Number(result?.totalCoins || 0);
+
+    response.status(success ? 201 : 200).json({
+      success,
+      newStreak: currentStreak,
+      reward,
+      achievement: success ? getStreakAchievement(currentStreak) : undefined,
+      message: success ? `+${reward} coins! Tiếp tục giữ vững phong độ!` : 'Bạn đã check-in hôm nay rồi!',
+      totalCoins: Number(totalCoins || 0),
+      streakData,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to check in.',
+    });
+  }
+}
+
 export async function getCoinsHandler(request, response) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -1893,131 +2385,29 @@ export async function getCoinsHandler(request, response) {
   }
 }
 
-export async function getStreakHandler(request, response) {
+export async function getLeaderboardHandler(request, response) {
   try {
-    const user = await requireAuthenticatedUser(request, response);
+    const user = await getAuthenticatedUser(request);
     if (!user) {
+      response.status(401).json({ message: 'Authentication required.' });
       return;
     }
 
-    const requestedUserId = Number(request.params?.userId);
-    if (!requestedUserId || requestedUserId !== user.id) {
-      response.status(403).json({ message: 'Cannot access another user streak.' });
-      return;
-    }
-
-    const streakData = await buildUserStreakData(user.id);
-    response.json(streakData);
-  } catch (error) {
-    response.status(500).json({
-      message: error instanceof Error ? error.message : 'Failed to load streak.',
-    });
-  }
-}
-
-export async function checkInStreakHandler(request, response) {
-  try {
-    const user = await requireAuthenticatedUser(request, response);
-    if (!user) {
-      return;
-    }
-
-    const requestedUserId = Number(request.params?.userId);
-    if (!requestedUserId || requestedUserId !== user.id) {
-      response.status(403).json({ message: 'Cannot modify another user streak.' });
-      return;
-    }
-
-    await ensureUserCoins(user.id);
-    await ensureUserStreak(user.id);
-
-    const streakRow = await getUserStreakRow(user.id);
-    const todayStr = getUtcDateString();
-
-    if (streakRow?.lastCheckInDate === todayStr) {
-      const streakData = await buildUserStreakData(user.id);
-      const totalCoins = await getUserCoins(user.id);
-
-      response.json({
-        success: false,
-        newStreak: streakData.currentStreak,
-        reward: 0,
-        message: 'Bạn đã check-in hôm nay rồi!',
-        totalCoins,
-        streakData,
-      });
-      return;
-    }
-
-    const reward = getStreakReward(
-      streakRow?.lastCheckInDate === getPreviousUtcDateString(todayStr)
-        ? Number(streakRow?.currentStreak || 0) + 1
-        : 1,
-    );
-
-    const insertRows = await query(
-      `
-        INSERT INTO user_streak_checkins (user_id, check_in_date, reward_coins)
-        VALUES ($1, $2::date, $3)
-        ON CONFLICT (user_id, check_in_date) DO NOTHING
-        RETURNING check_in_date::text AS "checkInDate"
-      `,
-      [user.id, todayStr, reward],
-    );
-
-    if (insertRows.length === 0) {
-      const streakData = await buildUserStreakData(user.id);
-      const totalCoins = await getUserCoins(user.id);
-
-      response.json({
-        success: false,
-        newStreak: streakData.currentStreak,
-        reward: 0,
-        message: 'Bạn đã check-in hôm nay rồi!',
-        totalCoins,
-        streakData,
-      });
-      return;
-    }
-
-    const previousDate = getPreviousUtcDateString(todayStr);
-    const previousCurrentStreak = Number(streakRow?.currentStreak || 0);
-    const newStreak = streakRow?.lastCheckInDate === previousDate ? previousCurrentStreak + 1 : 1;
-    const newLongestStreak = Math.max(Number(streakRow?.longestStreak || 0), newStreak);
-    const newTotalCheckIns = Number(streakRow?.totalCheckIns || 0) + 1;
-
-    await query(
-      `
-        UPDATE user_streaks
-        SET
-          current_streak = $2,
-          longest_streak = $3,
-          last_check_in_date = $4::date,
-          total_check_ins = $5,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $1
-      `,
-      [user.id, newStreak, newLongestStreak, todayStr, newTotalCheckIns],
-    );
-
-    await addUserCoins(user.id, reward);
-
-    const totalCoins = await getUserCoins(user.id);
-    const streakData = await buildUserStreakData(user.id);
-    const achievement = STREAK_MILESTONE_ACHIEVEMENTS[newStreak];
+    const entries = await getLeaderboardEntries(user.id);
+    const topEntries = entries
+      .filter((entry) => entry.rank <= 3)
+      .slice(0, 3)
+      .map((entry) => ({ ...entry, isCurrentUser: false }));
+    const currentUserEntry = entries.find((entry) => entry.id === user.id) ?? null;
 
     response.json({
-      success: true,
-      newStreak,
-      reward,
-      achievement,
-      message: achievement || `+${reward} coins! Tiếp tục giữ vững phong độ!`,
-      totalCoins,
-      streakData,
+      topEntries,
+      currentUserEntry,
+      currentUserId: user.id,
     });
   } catch (error) {
     response.status(500).json({
-      message: error instanceof Error ? error.message : 'Failed to check in streak.',
+      message: error instanceof Error ? error.message : 'Failed to load leaderboard.',
     });
   }
 }

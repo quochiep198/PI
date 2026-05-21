@@ -224,7 +224,7 @@ type UseStreakReturn = {
 - Nếu user đã Streak rồi thì sẽ không được Streak lại dù có reload lại page
 - Tạo bảng quan hệ giữa Streak à User
 - Nếu user đã Streak rồi thì phải cập nhật coin liền, không phải reload lại mới cập nhật
-
+- Hiển thị avatar ở danh sách list
 ---
 
 ## 6. Challenges Section
@@ -256,10 +256,10 @@ Grid 3 columns. Items có badge "MỚI!" cho item featured.
 ---
 
 ## 8. Leaderboard
-
 4 user entries:
-- Top 3 với rank badge colors: vàng (1), bạc (2), đồng (3)
+- Top 3 với rank badge colors: vàng (1), bạc (2), đồng (3) (Uư tiên là điểm xp, nếu có cùng xp thì so sánh coin để sắp xếp)
 - User row: dashed border, highlight background
+- Nếu nhấn nút làm mới thì sẽ cập nhật lại bảng xếp hạng
 
 ---
 

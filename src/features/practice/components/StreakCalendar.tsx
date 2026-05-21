@@ -113,7 +113,7 @@ export const StreakCalendar: FC<StreakCalendarProps> = ({ userId }) => {
               type="button"
               className={`practice-streak__checkin-btn pressable ${isCheckingIn ? 'is-loading' : ''}`}
               onClick={handleCheckIn}
-              disabled={isCheckingIn || isCheckedInToday}
+              disabled={isCheckingIn}
             >
               {isCheckingIn ? (
                 <>

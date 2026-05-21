@@ -38,6 +38,7 @@ export function useStreak(userId: number): UseStreakReturn {
         if (result.streakData) {
           setStreakData(result.streakData);
         }
+
         if (typeof result.totalCoins === 'number') {
           setCachedCoins(result.totalCoins);
         }

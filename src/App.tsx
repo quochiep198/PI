@@ -3,6 +3,7 @@ import { AuthPage } from './features/auth/AuthPage';
 import type { AuthUser } from './features/auth/types';
 import { HomePage } from './features/home/HomePage';
 import { PracticePage } from './features/practice/PracticePage';
+import { SettingsPage } from './features/settings/SettingsPage';
 import { TopBar } from './features/layout/TopBar';
 import { SideNav } from './features/layout/SideNav';
 import { useXPCached } from './features/home/useXPCached';
@@ -12,7 +13,7 @@ import { MobileNavigation } from './features/navigate/NavigateNavigation';
 import { clearCachedXp } from './features/shared/xpCache';
 import { clearCachedCoins } from './features/shared/coinsCache';
 
-type View = 'home' | 'practice';
+type View = 'home' | 'practice' | 'settings';
 
 type AuthMeResponse = {
   authenticated: boolean;
@@ -70,9 +71,21 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.documentElement.dataset.theme = user?.theme === 'dark' ? 'dark' : 'light';
+  }, [user?.theme]);
+
   function handleAuthenticated(nextUser: AuthUser) {
     clearCachedXp();
     clearCachedCoins();
+    setUser(nextUser);
+  }
+
+  function handleUserUpdated(nextUser: AuthUser) {
     setUser(nextUser);
   }
 
@@ -104,15 +117,20 @@ export default function App() {
 
       <div className="quest-layout">
         <SideNav
-          activeLabel={view === 'home' ? 'Lessons' : 'Daily Practice'}
+          activeLabel={view === 'home' ? 'Lessons' : view === 'practice' ? 'Daily Practice' : 'Settings'}
           onlineCount={onlineLearners}
           onlineLoading={!onlineConnected && !onlineFailed}
           onlineError={onlineFailed}
           onNavigateLessons={() => setView('home')}
           onNavigatePractice={() => setView('practice')}
+          onNavigateSettings={() => setView('settings')}
         />
 
-        {view === 'home' ? <HomePage user={user} /> : <PracticePage user={user} />}
+        {view === 'home'
+          ? <HomePage user={user} />
+          : view === 'practice'
+            ? <PracticePage user={user} />
+            : <SettingsPage user={user} onUserUpdated={handleUserUpdated} onLogout={handleLogout} />}
       </div>
 
       <MobileNavigation />

@@ -1,24 +1,29 @@
-import type { StreakData, CheckInResult } from '../types/streak';
+import type { CheckInResult, StreakData } from '../types/streak';
 
 const API_BASE = '/api/streak';
 
-async function parseResponse<T>(response: Response): Promise<T> {
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const message =
-      data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
-        ? data.message
-        : 'Streak request failed';
-    throw new Error(message);
+async function parseJsonSafely<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) {
+    return null;
   }
 
-  return data as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchStreakData(userId: number): Promise<StreakData> {
   const response = await fetch(`${API_BASE}/${userId}`);
-  return parseResponse<StreakData>(response);
+  const payload = await parseJsonSafely<StreakData & { message?: string }>(response);
+
+  if (!response.ok || !payload) {
+    throw new Error(payload?.message || 'Failed to load streak data');
+  }
+
+  return payload;
 }
 
 export async function checkIn(userId: number): Promise<CheckInResult> {
@@ -28,6 +33,11 @@ export async function checkIn(userId: number): Promise<CheckInResult> {
       'Content-Type': 'application/json',
     },
   });
+  const payload = await parseJsonSafely<CheckInResult & { message?: string }>(response);
 
-  return parseResponse<CheckInResult>(response);
+  if (!response.ok || !payload) {
+    throw new Error(payload?.message || 'Check-in failed');
+  }
+
+  return payload;
 }
