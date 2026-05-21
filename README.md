@@ -59,3 +59,4 @@ npm run dev
 - editor Python chạy bằng Pyodide trong browser
 - lưu tiến trình hoàn thành bài học
 - gợi ý AI qua Groq
+- Test
