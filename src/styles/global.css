@@ -411,6 +411,10 @@ select {
   justify-content: space-between;
 }
 
+.auth-backlink {
+  margin-bottom: 24px;
+}
+
 .auth-link {
   padding: 0;
   color: var(--color-primary);
@@ -431,6 +435,29 @@ select {
   color: var(--color-on-error-container);
   background: var(--color-error-container);
   border-radius: 12px;
+}
+
+.auth-success,
+.auth-helper {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.auth-success {
+  color: #0f5132;
+  background: #d1f4df;
+}
+
+.auth-helper {
+  color: var(--color-on-surface-variant);
+  background: var(--color-surface-container-low);
+}
+
+.auth-helper a {
+  color: var(--color-primary);
+  font-weight: 700;
+  word-break: break-all;
 }
 
 .auth-submit {

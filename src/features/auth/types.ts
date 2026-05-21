@@ -11,4 +11,4 @@ export type AuthUser = {
   soundVolume?: number;
 };
 
-export type AuthMode = 'login' | 'register';
+export type AuthMode = 'login' | 'register' | 'forgot' | 'reset';

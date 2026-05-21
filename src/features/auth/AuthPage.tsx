@@ -14,16 +14,42 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
     email,
     password,
     confirmPassword,
+    forgotIdentifier,
     isSubmitting,
     error,
+    successMessage,
+    resetPreviewUrl,
     setIdentifier,
     setUsername,
     setEmail,
     setPassword,
     setConfirmPassword,
+    setForgotIdentifier,
     switchMode,
     handleSubmit,
   } = useAuthForm({ onAuthenticated });
+
+  const isLogin = mode === 'login';
+  const isRegister = mode === 'register';
+  const isForgot = mode === 'forgot';
+  const isReset = mode === 'reset';
+  const showToggle = isLogin || isRegister;
+
+  const title = isLogin
+    ? 'Chào mừng nhỏ thám hiểm!'
+    : isRegister
+      ? 'Tạo tài khoản mới'
+      : isForgot
+        ? 'Quên mật khẩu'
+        : 'Đặt lại mật khẩu';
+
+  const description = isLogin
+    ? 'Sẵn sàng để tiếp tục cuộc hành trình lập trình của bạn?'
+    : isRegister
+      ? 'Tạo tài khoản để lưu tiến trình học Python của riêng bạn.'
+      : isForgot
+        ? 'Nhập email, tên đăng nhập hoặc số điện thoại để nhận hướng dẫn đặt lại mật khẩu.'
+        : 'Tạo mật khẩu mới mạnh hơn để quay lại PythonQuest.';
 
   return (
     <div className="auth-page">
@@ -58,33 +84,37 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
             </div>
 
             <header className="auth-panel__header">
-              <h2>{mode === 'login' ? 'Chào mừng nhỏ thám hiểm!' : 'Tạo tài khoản mới'}</h2>
-              <p>
-                {mode === 'login'
-                 ? 'Sẵn sàng để tiếp tục cuộc hành trình lập trình của bạn?'
-                  : 'Tạo tài khoản để lưu tiến trình học Python của riêng bạn.'}
-              </p>
+              <h2>{title}</h2>
+              <p>{description}</p>
             </header>
 
-            <div className="auth-toggle" role="tablist" aria-label="Authentication mode">
-              <button
-                className={`pressable auth-toggle__button${mode === 'login' ? ' is-active' : ''}`}
-                type="button"
-                onClick={() => switchMode('login')}
-              >
-                Đăng nhập
-              </button>
-              <button
-                className={`pressable auth-toggle__button${mode === 'register' ? ' is-active' : ''}`}
-                type="button"
-                onClick={() => switchMode('register')}
-              >
-                Tạo tài khoản
-              </button>
-            </div>
+            {showToggle ? (
+              <div className="auth-toggle" role="tablist" aria-label="Authentication mode">
+                <button
+                  className={`pressable auth-toggle__button${isLogin ? ' is-active' : ''}`}
+                  type="button"
+                  onClick={() => switchMode('login')}
+                >
+                  Đăng nhập
+                </button>
+                <button
+                  className={`pressable auth-toggle__button${isRegister ? ' is-active' : ''}`}
+                  type="button"
+                  onClick={() => switchMode('register')}
+                >
+                  Tạo tài khoản
+                </button>
+              </div>
+            ) : (
+              <div className="auth-backlink">
+                <button className="auth-link" type="button" onClick={() => switchMode('login')}>
+                  Quay lại đăng nhập
+                </button>
+              </div>
+            )}
 
             <form className="auth-form" onSubmit={handleSubmit}>
-              {mode === 'register' ? (
+              {isRegister ? (
                 <>
                   <label className="auth-field">
                     <span className="auth-field__label">Tên đăng nhập</span>
@@ -110,7 +140,9 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                     />
                   </label>
                 </>
-              ) : (
+              ) : null}
+
+              {isLogin ? (
                 <label className="auth-field">
                   <span className="auth-field__label">{VI_MESSAGES.auth.labels.emailOrUsername}</span>
                   <input
@@ -122,21 +154,39 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                     onChange={(event) => setIdentifier(event.target.value)}
                   />
                 </label>
-              )}
+              ) : null}
 
-              <label className="auth-field">
-                <span className="auth-field__label">{VI_MESSAGES.auth.labels.password}</span>
-                <input
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  className="auth-input"
-                  placeholder="........"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </label>
+              {isForgot ? (
+                <label className="auth-field">
+                  <span className="auth-field__label">Email, tên đăng nhập hoặc số điện thoại</span>
+                  <input
+                    autoComplete="username"
+                    className="auth-input"
+                    placeholder="be@example.com hoặc explorer_01"
+                    type="text"
+                    value={forgotIdentifier}
+                    onChange={(event) => setForgotIdentifier(event.target.value)}
+                  />
+                </label>
+              ) : null}
 
-              {mode === 'register' ? (
+              {!isForgot ? (
+                <label className="auth-field">
+                  <span className="auth-field__label">
+                    {isReset ? 'Mật khẩu mới' : VI_MESSAGES.auth.labels.password}
+                  </span>
+                  <input
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    className="auth-input"
+                    placeholder="........"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </label>
+              ) : null}
+
+              {isRegister || isReset ? (
                 <label className="auth-field">
                   <span className="auth-field__label">{VI_MESSAGES.auth.labels.confirmPassword}</span>
                   <input
@@ -148,73 +198,98 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                     onChange={(event) => setConfirmPassword(event.target.value)}
                   />
                 </label>
-              ) : (
+              ) : null}
+
+              {isLogin ? (
                 <div className="auth-form__meta">
                   <span />
-                  <button className="auth-link" disabled type="button">
+                  <button className="auth-link" type="button" onClick={() => switchMode('forgot')}>
                     {VI_MESSAGES.auth.labels.forgotPassword}
                   </button>
                 </div>
-              )}
+              ) : null}
+
+              {isReset ? (
+                <p className="auth-helper">
+                  Mật khẩu phải từ 8 ký tự trở lên, có chữ hoa, chữ thường và ký tự đặc biệt.
+                </p>
+              ) : null}
 
               {error ? <p className="auth-error">{error}</p> : null}
+              {successMessage ? <p className="auth-success">{successMessage}</p> : null}
+              {resetPreviewUrl ? (
+                <p className="auth-helper">
+                  Link test local:{' '}
+                  <a href={resetPreviewUrl} rel="noreferrer" target="_blank">
+                    {resetPreviewUrl}
+                  </a>
+                </p>
+              ) : null}
 
               <button className="pressable auth-submit" disabled={isSubmitting} type="submit">
                 <span>
                   {isSubmitting
                     ? 'Đang xử lý...'
-                    : mode === 'login'
+                    : isLogin
                       ? 'Bắt đầu tham quan'
-                      : 'Tạo tài khoản'}
+                      : isRegister
+                        ? 'Tạo tài khoản'
+                        : isForgot
+                          ? 'Gửi hướng dẫn'
+                          : 'Cập nhật mật khẩu'}
                 </span>
                 <span aria-hidden="true" className="material-symbols-outlined">
-                  {mode === 'login' ? 'rocket_launch' : 'person_add'}
+                  {isLogin ? 'rocket_launch' : isRegister ? 'person_add' : isForgot ? 'mail' : 'lock_reset'}
                 </span>
               </button>
             </form>
 
-            <div className="auth-divider">
-              <span>Hoặc đăng nhập bằng</span>
-            </div>
+            {showToggle ? (
+              <>
+                <div className="auth-divider">
+                  <span>Hoặc đăng nhập bằng</span>
+                </div>
 
-            <div className="auth-social">
-              <button className="pressable auth-social__button" disabled type="button">
-                <img
-                  alt="Google"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkccZawS2sDX8JfJFSyk6R4xO-BaWZ05VmDV1CCLfmSdM9eUuZqX_nuzLdDvsAppWPH9b3BdejbJhlGrVN1qVUWAraR1ui5fdGSPusrnWNoIWYlUPwIr-xWPIa9PXHsuB9YbNOgcYihQv8_mfXWX1vJ0PfqYltgy-l0edBuVpUteBwWqrjYMXiN8D3hpsvcKyRZrri68vCVOCd1HDrAHUjHpBmbybtZgA13_9-5Ha4sT2SFrkqeFtFr2c-JyBy-JSHQBXpFi6OayI8"
-                />
-                <span>Google</span>
-              </button>
-              <button className="pressable auth-social__button" disabled type="button">
-                <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path
-                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483
-                    0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466
-                    -.908-.62.069-.008.069-.008 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647
-                    .35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272
-                    .098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337
-                    1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688
-                    0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747
-                    0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"
-                    fill="currentColor"
-                  />
-                </svg>
-                <span>Github</span>
-              </button>
-            </div>
+                <div className="auth-social">
+                  <button className="pressable auth-social__button" disabled type="button">
+                    <img
+                      alt="Google"
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkccZawS2sDX8JfJFSyk6R4xO-BaWZ05VmDV1CCLfmSdM9eUuZqX_nuzLdDvsAppWPH9b3BdejbJhlGrVN1qVUWAraR1ui5fdGSPusrnWNoIWYlUPwIr-xWPIa9PXHsuB9YbNOgcYihQv8_mfXWX1vJ0PfqYltgy-l0edBuVpUteBwWqrjYMXiN8D3hpsvcKyRZrri68vCVOCd1HDrAHUjHpBmbybtZgA13_9-5Ha4sT2SFrkqeFtFr2c-JyBy-JSHQBXpFi6OayI8"
+                    />
+                    <span>Google</span>
+                  </button>
+                  <button className="pressable auth-social__button" disabled type="button">
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path
+                        d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483
+                        0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466
+                        -.908-.62.069-.008.069-.008 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647
+                        .35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272
+                        .098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337
+                        1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688
+                        0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747
+                        0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    <span>Github</span>
+                  </button>
+                </div>
 
-            <footer className="auth-footer">
-              <p>
-                {mode === 'login' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}{' '}
-                <button
-                  className="auth-link"
-                  type="button"
-                  onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
-                >
-                  {mode === 'login' ? 'Tham gia ngay!' : 'Đăng nhập ngay!'}
-                </button>
-              </p>
-            </footer>
+                <footer className="auth-footer">
+                  <p>
+                    {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}{' '}
+                    <button
+                      className="auth-link"
+                      type="button"
+                      onClick={() => switchMode(isLogin ? 'register' : 'login')}
+                    >
+                      {isLogin ? 'Tham gia ngay!' : 'Đăng nhập ngay!'}
+                    </button>
+                  </p>
+                </footer>
+              </>
+            ) : null}
           </div>
         </section>
       </main>

@@ -7,6 +7,7 @@ import {
   completeProgressHandler,
   createLessonHandler,
   errorFeedbackHandler,
+  forgotPasswordHandler,
   getLeaderboardHandler,
   getXpHandler,
   healthHandler,
@@ -17,6 +18,7 @@ import {
   logoutHandler,
   progressHandler,
   registerHandler,
+  resetPasswordHandler,
   postXpHandler,
   getCoinsHandler,
   getStreakHandler,
@@ -43,6 +45,8 @@ app.get('/api/auth/me', authMeHandler);
 app.get('/api/presence/stream', onlinePresenceStreamHandler);
 app.post('/api/auth/login', loginHandler);
 app.post('/api/auth/register', registerHandler);
+app.post('/api/auth/forgot-password', forgotPasswordHandler);
+app.post('/api/auth/reset-password', resetPasswordHandler);
 app.post('/api/auth/logout', logoutHandler);
 app.post('/api/users/me/avatar', updateAvatarHandler);
 app.post('/api/users/me/settings', updateSettingsHandler);

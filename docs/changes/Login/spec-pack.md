@@ -251,6 +251,162 @@ Spec-pack này xác định hành vi mục tiêu của khu vực `Login`, đồn
 
 ---
 
+### 5.8 Quên mật khẩu
+# Forgot Password Flow
+
+## 1. User chọn “Quên mật khẩu”
+
+Tại màn hình đăng nhập:
+
+- User click vào button/link: `Quên mật khẩu?`
+
+---
+
+## 2. Nhập thông tin tài khoản
+
+Người dùng nhập:
+
+- Email
+hoặc
+- Username
+hoặc
+- Số điện thoại
+
+---
+
+## 3. Hệ thống kiểm tra tài khoản
+
+### Trường hợp tài khoản không tồn tại
+
+Hệ thống trả về message chung:
+
+```text
+Nếu tài khoản tồn tại, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu.
+```
+
+> Mục đích:
+> Không expose thông tin account tồn tại hay không.
+
+### Trường hợp tài khoản tồn tại
+
+Hệ thống:
+
+- Reset Token
+- Lưu expiration time
+- Gửi email
+
+---
+
+## 4. Reset Link
+
+```text
+https://python.thtsolution.online/reset-password?token=abcxyz
+```
+
+Token:
+
+- Chỉ dùng 1 lần
+- Có thời gian hết hạn
+
+---
+
+## 5. Người dùng xác thực
+
+User thực hiện:
+
+- Click reset link
+
+Hệ thống kiểm tra:
+
+- Token hợp lệ
+- Chưa hết hạn
+- Chưa được sử dụng
+
+---
+
+## 6. Nhập mật khẩu mới
+
+Validate:
+
+- Độ dài tối thiểu
+- Có chữ hoa/thường
+- Có ký tự đặc biệt
+- Không trùng mật khẩu cũ
+- Confirm password đúng
+
+Ví dụ:
+
+```text
+Password phải từ 8 ký tự trở lên
+Bao gồm chữ hoa, chữ thường và ký tự đặc biệt
+```
+
+---
+
+## 7. Cập nhật mật khẩu
+
+Hệ thống:
+
+- Hash password (bcrypt/argon2)
+- Update DB
+- Invalidate token/OTP
+- Logout các session cũ (optional)
+
+---
+
+## 8. Hoàn tất
+
+Hiển thị:
+
+```text
+Đổi mật khẩu thành công
+```
+
+Sau đó:
+
+- Redirect về màn hình Login
+
+---
+
+# Sequence Flow
+
+```text
+Login Screen
+   ↓
+Forgot Password
+   ↓
+Input Email/Phone
+   ↓
+Send OTP / Reset Link
+   ↓
+Verify OTP / Token
+   ↓
+Input New Password
+   ↓
+Update Password
+   ↓
+Login Again
+```
+
+---
+
+# Security Recommendation
+
+## Nên có
+
+- Rate limit API
+- Token one-time-use
+- Audit log
+
+## Không nên
+
+- Trả message:
+  `Email không tồn tại`
+- Token không expire
+- Lưu password dạng plain text
+
+---
+
 ## 6. Yêu cầu phi chức năng
 
 | # | Danh mục | Yêu cầu |

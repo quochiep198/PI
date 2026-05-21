@@ -5,6 +5,11 @@ type AuthResponse = {
   message?: string;
 };
 
+type PasswordResetRequestResponse = {
+  message?: string;
+  resetUrl?: string;
+};
+
 async function readJsonSafely<T>(response: Response): Promise<T | null> {
   const text = await response.text();
 
@@ -66,6 +71,51 @@ export async function register(username: string, email: string, password: string
   }
 
   return data.user;
+}
+
+export async function requestPasswordReset(identifier: string) {
+  const response = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      identifier,
+    }),
+  });
+
+  const data = await readJsonSafely<PasswordResetRequestResponse>(response);
+  if (!response.ok) {
+    throw new Error(data?.message || 'Khong the gui yeu cau dat lai mat khau.');
+  }
+
+  return {
+    message: data?.message || 'Neu tai khoan ton tai, chung toi da gui huong dan dat lai mat khau.',
+    resetUrl: data?.resetUrl || null,
+  };
+}
+
+export async function resetPassword(token: string, password: string, confirmPassword: string) {
+  const response = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      token,
+      password,
+      confirmPassword,
+    }),
+  });
+
+  const data = await readJsonSafely<PasswordResetRequestResponse>(response);
+  if (!response.ok) {
+    throw new Error(data?.message || 'Khong the dat lai mat khau.');
+  }
+
+  return {
+    message: data?.message || 'Doi mat khau thanh cong.',
+  };
 }
 
 export async function updateAvatar(avatarDataUrl: string) {

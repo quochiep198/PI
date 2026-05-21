@@ -6,6 +6,8 @@ import { execute, query } from './db.mjs';
 const scryptAsync = promisify(crypto.scrypt);
 const SESSION_COOKIE_NAME = 'python_adventure_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TOKEN_MAX_AGE_MS = Number(process.env.PASSWORD_RESET_TOKEN_MAX_AGE_MS || 60 * 60 * 1000);
+const PASSWORD_RESET_GENERIC_MESSAGE = 'Nếu tài khoản tồn tại, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu.';
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqPrimaryModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -958,6 +960,10 @@ function hashSessionToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+function hashPasswordResetToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
   const derivedKey = await scryptAsync(password, salt, 64);
@@ -979,6 +985,95 @@ async function verifyPassword(password, storedHash) {
   }
 
   return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+function getPasswordStrengthError(password) {
+  const value = String(password || '');
+
+  if (value.length < 8) {
+    return 'Mật khẩu phải từ 8 ký tự trở lên.';
+  }
+
+  if (!/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/[^A-Za-z0-9]/.test(value)) {
+    return 'Mật khẩu phải có chữ hoa, chữ thường và ký tự đặc biệt.';
+  }
+
+  return null;
+}
+
+function getPasswordResetBaseUrl() {
+  const explicitBaseUrl =
+    process.env.PASSWORD_RESET_BASE_URL || process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL;
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl.replace(/\/+$/, '');
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return 'http://localhost:5173';
+}
+
+function buildPasswordResetUrl(token) {
+  const url = new URL(getPasswordResetBaseUrl());
+  url.searchParams.set('token', token);
+  return url.toString();
+}
+
+async function createPasswordResetToken(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashPasswordResetToken(token);
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_MAX_AGE_MS);
+
+  await execute(
+    `
+      INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+      VALUES ($1, $2, $3)
+    `,
+    [userId, tokenHash, expiresAt.toISOString()],
+  );
+
+  return {
+    token,
+    expiresAt,
+  };
+}
+
+async function sendPasswordResetEmail({ email, username, resetUrl }) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const resendFromEmail = process.env.RESEND_FROM_EMAIL;
+
+  if (!resendApiKey || !resendFromEmail) {
+    return false;
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: resendFromEmail,
+      to: [email],
+      subject: 'Đặt lại mật khẩu PythonQuest',
+      html: [
+        `<p>Chào ${username || 'bạn'},</p>`,
+        '<p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản PythonQuest của bạn.</p>',
+        `<p><a href="${resetUrl}">Đặt lại mật khẩu</a></p>`,
+        `<p>Nếu nút không hoạt động, hãy dùng liên kết này:</p><p>${resetUrl}</p>`,
+        `<p>Liên kết này sẽ hết hạn sau ${Math.round(PASSWORD_RESET_TOKEN_MAX_AGE_MS / 60000)} phút và chỉ dùng được một lần.</p>`,
+      ].join(''),
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to send reset email: ${response.status}`);
+  }
+
+  return true;
 }
 
 function sanitizeUser(user) {
@@ -1515,6 +1610,179 @@ export async function loginHandler(request, response) {
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to log in.',
+    });
+  }
+}
+
+export async function forgotPasswordHandler(request, response) {
+  const { identifier } = getRequestBody(request);
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+
+  if (!normalizedIdentifier) {
+    response.status(400).json({
+      message: 'Vui lòng nhập email, tên đăng nhập hoặc số điện thoại.',
+    });
+    return;
+  }
+
+  try {
+    const users = await query(
+      `
+        SELECT id, username, email
+        FROM users
+        WHERE username = $1 OR email = $1
+        LIMIT 1
+      `,
+      [normalizedIdentifier],
+    );
+
+    const user = users[0];
+    let resetUrl = null;
+
+    if (user) {
+      const { token } = await createPasswordResetToken(user.id);
+      resetUrl = buildPasswordResetUrl(token);
+
+      try {
+        const sent = await sendPasswordResetEmail({
+          email: user.email,
+          username: user.username,
+          resetUrl,
+        });
+
+        if (!sent && !isProduction()) {
+          console.warn(`Password reset email not configured. Preview link for ${user.email}: ${resetUrl}`);
+        }
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : 'Failed to send password reset email.');
+      }
+    }
+
+    response.json({
+      message: PASSWORD_RESET_GENERIC_MESSAGE,
+      resetUrl: !isProduction() ? resetUrl : undefined,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to process password reset request.',
+    });
+  }
+}
+
+export async function resetPasswordHandler(request, response) {
+  const { token, password, confirmPassword } = getRequestBody(request);
+  const rawToken = String(token || '').trim();
+  const rawPassword = String(password || '');
+  const rawConfirmPassword = String(confirmPassword || '');
+
+  if (!rawToken) {
+    response.status(400).json({
+      message: 'Thiếu token đặt lại mật khẩu.',
+    });
+    return;
+  }
+
+  const passwordStrengthError = getPasswordStrengthError(rawPassword);
+  if (passwordStrengthError) {
+    response.status(400).json({
+      message: passwordStrengthError,
+    });
+    return;
+  }
+
+  if (rawPassword !== rawConfirmPassword) {
+    response.status(400).json({
+      message: 'Mật khẩu xác nhận chưa khớp.',
+    });
+    return;
+  }
+
+  try {
+    const tokenHash = hashPasswordResetToken(rawToken);
+    const rows = await query(
+      `
+        SELECT
+          password_reset_tokens.id,
+          password_reset_tokens.user_id AS "userId",
+          users.password_hash AS "passwordHash"
+        FROM password_reset_tokens
+        INNER JOIN users ON users.id = password_reset_tokens.user_id
+        WHERE password_reset_tokens.token_hash = $1
+          AND password_reset_tokens.used_at IS NULL
+          AND password_reset_tokens.expires_at > CURRENT_TIMESTAMP
+        LIMIT 1
+      `,
+      [tokenHash],
+    );
+
+    const tokenRecord = rows[0];
+    if (!tokenRecord) {
+      response.status(400).json({
+        message: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+      });
+      return;
+    }
+
+    const isSameAsCurrentPassword = await verifyPassword(rawPassword, tokenRecord.passwordHash);
+    if (isSameAsCurrentPassword) {
+      response.status(400).json({
+        message: 'Mật khẩu mới không được trùng với mật khẩu cũ.',
+      });
+      return;
+    }
+
+    const nextPasswordHash = await hashPassword(rawPassword);
+    const claimedTokenRows = await query(
+      `
+        UPDATE password_reset_tokens
+        SET used_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+          AND used_at IS NULL
+          AND expires_at > CURRENT_TIMESTAMP
+        RETURNING user_id AS "userId"
+      `,
+      [tokenRecord.id],
+    );
+
+    if (!claimedTokenRows[0]?.userId) {
+      response.status(400).json({
+        message: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+      });
+      return;
+    }
+
+    await execute(
+      `
+        UPDATE users
+        SET password_hash = $2
+        WHERE id = $1
+      `,
+      [tokenRecord.userId, nextPasswordHash],
+    );
+
+    await execute(
+      `
+        DELETE FROM user_sessions
+        WHERE user_id = $1
+      `,
+      [tokenRecord.userId],
+    );
+
+    await execute(
+      `
+        UPDATE password_reset_tokens
+        SET used_at = COALESCE(used_at, CURRENT_TIMESTAMP)
+        WHERE user_id = $1
+      `,
+      [tokenRecord.userId],
+    );
+
+    response.json({
+      message: 'Đổi mật khẩu thành công.',
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to reset password.',
     });
   }
 }
