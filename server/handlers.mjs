@@ -1419,6 +1419,7 @@ Mục tiêu:
 - Khong lam tre cam thay that bai.
 
 Quy tac:
+- đầu tiên giải thích ý nghĩa lệnh của python đang sử dụng sau đó mới thực hiện các mục bên dưới
 - Chi dua goi y ngan gon.
 - Khong giai full bai.
 - Khong dua nguyen dap an hoan chinh.
