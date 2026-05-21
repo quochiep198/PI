@@ -1,12 +1,11 @@
 export const VI_MESSAGES = {
   tracks: {
-    basicGrade6: 'Cơ bản',
-    advancedGrade6: 'Nâng cao',
+    basicGrade6: 'Cơ bản lớp 6',
+    advancedGrade6: 'Nâng cao lớp 6',
   },
-  auth:
-  {
-     labels: {
-      emailOrUsername: 'Email hoặc Tên đăng nhập',
+  auth: {
+    labels: {
+      emailOrUsername: 'Email hoặc tên đăng nhập',
       password: 'Mật khẩu',
       confirmPassword: 'Xác nhận mật khẩu',
       login: 'Đăng nhập',
@@ -14,7 +13,7 @@ export const VI_MESSAGES = {
       switchToLogin: 'Đã có tài khoản? Đăng nhập ngay.',
       switchToRegister: 'Chưa có tài khoản? Đăng ký ngay.',
       forgotPassword: 'Quên mật khẩu?',
-     }
+    },
   },
   home: {
     defaultCode: '# Hãy viết mã của bạn bên dưới\nprint("Chào Py-Bot!")',
@@ -34,7 +33,7 @@ export const VI_MESSAGES = {
         `${resultOutput}\n\nHoàn thành bài học: ${title}`,
       aiErrorAnalysisTitle: 'Giải thích lỗi từ AI:',
       aiFixFocusTitle: 'Cần sửa ở đâu:',
-      aiPreventionTitle: 'Mẹo để không bị lại lần sau:',
+      aiPreventionTitle: 'Mẹo để tránh lặp lại lần sau:',
       aiErrorFallback: 'AI chưa giải thích được lỗi này.',
       aiFixFocusFallback: 'Hãy kiểm tra lại code theo dòng báo lỗi.',
       aiPreventionFallback: 'Lần sau em hãy chạy thử từng đoạn ngắn để phát hiện lỗi sớm hơn.',
@@ -87,7 +86,7 @@ export const VI_MESSAGES = {
   xp: {
     displayXp: (current: number, xpToNext: number) => `+${current} / ${current + xpToNext} XP`,
     levelUpTitle: 'Lên cấp!',
-    levelUpMessage: 'Chúc mừng bạn đã đạt cấp mới! Tiếp tục học hỏi để lên cấp cao hơn nhé.',
+    levelUpMessage: 'Chúc mừng bạn đã đạt cấp mới! Tiếp tục học để lên cấp cao hơn nhé.',
     continueLearning: 'Tiếp tục học',
     levels: {
       1: 'Người mới',

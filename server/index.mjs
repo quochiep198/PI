@@ -18,7 +18,7 @@ import {
   postXpHandler,
   getCoinsHandler,
 } from './handlers.mjs';
-import { ensureAppSchema } from './db.mjs';
+import { runMigrations } from './db.mjs';
 
 dotenv.config();
 
@@ -49,7 +49,7 @@ app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 app.post('/api/lessons', createLessonHandler);
 
-await ensureAppSchema();
+await runMigrations();
 
 app.listen(port, () => {
   console.log(`Lessons API listening on http://localhost:${port}`);

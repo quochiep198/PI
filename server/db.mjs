@@ -1,5 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 dotenv.config();
 
@@ -10,6 +13,8 @@ if (!connectionString) {
 }
 
 const sql = neon(connectionString);
+const migrationsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../database/migrations');
+let migrationPromise = null;
 
 export async function query(text, params = []) {
   const result = await sql.query(text, params);
@@ -20,146 +25,79 @@ export async function execute(text, params = []) {
   return sql.query(text, params);
 }
 
-export async function ensureAppSchema() {
+function splitSqlStatements(sqlText) {
+  return sqlText
+    .split(/;\s*(?:\r?\n|$)/)
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+}
+
+async function ensureMigrationsTable() {
   await execute(`
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS schema_migrations (
       id SERIAL PRIMARY KEY,
-      username TEXT NOT NULL UNIQUE,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      is_pro BOOLEAN NOT NULL DEFAULT FALSE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+      filename TEXT NOT NULL UNIQUE,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+}
 
-  await execute(`
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS is_pro BOOLEAN NOT NULL DEFAULT FALSE
+async function getAppliedMigrationFilenames() {
+  const rows = await query(`
+    SELECT filename
+    FROM schema_migrations
+    ORDER BY filename ASC
   `);
 
-  await execute(`
-    CREATE TABLE IF NOT EXISTS user_sessions (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      session_token_hash TEXT NOT NULL UNIQUE,
-      expires_at TIMESTAMPTZ NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  return new Set(rows.map((row) => row.filename));
+}
 
-  await execute(`
-    CREATE TABLE IF NOT EXISTS user_lesson_progress (
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-      completed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (user_id, lesson_id)
-    )
-  `);
+async function applyMigrationFile(filename) {
+  const migrationPath = path.join(migrationsDir, filename);
+  const sqlText = await readFile(migrationPath, 'utf8');
+  const statements = splitSqlStatements(sqlText);
 
-  await execute(`
-    CREATE TABLE IF NOT EXISTS user_lesson_errors (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-      error_message TEXT NOT NULL,
-      code_snapshot TEXT NOT NULL,
-      ai_explanation TEXT NOT NULL,
-      ai_guidance TEXT NOT NULL,
-      mistake_tags JSONB NOT NULL DEFAULT '[]'::jsonb,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  for (const statement of statements) {
+    await execute(statement);
+  }
 
-  await execute(`
-    CREATE INDEX IF NOT EXISTS user_lesson_errors_user_lesson_idx
-    ON user_lesson_errors (user_id, lesson_id, created_at DESC)
-  `);
+  await execute(
+    `
+      INSERT INTO schema_migrations (filename)
+      VALUES ($1)
+      ON CONFLICT (filename) DO NOTHING
+    `,
+    [filename],
+  );
+}
 
-  await execute(`
-    CREATE INDEX IF NOT EXISTS user_sessions_user_id_idx
-    ON user_sessions (user_id)
-  `);
+async function runMigrationsInternal() {
+  await ensureMigrationsTable();
 
-  await execute(`
-    CREATE INDEX IF NOT EXISTS user_sessions_expires_at_idx
-    ON user_sessions (expires_at)
-  `);
+  const migrationEntries = await readdir(migrationsDir, { withFileTypes: true });
+  const migrationFiles = migrationEntries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.sql'))
+    .map((entry) => entry.name)
+    .sort((left, right) => left.localeCompare(right));
 
-  await execute(`
-    CREATE TABLE IF NOT EXISTS ai_hint_cache (
-      cache_key TEXT PRIMARY KEY,
-      lesson_id INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
-      response_text TEXT NOT NULL,
-      model TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      expires_at TIMESTAMPTZ NOT NULL
-    )
-  `);
+  const appliedMigrations = await getAppliedMigrationFilenames();
 
-  await execute(`
-    CREATE INDEX IF NOT EXISTS ai_hint_cache_expires_at_idx
-    ON ai_hint_cache (expires_at)
-  `);
+  for (const filename of migrationFiles) {
+    if (appliedMigrations.has(filename)) {
+      continue;
+    }
 
-  await execute(`
-    CREATE TABLE IF NOT EXISTS ai_hint_usage (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      lesson_id INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
-      model TEXT NOT NULL,
-      request_ip TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    await applyMigrationFile(filename);
+  }
+}
 
-  await execute(`
-    CREATE INDEX IF NOT EXISTS ai_hint_usage_user_created_idx
-    ON ai_hint_usage (user_id, created_at DESC)
-  `);
+export async function runMigrations() {
+  if (!migrationPromise) {
+    migrationPromise = runMigrationsInternal().catch((error) => {
+      migrationPromise = null;
+      throw error;
+    });
+  }
 
-  await execute(`
-    CREATE INDEX IF NOT EXISTS ai_hint_usage_user_lesson_created_idx
-    ON ai_hint_usage (user_id, lesson_id, created_at DESC)
-  `);
-
-  await execute(`
-    CREATE TABLE IF NOT EXISTS user_xp (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-      total_xp INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-
-  await execute(`
-    CREATE TABLE IF NOT EXISTS user_xp_log (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      xp_amount INTEGER NOT NULL,
-      source TEXT NOT NULL,
-      lesson_id INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await execute(`
-    CREATE INDEX IF NOT EXISTS user_xp_log_user_created_idx
-    ON user_xp_log (user_id, created_at DESC)
-  `);
-
-  await execute(`
-    CREATE TABLE IF NOT EXISTS user_coins (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-      coins INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-
-  await execute(`
-    CREATE TABLE IF NOT EXISTS user_lesson_first_success (
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (user_id, lesson_id)
-    )
-  `);
+  return migrationPromise;
 }

@@ -34,6 +34,14 @@ export function getCachedXp(): XpLevel {
   return DEFAULT_XP;
 }
 
+export function clearCachedXp(): void {
+  cachedXpData = {
+    data: null,
+    timestamp: 0,
+  };
+  listeners.forEach((listener) => listener());
+}
+
 export function setCachedXp(data: XpLevel): void {
   cachedXpData = {
     data,

@@ -5,7 +5,9 @@ import {
   completeProgressHandler,
   createLessonHandler,
   errorFeedbackHandler,
+  getCoinsHandler,
   getXpHandler,
+  healthHandler,
   hintHandler,
   lessonsHandler,
   loginHandler,
@@ -15,8 +17,11 @@ import {
   progressHandler,
   registerHandler,
 } from '../server/handlers.mjs';
+import { runMigrations } from '../server/db.mjs';
 
 const app = express();
+
+await runMigrations();
 
 app.use(
   cors({
@@ -26,7 +31,7 @@ app.use(
 );
 app.use(express.json());
 
-app.get('/api/health', authMeHandler);
+app.get('/api/health', healthHandler);
 
 app.get('/api/auth/me', authMeHandler);
 app.get('/api/presence/stream', onlinePresenceStreamHandler);
@@ -42,6 +47,7 @@ app.post('/api/progress/complete', completeProgressHandler);
 
 app.get('/api/xp', getXpHandler);
 app.post('/api/xp', postXpHandler);
+app.get('/api/coins', getCoinsHandler);
 
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);

@@ -9,6 +9,8 @@ import { useXPCached } from './features/home/useXPCached';
 import { useCoinsCached } from './features/home/useCoinsCached';
 import { useOnlineLearners } from './features/home/useOnlineLearners';
 import { MobileNavigation } from './features/navigate/NavigateNavigation';
+import { clearCachedXp } from './features/shared/xpCache';
+import { clearCachedCoins } from './features/shared/coinsCache';
 
 type View = 'home' | 'practice';
 
@@ -32,8 +34,6 @@ export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [view, setView] = useState<View>('home');
   const { coins } = useCoinsCached();
-
-  // Shared hooks
   const { xpData } = useXPCached();
   const { onlineLearners, connected: onlineConnected, failed: onlineFailed } = useOnlineLearners();
 
@@ -45,21 +45,41 @@ export default function App() {
         const response = await fetch('/api/auth/me');
         const data = await readJsonSafely<AuthMeResponse>(response);
         if (!active) return;
+
         const authUser = response.ok && data?.authenticated ? data.user : null;
+        if (!authUser) {
+          clearCachedXp();
+          clearCachedCoins();
+        }
         setUser(authUser);
       } catch {
-        if (active) setUser(null);
+        if (active) {
+          clearCachedXp();
+          clearCachedCoins();
+          setUser(null);
+        }
       } finally {
         if (active) setIsLoading(false);
       }
     }
 
     void loadSession();
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  function handleAuthenticated(nextUser: AuthUser) {
+    clearCachedXp();
+    clearCachedCoins();
+    setUser(nextUser);
+  }
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
+    clearCachedXp();
+    clearCachedCoins();
     setUser(null);
   }
 
@@ -75,17 +95,12 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthPage onAuthenticated={setUser} />;
+    return <AuthPage onAuthenticated={handleAuthenticated} />;
   }
 
   return (
     <div className="quest-page">
-      <TopBar
-        user={user}
-        xpData={xpData}
-        coins={coins}
-        onLogout={handleLogout}
-      />
+      <TopBar user={user} xpData={xpData} coins={coins} onLogout={handleLogout} />
 
       <div className="quest-layout">
         <SideNav
@@ -97,11 +112,7 @@ export default function App() {
           onNavigatePractice={() => setView('practice')}
         />
 
-        {view === 'home' ? (
-          <HomePage user={user} />
-        ) : (
-          <PracticePage user={user} />
-        )}
+        {view === 'home' ? <HomePage user={user} /> : <PracticePage user={user} />}
       </div>
 
       <MobileNavigation />

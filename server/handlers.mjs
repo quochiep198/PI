@@ -1,6 +1,6 @@
-import crypto from 'node:crypto';
+﻿import crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { ensureAppSchema, execute, query } from './db.mjs';
+import { execute, query } from './db.mjs';
 
 const scryptAsync = promisify(crypto.scrypt);
 const SESSION_COOKIE_NAME = 'python_adventure_session';
@@ -8,8 +8,7 @@ const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqPrimaryModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const groqSmallModel = process.env.GROQ_SMALL_MODEL || 'llama-3.1-8b-instant';
-const onlinePresenceConnections = new Map();
-const PRO_TRACKS = new Set(['Nâng cao lớp 6']);
+const PRO_TRACKS = new Set(['Nﾃ｢ng cao l盻孅 6']);
 const ERROR_HISTORY_LIMIT = 5;
 const HINT_CACHE_TTL_MS = Number(process.env.HINT_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000);
 const HINT_IP_WINDOW_MS = Number(process.env.HINT_IP_WINDOW_MS || 10 * 60 * 1000);
@@ -23,8 +22,8 @@ const HINT_COOLDOWN_PRO_MS = Number(process.env.HINT_COOLDOWN_PRO_MS || 8_000);
 const HINT_MAX_TOKENS_FREE = Number(process.env.HINT_MAX_TOKENS_FREE || 300);
 const HINT_MAX_TOKENS_PRO = Number(process.env.HINT_MAX_TOKENS_PRO || 500);
 const HINT_TEMPERATURE = Number(process.env.HINT_TEMPERATURE || 0.3);
-const hintIpRequestLog = new Map();
-const hintCooldownByUser = new Map();
+const PRESENCE_HEARTBEAT_MS = 15_000;
+const PRESENCE_LEASE_MS = 45_000;
 
 // XP System Constants
 const XP_LESSON_COMPLETE_FIRST = 50;
@@ -141,22 +140,55 @@ function sendSseEvent(response, event, data) {
   }
 }
 
-function getOnlineLearnerCount() {
-  const activeUserIds = new Set();
-
-  for (const connection of onlinePresenceConnections.values()) {
-    activeUserIds.add(connection.userId);
-  }
-
-  return activeUserIds.size;
+async function pruneExpiredPresenceLeases() {
+  await execute(`
+    DELETE FROM online_presence_leases
+    WHERE expires_at <= CURRENT_TIMESTAMP
+  `);
 }
 
-function broadcastOnlineLearnerCount() {
-  const payload = { count: getOnlineLearnerCount() };
+async function touchPresenceLease(connectionId, userId) {
+  const expiresAt = new Date(Date.now() + PRESENCE_LEASE_MS).toISOString();
 
-  for (const connection of onlinePresenceConnections.values()) {
-    sendSseEvent(connection.response, 'presence', payload);
-  }
+  await execute(
+    `
+      INSERT INTO online_presence_leases (connection_id, user_id, expires_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (connection_id)
+      DO UPDATE SET
+        user_id = EXCLUDED.user_id,
+        expires_at = EXCLUDED.expires_at,
+        updated_at = CURRENT_TIMESTAMP
+    `,
+    [connectionId, userId, expiresAt],
+  );
+}
+
+async function deletePresenceLease(connectionId) {
+  await execute(
+    `
+      DELETE FROM online_presence_leases
+      WHERE connection_id = $1
+    `,
+    [connectionId],
+  );
+}
+
+async function getOnlineLearnerCount() {
+  await pruneExpiredPresenceLeases();
+
+  const rows = await query(`
+    SELECT COUNT(DISTINCT user_id)::int AS count
+    FROM online_presence_leases
+    WHERE expires_at > CURRENT_TIMESTAMP
+  `);
+
+  return Number(rows[0]?.count || 0);
+}
+
+async function sendPresenceUpdate(response) {
+  const count = await getOnlineLearnerCount();
+  return sendSseEvent(response, 'presence', { count });
 }
 
 function canAccessTrack(user, track) {
@@ -245,17 +277,23 @@ function getUtcDayBounds(reference = new Date()) {
   };
 }
 
-function pruneOldTimestamps(timestamps, now, windowMs) {
-  return timestamps.filter((timestamp) => now - timestamp < windowMs);
-}
-
-function enforceHintIpRateLimit(request) {
-  const now = Date.now();
+async function getHintIpRateLimitStatus(request) {
   const ip = getClientIp(request);
-  const existing = pruneOldTimestamps(hintIpRequestLog.get(ip) || [], now, HINT_IP_WINDOW_MS);
+  const windowStart = new Date(Date.now() - HINT_IP_WINDOW_MS).toISOString();
+  const rows = await query(
+    `
+      SELECT created_at AS "createdAt"
+      FROM ai_hint_request_log
+      WHERE request_ip = $1
+        AND created_at >= $2
+      ORDER BY created_at ASC
+    `,
+    [ip, windowStart],
+  );
 
-  if (existing.length >= HINT_IP_LIMIT) {
-    const retryAfterSeconds = Math.max(1, Math.ceil((existing[0] + HINT_IP_WINDOW_MS - now) / 1000));
+  if (rows.length >= HINT_IP_LIMIT) {
+    const oldestTimestamp = new Date(rows[0].createdAt).getTime();
+    const retryAfterSeconds = Math.max(1, Math.ceil((oldestTimestamp + HINT_IP_WINDOW_MS - Date.now()) / 1000));
     return {
       allowed: false,
       ip,
@@ -263,8 +301,6 @@ function enforceHintIpRateLimit(request) {
     };
   }
 
-  existing.push(now);
-  hintIpRequestLog.set(ip, existing);
   return {
     allowed: true,
     ip,
@@ -272,12 +308,33 @@ function enforceHintIpRateLimit(request) {
   };
 }
 
-function getHintCooldownStatus(userId, cooldownMs) {
-  const lastRequestedAt = hintCooldownByUser.get(userId);
-  if (!lastRequestedAt) {
+async function recordHintRequest({ userId, lessonId, requestIp }) {
+  await execute(
+    `
+      INSERT INTO ai_hint_request_log (user_id, lesson_id, request_ip)
+      VALUES ($1, $2, $3)
+    `,
+    [userId, lessonId || null, requestIp || null],
+  );
+}
+
+async function getHintCooldownStatus(userId, cooldownMs) {
+  const rows = await query(
+    `
+      SELECT last_requested_at AS "lastRequestedAt"
+      FROM user_hint_cooldowns
+      WHERE user_id = $1
+      LIMIT 1
+    `,
+    [userId],
+  );
+
+  const lastRequestedAtValue = rows[0]?.lastRequestedAt;
+  if (!lastRequestedAtValue) {
     return { allowed: true, retryAfterSeconds: 0 };
   }
 
+  const lastRequestedAt = new Date(lastRequestedAtValue).getTime();
   const remainingMs = cooldownMs - (Date.now() - lastRequestedAt);
   if (remainingMs <= 0) {
     return { allowed: true, retryAfterSeconds: 0 };
@@ -289,8 +346,16 @@ function getHintCooldownStatus(userId, cooldownMs) {
   };
 }
 
-function markHintCooldownUsed(userId) {
-  hintCooldownByUser.set(userId, Date.now());
+async function markHintCooldownUsed(userId) {
+  await execute(
+    `
+      INSERT INTO user_hint_cooldowns (user_id, last_requested_at)
+      VALUES ($1, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id)
+      DO UPDATE SET last_requested_at = CURRENT_TIMESTAMP
+    `,
+    [userId],
+  );
 }
 
 function buildHintCacheKey({ lessonId, lessonTitle, objective, starterCode, code }) {
@@ -601,23 +666,23 @@ async function analyzeLessonError({ lesson, code, errorOutput, errorHistory }) {
       : 'Chưa có lịch sử lỗi trước đó.';
 
   const systemPrompt = `
-Bạn là trợ lý dạy Python cho học sinh lớp 6.
+B蘯｡n lﾃ tr盻｣ lﾃｽ d蘯｡y Python cho h盻皇 sinh l盻孅 6.
 
-Nguồn phân tích chính:
-- Ưu tiên đọc kỹ Traceback/lỗi Python được cung cấp.
-- Không đoán bừa nếu Traceback đã chỉ rõ nguyên nhân.
-- Phải nói rõ lỗi nằm ở đâu, vì sao Python báo lỗi đó, và học sinh cần chú ý điểm nào.
+Ngu盻渡 phﾃ｢n tﾃｭch chﾃｭnh:
+- ﾆｯu tiﾃｪn ﾄ黛ｻ皇 k盻ｹ Traceback/l盻擁 Python ﾄ柁ｰ盻｣c cung c蘯･p.
+- Khﾃｴng ﾄ双ﾃ｡n b盻ｫa n蘯ｿu Traceback ﾄ妥｣ ch盻・rﾃｵ nguyﾃｪn nhﾃ｢n.
+- Ph蘯｣i nﾃｳi rﾃｵ l盻擁 n蘯ｱm 盻・ﾄ妥｢u, vﾃｬ sao Python bﾃ｡o l盻擁 ﾄ妥ｳ, vﾃ h盻皇 sinh c蘯ｧn chﾃｺ ﾃｽ ﾄ訴盻ノ nﾃo.
 
-Mục tiêu phản hồi:
-- Giải thích thật rõ ràng nhưng ngắn gọn, dễ hiểu với học sinh 11-12 tuổi.
-- Dùng giọng khuyến khích, giúp học sinh thấy lỗi là bình thường và có thể sửa được.
-- Chỉ ra lỗi đang lặp lại nếu lịch sử lỗi cho thấy điều đó.
-- Luôn thêm cách tránh bị lại lần sau.
-- Không đưa full đáp án hoàn chỉnh.
+M盻･c tiﾃｪu ph蘯｣n h盻妬:
+- Gi蘯｣i thﾃｭch th蘯ｭt rﾃｵ rﾃng nhﾆｰng ng蘯ｯn g盻肱, d盻・hi盻ブ v盻嬖 h盻皇 sinh 11-12 tu盻品.
+- Dﾃｹng gi盻肱g khuy蘯ｿn khﾃｭch, giﾃｺp h盻皇 sinh th蘯･y l盻擁 lﾃ bﾃｬnh thﾆｰ盻拵g vﾃ cﾃｳ th盻・s盻ｭa ﾄ柁ｰ盻｣c.
+- Ch盻・ra l盻擁 ﾄ疎ng l蘯ｷp l蘯｡i n蘯ｿu l盻議h s盻ｭ l盻擁 cho th蘯･y ﾄ訴盻「 ﾄ妥ｳ.
+- Luﾃｴn thﾃｪm cﾃ｡ch trﾃ｡nh b盻・l蘯｡i l蘯ｧn sau.
+- Khﾃｴng ﾄ柁ｰa full ﾄ妥｡p ﾃ｡n hoﾃn ch盻穎h.
 
-Yêu cầu đầu ra:
-- Trả về JSON hợp lệ.
-- Dùng đúng schema:
+Yﾃｪu c蘯ｧu ﾄ黛ｺｧu ra:
+- Tr蘯｣ v盻・JSON h盻｣p l盻・
+- Dﾃｹng ﾄ妥ｺng schema:
   {
     "explanation": "string",
     "fixFocus": "string",
@@ -626,13 +691,13 @@ Yêu cầu đầu ra:
     "mistakeTags": ["string"]
   }
 
-Ràng buộc nội dung:
-- \`explanation\` gồm 2-4 câu, giải thích dựa trên Traceback, nêu nguyên nhân và vị trí/ngữ cảnh lỗi.
-- \`fixFocus\` gồm 1-3 câu, nói rõ học sinh nên nhìn vào chỗ nào để sửa.
-- \`preventionTip\` gồm 1-3 câu, mang tính khuyến khích và chỉ cách để tránh lặp lại lỗi lần sau.
-- \`guidance\` là bản gộp ngắn của \`fixFocus\` và \`preventionTip\`.
-- Nếu là lỗi lặp lại, hãy nói nhẹ nhàng rằng học sinh đang gặp lại lỗi quen thuộc này.
-- \`mistakeTags\` gồm 1-5 nhãn ngắn như "syntax", "indentation", "variable-name", "print", "colon".
+Rﾃng bu盻冂 n盻冓 dung:
+- \`explanation\` g盻杜 2-4 cﾃ｢u, gi蘯｣i thﾃｭch d盻ｱa trﾃｪn Traceback, nﾃｪu nguyﾃｪn nhﾃ｢n vﾃ v盻・trﾃｭ/ng盻ｯ c蘯｣nh l盻擁.
+- \`fixFocus\` g盻杜 1-3 cﾃ｢u, nﾃｳi rﾃｵ h盻皇 sinh nﾃｪn nhﾃｬn vﾃo ch盻・nﾃo ﾄ黛ｻ・s盻ｭa.
+- \`preventionTip\` g盻杜 1-3 cﾃ｢u, mang tﾃｭnh khuy蘯ｿn khﾃｭch vﾃ ch盻・cﾃ｡ch ﾄ黛ｻ・trﾃ｡nh l蘯ｷp l蘯｡i l盻擁 l蘯ｧn sau.
+- \`guidance\` lﾃ b蘯｣n g盻冪 ng蘯ｯn c盻ｧa \`fixFocus\` vﾃ \`preventionTip\`.
+- N蘯ｿu lﾃ l盻擁 l蘯ｷp l蘯｡i, hﾃ｣y nﾃｳi nh蘯ｹ nhﾃng r蘯ｱng h盻皇 sinh ﾄ疎ng g蘯ｷp l蘯｡i l盻擁 quen thu盻冂 nﾃy.
+- \`mistakeTags\` g盻杜 1-5 nhﾃ｣n ng蘯ｯn nhﾆｰ "syntax", "indentation", "variable-name", "print", "colon".
 `.trim();
 
   const content = await callGroqChat(
@@ -641,13 +706,13 @@ Ràng buộc nội dung:
       {
         role: 'user',
         content: [
-          `Bài học: ${lesson.title}`,
-          `Mục tiêu: ${lesson.objective}`,
+          `Bﾃi h盻皇: ${lesson.title}`,
+          `M盻･c tiﾃｪu: ${lesson.objective}`,
           lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
-          `Code hiện tại:\n${code}`,
-          `Traceback / lỗi Python:\n${errorOutput}`,
-          `Lịch sử lỗi gần đây của học sinh:\n${historySummary}`,
-          'Hãy phân tích bám sát Traceback trước, rồi trả lời thật rõ ràng, tích cực, và có mẹo để không bị lại lần sau.',
+          `Code hi盻㌻ t蘯｡i:\n${code}`,
+          `Traceback / l盻擁 Python:\n${errorOutput}`,
+          `L盻議h s盻ｭ l盻擁 g蘯ｧn ﾄ妥｢y c盻ｧa h盻皇 sinh:\n${historySummary}`,
+          'Hﾃ｣y phﾃ｢n tﾃｭch bﾃ｡m sﾃ｡t Traceback trﾆｰ盻嫩, r盻妬 tr蘯｣ l盻拱 th蘯ｭt rﾃｵ rﾃng, tﾃｭch c盻ｱc, vﾃ cﾃｳ m蘯ｹo ﾄ黛ｻ・khﾃｴng b盻・l蘯｡i l蘯ｧn sau.',
         ]
           .filter(Boolean)
           .join('\n\n'),
@@ -660,19 +725,19 @@ Ràng buộc nội dung:
   const explanation =
     parsed && typeof parsed.explanation === 'string' && parsed.explanation.trim()
       ? parsed.explanation.trim()
-      : 'Code đang gặp lỗi Python. Không sao cả, mình sửa từng chút là được. Hãy nhìn kỹ dòng báo lỗi cuối cùng vì đó thường là manh mối quan trọng nhất.';
+      : 'Code ﾄ疎ng g蘯ｷp l盻擁 Python. Khﾃｴng sao c蘯｣, mﾃｬnh s盻ｭa t盻ｫng chﾃｺt lﾃ ﾄ柁ｰ盻｣c. Hﾃ｣y nhﾃｬn k盻ｹ dﾃｲng bﾃ｡o l盻擁 cu盻訴 cﾃｹng vﾃｬ ﾄ妥ｳ thﾆｰ盻拵g lﾃ manh m盻訴 quan tr盻肱g nh蘯･t.';
   const guidance =
     parsed && typeof parsed.guidance === 'string' && parsed.guidance.trim()
       ? parsed.guidance.trim()
-      : 'Em hãy kiểm tra lại dấu ngoặc, dấu hai chấm, tên biến và cách thụt lề ở gần dòng báo lỗi. Lần sau, sau mỗi lần viết một đoạn ngắn, em chạy thử ngay để phát hiện lỗi sớm hơn.';
+      : 'Em hﾃ｣y ki盻ノ tra l蘯｡i d蘯･u ngo蘯ｷc, d蘯･u hai ch蘯･m, tﾃｪn bi蘯ｿn vﾃ cﾃ｡ch th盻･t l盻・盻・g蘯ｧn dﾃｲng bﾃ｡o l盻擁. L蘯ｧn sau, sau m盻擁 l蘯ｧn vi蘯ｿt m盻冲 ﾄ双蘯｡n ng蘯ｯn, em ch蘯｡y th盻ｭ ngay ﾄ黛ｻ・phﾃ｡t hi盻㌻ l盻擁 s盻嬶 hﾆ｡n.';
   const fixFocus =
     parsed && typeof parsed.fixFocus === 'string' && parsed.fixFocus.trim()
       ? parsed.fixFocus.trim()
-      : 'Em hãy nhìn vào dòng gần chỗ Python báo lỗi nhất, rồi kiểm tra lại dấu ngoặc, dấu hai chấm và tên biến ở đoạn đó.';
+      : 'Em hﾃ｣y nhﾃｬn vﾃo dﾃｲng g蘯ｧn ch盻・Python bﾃ｡o l盻擁 nh蘯･t, r盻妬 ki盻ノ tra l蘯｡i d蘯･u ngo蘯ｷc, d蘯･u hai ch蘯･m vﾃ tﾃｪn bi蘯ｿn 盻・ﾄ双蘯｡n ﾄ妥ｳ.';
   const preventionTip =
     parsed && typeof parsed.preventionTip === 'string' && parsed.preventionTip.trim()
       ? parsed.preventionTip.trim()
-      : 'Không sao cả, lỗi này sửa được. Lần sau em hãy viết từng đoạn ngắn rồi chạy thử ngay để bắt lỗi sớm hơn.';
+      : 'Khﾃｴng sao c蘯｣, l盻擁 nﾃy s盻ｭa ﾄ柁ｰ盻｣c. L蘯ｧn sau em hﾃ｣y vi蘯ｿt t盻ｫng ﾄ双蘯｡n ng蘯ｯn r盻妬 ch蘯｡y th盻ｭ ngay ﾄ黛ｻ・b蘯ｯt l盻擁 s盻嬶 hﾆ｡n.';
   const mistakeTags = extractMistakeTags(parsed?.mistakeTags);
 
   return {
@@ -806,7 +871,6 @@ export async function healthHandler(_request, response) {
 
 export async function authMeHandler(request, response) {
   try {
-    await ensureAppSchema();
     const user = await getAuthenticatedUser(request);
     response.json({
       authenticated: Boolean(user),
@@ -821,7 +885,6 @@ export async function authMeHandler(request, response) {
 
 export async function onlinePresenceStreamHandler(request, response) {
   try {
-    await ensureAppSchema();
     const user = await getAuthenticatedUser(request);
 
     if (!user) {
@@ -839,39 +902,38 @@ export async function onlinePresenceStreamHandler(request, response) {
     });
 
     const connectionId = crypto.randomUUID();
-    const heartbeat = setInterval(() => {
-      sendSseEvent(response, 'heartbeat', { ts: Date.now() });
-    }, 15000);
+    let closed = false;
+    let heartbeat = null;
 
-    onlinePresenceConnections.set(connectionId, {
-      userId: user.id,
-      response,
-      heartbeat,
-    });
-
-    sendSseEvent(response, 'presence', { count: getOnlineLearnerCount() });
-    broadcastOnlineLearnerCount();
-
-    request.on('close', () => {
-      const connection = onlinePresenceConnections.get(connectionId);
-      if (!connection) {
+    const cleanup = () => {
+      if (closed) {
         return;
       }
 
-      clearInterval(connection.heartbeat);
-      onlinePresenceConnections.delete(connectionId);
-      broadcastOnlineLearnerCount();
-    });
-
-    request.on('error', () => {
-      const connection = onlinePresenceConnections.get(connectionId);
-      if (!connection) {
-        return;
+      closed = true;
+      if (heartbeat) {
+        clearInterval(heartbeat);
       }
+      void deletePresenceLease(connectionId);
+    };
 
-      clearInterval(connection.heartbeat);
-      onlinePresenceConnections.delete(connectionId);
-    });
+    await touchPresenceLease(connectionId, user.id);
+    await sendPresenceUpdate(response);
+
+    heartbeat = setInterval(() => {
+      void (async () => {
+        try {
+          await touchPresenceLease(connectionId, user.id);
+          sendSseEvent(response, 'heartbeat', { ts: Date.now() });
+          await sendPresenceUpdate(response);
+        } catch {
+          cleanup();
+        }
+      })();
+    }, PRESENCE_HEARTBEAT_MS);
+
+    request.on('close', cleanup);
+    request.on('error', cleanup);
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to stream online presence.',
@@ -893,7 +955,6 @@ export async function registerHandler(request, response) {
   }
 
   try {
-    await ensureAppSchema();
     const existingUsers = await query(
       `
         SELECT id
@@ -948,7 +1009,6 @@ export async function loginHandler(request, response) {
   }
 
   try {
-    await ensureAppSchema();
     const users = await query(
       `
         SELECT id, username, email, is_pro AS "isPro", password_hash AS "passwordHash"
@@ -964,7 +1024,7 @@ export async function loginHandler(request, response) {
 
     if (!userRecord || !isValid) {
       response.status(401).json({
-        message: 'Thông tin đăng nhập không hợp lệ.',
+        message: 'Thﾃｴng tin ﾄ惰ハg nh蘯ｭp khﾃｴng h盻｣p l盻・',
       });
       return;
     }
@@ -985,7 +1045,6 @@ export async function loginHandler(request, response) {
 
 export async function logoutHandler(request, response) {
   try {
-    await ensureAppSchema();
     const cookies = parseCookies(request);
     const sessionToken = cookies[SESSION_COOKIE_NAME];
 
@@ -1010,7 +1069,6 @@ export async function logoutHandler(request, response) {
 
 export async function lessonsHandler(request, response) {
   try {
-    await ensureAppSchema();
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
       return;
@@ -1043,7 +1101,6 @@ export async function lessonsHandler(request, response) {
 
 export async function progressHandler(request, response) {
   try {
-    await ensureAppSchema();
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
       return;
@@ -1078,7 +1135,6 @@ export async function completeProgressHandler(request, response) {
   }
 
   try {
-    await ensureAppSchema();
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
       return;
@@ -1109,33 +1165,56 @@ export async function completeProgressHandler(request, response) {
       return;
     }
 
-    await query(
+    const rewardRows = await query(
       `
-        INSERT INTO user_lesson_progress (user_id, lesson_id)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id, lesson_id)
-        DO UPDATE SET completed_at = CURRENT_TIMESTAMP
+        WITH progress_insert AS (
+          INSERT INTO user_lesson_progress (user_id, lesson_id)
+          VALUES ($1, $2)
+          ON CONFLICT (user_id, lesson_id) DO NOTHING
+          RETURNING 1
+        ),
+        xp_log_insert AS (
+          INSERT INTO user_xp_log (user_id, xp_amount, source, lesson_id)
+          SELECT $1, $3, $4, $2
+          FROM progress_insert
+          ON CONFLICT (user_id, source, lesson_id) DO NOTHING
+          RETURNING xp_amount
+        ),
+        xp_upsert AS (
+          INSERT INTO user_xp (user_id, total_xp)
+          VALUES ($1, COALESCE((SELECT xp_amount FROM xp_log_insert), 0))
+          ON CONFLICT (user_id)
+          DO UPDATE SET total_xp = user_xp.total_xp + EXCLUDED.total_xp
+          RETURNING total_xp
+        ),
+        coins_upsert AS (
+          INSERT INTO user_coins (user_id, coins)
+          VALUES ($1, CASE WHEN EXISTS (SELECT 1 FROM progress_insert) THEN $5 ELSE 0 END)
+          ON CONFLICT (user_id)
+          DO UPDATE SET coins = user_coins.coins + EXCLUDED.coins
+          RETURNING coins
+        )
+        SELECT
+          EXISTS (SELECT 1 FROM progress_insert) AS "completedNow",
+          COALESCE((SELECT xp_amount FROM xp_log_insert), 0) AS "xpGranted",
+          CASE WHEN EXISTS (SELECT 1 FROM progress_insert) THEN $5 ELSE 0 END AS "coinsGranted",
+          COALESCE((SELECT total_xp FROM xp_upsert), 0) AS "totalXp"
       `,
-      [user.id, lessonId],
+      [user.id, lessonId, XP_LESSON_COMPLETE_FIRST, XP_SOURCES.LESSON_COMPLETE_FIRST, COINS_LESSON_COMPLETE],
     );
 
-    await ensureUserXp(user.id);
-    let xpData = null;
-    const alreadyClaimed = await hasUserClaimedLessonXp(user.id, lessonId, XP_SOURCES.LESSON_COMPLETE_FIRST);
-    let coinsEarned = 0;
+    const reward = rewardRows[0] ?? { completedNow: false, xpGranted: 0, coinsGranted: 0, totalXp: 0 };
+    const totalXp = Number(reward.totalXp || 0);
+    const xpData = {
+      totalXp,
+      ...getLevelFromXp(totalXp),
+    };
 
-    if (!alreadyClaimed) {
-      await addUserXp(user.id, XP_LESSON_COMPLETE_FIRST, XP_SOURCES.LESSON_COMPLETE_FIRST, lessonId);
-      xpData = await getUserXp(user.id);
-    } else {
-      xpData = await getUserXp(user.id);
-    }
-
-    await ensureUserCoins(user.id);
-    await addUserCoins(user.id, COINS_LESSON_COMPLETE);
-    coinsEarned = COINS_LESSON_COMPLETE;
-
-    response.status(201).json({ ok: true, xp: xpData, coins: coinsEarned });
+    response.status(reward.completedNow ? 201 : 200).json({
+      ok: true,
+      xp: xpData,
+      coins: Number(reward.coinsGranted || 0),
+    });
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Failed to save lesson progress.',
@@ -1161,7 +1240,6 @@ export async function errorFeedbackHandler(request, response) {
   }
 
   try {
-    await ensureAppSchema();
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
       return;
@@ -1239,7 +1317,6 @@ export async function hintHandler(request, response) {
   }
 
   try {
-    await ensureAppSchema();
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
       return;
@@ -1261,11 +1338,11 @@ export async function hintHandler(request, response) {
     }
 
     const entitlement = getHintEntitlement(user);
-    const ipLimitStatus = enforceHintIpRateLimit(request);
+    const ipLimitStatus = await getHintIpRateLimitStatus(request);
     if (!ipLimitStatus.allowed) {
       response.setHeader('Retry-After', String(ipLimitStatus.retryAfterSeconds));
       response.status(429).json({
-        message: `Ban dang gui qua nhieu yeu cau goi y AI tu cung mot mang. Hay thu lai sau khoang ${ipLimitStatus.retryAfterSeconds} giay.`,
+        message: `Bạn đang gửi quá nhiều yêu cầu gợi ý AI từ cùng một mạng. Hãy thử lại sau khoảng ${ipLimitStatus.retryAfterSeconds} giây.`,
       });
       return;
     }
@@ -1274,7 +1351,7 @@ export async function hintHandler(request, response) {
     const userDailyUsage = await getDailyHintUsageCount(user.id, dayBounds);
     if (userDailyUsage >= entitlement.dailyQuota) {
       response.status(429).json({
-        message: `Ban da dung het ${entitlement.dailyQuota} luot goi y AI hom nay. Hay quay lai vao ngay mai hoac nang cap Pro neu can them quota.`,
+        message: `Bạn đã dùng hết ${entitlement.dailyQuota} lượt gợi ý AI hôm nay. Hãy quay lại vào ngày mai hoặc nâng cấp Pro nếu cần thêm quota.`,
       });
       return;
     }
@@ -1282,16 +1359,16 @@ export async function hintHandler(request, response) {
     const lessonDailyUsage = await getDailyHintUsageCountByLesson(user.id, lesson.id, dayBounds);
     if (lessonDailyUsage >= entitlement.lessonDailyQuota) {
       response.status(429).json({
-        message: `Ban da dung het ${entitlement.lessonDailyQuota} luot goi y cho bai hoc nay trong hom nay. Hay thu tu chinh code truoc roi quay lai sau.`,
+        message: `Bạn đã dùng hết ${entitlement.lessonDailyQuota} lượt gợi ý cho bài học này trong hôm nay. Hãy thử tự chỉnh code trước rồi quay lại sau.`,
       });
       return;
     }
 
-    const cooldownStatus = getHintCooldownStatus(user.id, entitlement.cooldownMs);
+    const cooldownStatus = await getHintCooldownStatus(user.id, entitlement.cooldownMs);
     if (!cooldownStatus.allowed) {
       response.setHeader('Retry-After', String(cooldownStatus.retryAfterSeconds));
       response.status(429).json({
-        message: `Hay cho them ${cooldownStatus.retryAfterSeconds} giay roi xin goi y tiep nhe.`,
+        message: `Hãy chờ thêm ${cooldownStatus.retryAfterSeconds} giây rồi xin gợi ý tiếp nhé.`,
       });
       return;
     }
@@ -1306,7 +1383,12 @@ export async function hintHandler(request, response) {
     });
     const cachedHint = await getCachedHint(cacheKey);
 
-    markHintCooldownUsed(user.id);
+    await markHintCooldownUsed(user.id);
+    await recordHintRequest({
+      userId: user.id,
+      lessonId: lesson.id,
+      requestIp: ipLimitStatus.ip,
+    });
 
     if (cachedHint?.responseText) {
       response.json({
@@ -1322,16 +1404,16 @@ export async function hintHandler(request, response) {
       errorHistory.length > 0
         ? errorHistory
             .map((item, index) => {
-              const tags = extractMistakeTags(item.mistakeTags).join(', ') || 'khong co tag';
+              const tags = extractMistakeTags(item.mistakeTags).join(', ') || 'không có tag';
               return `${index + 1}. Loi hay gap: ${item.errorMessage}\nGoi y tung dua: ${item.aiGuidance}\nTag: ${tags}`;
             })
             .join('\n\n')
-        : 'Chua co lich su loi cho bai hoc nay.';
+        : 'Chưa có lịch sử lỗi cho bài học này.';
 
     const systemPrompt = `
 Ban la ban dong hanh day Python cho hoc sinh lop 6.
 
-Muc tieu:
+Mục tiêu:
 - Giup tre thay hoc Python vui va de hieu.
 - Khuyen khich tre tu sua code.
 - Khong lam tre cam thay that bai.
@@ -1353,20 +1435,20 @@ Phong cach:
 `.trim();
 
     const latestRuntimeContext = [
-      errorOutput ? `Loi Python gan nhat:\n${normalizeMultilineText(errorOutput)}` : '',
-      !errorOutput && output ? `Ket qua chay gan nhat:\n${normalizeMultilineText(output)}` : '',
+      errorOutput ? `Lỗi Python gần nhất:\n${normalizeMultilineText(errorOutput)}` : '',
+      !errorOutput && output ? `Kết quả chạy gần nhất:\n${normalizeMultilineText(output)}` : '',
     ]
       .filter(Boolean)
       .join('\n\n');
 
     const hintPrompt = [
-      `Bai hoc: ${lesson.title}`,
-      `Muc tieu: ${lesson.objective}`,
+      `Bài học: ${lesson.title}`,
+      `Mục tiêu: ${lesson.objective}`,
       lesson.starterCode ? `Starter code:\n${lesson.starterCode}` : '',
-      `Code hien tai cua hoc sinh:\n${normalizedCode}`,
+      `Code hiện tại của học sinh:\n${normalizedCode}`,
       latestRuntimeContext,
-      `Lich su loi hay gap cua hoc sinh o bai nay:\n${mistakeSummary}`,
-      'Hay dua ra 1-3 goi y ngan giup hoc sinh tu sua, uu tien dung cho cac loi em ay hay lap lai.',
+      `Lịch sử lỗi hay gặp của học sinh ở bài này:\n${mistakeSummary}`,
+      'Hãy đưa ra 1-3 gợi ý ngắn giúp học sinh tự sửa, ưu tiên đúng cho các lỗi em ấy hay lặp lại.',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -1386,7 +1468,7 @@ Phong cach:
       maxCompletionTokens: entitlement.maxCompletionTokens,
     });
 
-    const hint = hintResult.hint || 'Chua nhan duoc goi y tu Groq.';
+    const hint = hintResult.hint || 'Chưa nhận được gợi ý từ Groq.';
 
     await saveCachedHint({
       cacheKey,
@@ -1410,7 +1492,7 @@ Phong cach:
   } catch (error) {
     if (error instanceof GroqRequestError && (error.status === 429 || error.status >= 500)) {
       response.status(429).json({
-        message: 'He thong goi y AI dang ban hoac tam cham gioi han. Ban thu lai sau it phut nhe.',
+        message: 'Hệ thống gợi ý AI đang bận hoặc tạm chạm giới hạn. Bạn thử lại sau ít phút nhé.',
       });
       return;
     }
@@ -1511,7 +1593,6 @@ export async function getXpHandler(request, response) {
       return;
     }
 
-    await ensureAppSchema();
     const xpData = await getUserXp(user.id);
     response.json(xpData);
   } catch (error) {
@@ -1542,30 +1623,77 @@ export async function addXpHandler(request, response) {
       return;
     }
 
-    await ensureAppSchema();
-    await ensureUserXp(user.id);
+    const resultRows = await query(
+      lessonId
+        ? `
+            WITH previous_xp AS (
+              SELECT COALESCE((SELECT total_xp FROM user_xp WHERE user_id = $1), 0) AS total_xp
+            ),
+            xp_log_insert AS (
+              INSERT INTO user_xp_log (user_id, xp_amount, source, lesson_id)
+              VALUES ($1, $2, $3, $4)
+              ON CONFLICT (user_id, source, lesson_id) DO NOTHING
+              RETURNING xp_amount
+            ),
+            xp_upsert AS (
+              INSERT INTO user_xp (user_id, total_xp)
+              VALUES ($1, COALESCE((SELECT xp_amount FROM xp_log_insert), 0))
+              ON CONFLICT (user_id)
+              DO UPDATE SET total_xp = user_xp.total_xp + EXCLUDED.total_xp
+              RETURNING total_xp
+            )
+            SELECT
+              (SELECT total_xp FROM previous_xp) AS "oldTotalXp",
+              COALESCE((SELECT xp_amount FROM xp_log_insert), 0) AS "xpGranted",
+              COALESCE((SELECT total_xp FROM xp_upsert), 0) AS "newTotalXp"
+          `
+        : `
+            WITH previous_xp AS (
+              SELECT COALESCE((SELECT total_xp FROM user_xp WHERE user_id = $1), 0) AS total_xp
+            ),
+            xp_log_insert AS (
+              INSERT INTO user_xp_log (user_id, xp_amount, source, lesson_id)
+              VALUES ($1, $2, $3, NULL)
+              RETURNING xp_amount
+            ),
+            xp_upsert AS (
+              INSERT INTO user_xp (user_id, total_xp)
+              VALUES ($1, COALESCE((SELECT xp_amount FROM xp_log_insert), 0))
+              ON CONFLICT (user_id)
+              DO UPDATE SET total_xp = user_xp.total_xp + EXCLUDED.total_xp
+              RETURNING total_xp
+            )
+            SELECT
+              (SELECT total_xp FROM previous_xp) AS "oldTotalXp",
+              COALESCE((SELECT xp_amount FROM xp_log_insert), 0) AS "xpGranted",
+              COALESCE((SELECT total_xp FROM xp_upsert), 0) AS "newTotalXp"
+          `,
+      lessonId ? [user.id, xpAmount, source, lessonId] : [user.id, xpAmount, source],
+    );
 
-    if (lessonId) {
-      const alreadyClaimed = await hasUserClaimedLessonXp(user.id, lessonId, source);
-      if (alreadyClaimed) {
-        response.json({
-          message: 'XP already claimed for this lesson.',
-          totalXp: (await getUserXp(user.id)).totalXp,
-        });
-        return;
-      }
+    const result = resultRows[0] ?? { oldTotalXp: 0, xpGranted: 0, newTotalXp: 0 };
+    const oldTotalXp = Number(result.oldTotalXp || 0);
+    const xpGranted = Number(result.xpGranted || 0);
+    const newTotalXp = Number(result.newTotalXp || 0);
+    const newXpData = {
+      totalXp: newTotalXp,
+      ...getLevelFromXp(newTotalXp),
+    };
+
+    if (lessonId && xpGranted === 0) {
+      response.json({
+        message: 'XP already claimed for this lesson.',
+        totalXp: newTotalXp,
+      });
+      return;
     }
 
-    const oldXpData = await getUserXp(user.id);
-    await addUserXp(user.id, xpAmount, source, lessonId || null);
-    const newXpData = await getUserXp(user.id);
-
     response.json({
-      xpAdded: xpAmount,
+      xpAdded: xpGranted,
       totalXp: newXpData.totalXp,
-      oldLevel: getLevelFromXp(oldXpData.totalXp).level,
+      oldLevel: getLevelFromXp(oldTotalXp).level,
       newLevel: newXpData.level,
-      leveledUp: newXpData.level > getLevelFromXp(oldXpData.totalXp).level,
+      leveledUp: newXpData.level > getLevelFromXp(oldTotalXp).level,
       ...newXpData,
     });
   } catch (error) {
@@ -1591,7 +1719,6 @@ export async function getCoinsHandler(request, response) {
       return;
     }
 
-    await ensureAppSchema();
     await ensureUserCoins(user.id);
     const coins = await getUserCoins(user.id);
     response.json({ coins });
@@ -1617,23 +1744,41 @@ export async function recordFirstSuccessHandler(request, response) {
       return;
     }
 
-    await ensureAppSchema();
+    const resultRows = await query(
+      `
+        WITH first_success_insert AS (
+          INSERT INTO user_lesson_first_success (user_id, lesson_id)
+          VALUES ($1, $2)
+          ON CONFLICT DO NOTHING
+          RETURNING 1
+        ),
+        xp_log_insert AS (
+          INSERT INTO user_xp_log (user_id, xp_amount, source, lesson_id)
+          SELECT $1, $3, $4, $2
+          FROM first_success_insert
+          ON CONFLICT (user_id, source, lesson_id) DO NOTHING
+          RETURNING xp_amount
+        ),
+        xp_upsert AS (
+          INSERT INTO user_xp (user_id, total_xp)
+          VALUES ($1, COALESCE((SELECT xp_amount FROM xp_log_insert), 0))
+          ON CONFLICT (user_id)
+          DO UPDATE SET total_xp = user_xp.total_xp + EXCLUDED.total_xp
+          RETURNING total_xp
+        )
+        SELECT
+          EXISTS (SELECT 1 FROM first_success_insert) AS "recordedNow",
+          COALESCE((SELECT xp_amount FROM xp_log_insert), 0) AS "xpGranted",
+          COALESCE((SELECT total_xp FROM xp_upsert), 0) AS "totalXp"
+      `,
+      [user.id, lessonId, XP_FIRST_SUCCESS_RUN, XP_SOURCES.FIRST_SUCCESS_RUN],
+    );
 
-    const alreadyDone = await hasFirstSuccessRun(user.id, lessonId);
-    if (alreadyDone) {
-      response.json({ alreadyRecorded: true, xpGranted: 0 });
-      return;
-    }
-
-    await markFirstSuccessRun(user.id, lessonId);
-    await ensureUserXp(user.id);
-    await addUserXp(user.id, XP_FIRST_SUCCESS_RUN, XP_SOURCES.FIRST_SUCCESS_RUN, lessonId);
-
-    const xpData = await getUserXp(user.id);
+    const result = resultRows[0] ?? { recordedNow: false, xpGranted: 0, totalXp: 0 };
     response.json({
-      alreadyRecorded: false,
-      xpGranted: XP_FIRST_SUCCESS_RUN,
-      totalXp: xpData.totalXp,
+      alreadyRecorded: Number(result.xpGranted || 0) === 0,
+      xpGranted: Number(result.xpGranted || 0),
+      totalXp: Number(result.totalXp || 0),
     });
   } catch (error) {
     response.status(500).json({
@@ -1641,4 +1786,5 @@ export async function recordFirstSuccessHandler(request, response) {
     });
   }
 }
+
 

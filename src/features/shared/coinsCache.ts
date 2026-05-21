@@ -1,4 +1,5 @@
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+export const DEFAULT_COINS = 0;
 
 interface CachedCoinsData {
   data: number;
@@ -6,7 +7,7 @@ interface CachedCoinsData {
 }
 
 let cachedCoinsData: CachedCoinsData = {
-  data: 1250, // Default starting coins
+  data: DEFAULT_COINS,
   timestamp: 0,
 };
 
@@ -17,7 +18,15 @@ export function getCachedCoins(): number {
   if ((now - cachedCoinsData.timestamp) < CACHE_DURATION) {
     return cachedCoinsData.data;
   }
-  return cachedCoinsData.data;
+  return DEFAULT_COINS;
+}
+
+export function clearCachedCoins(): void {
+  cachedCoinsData = {
+    data: DEFAULT_COINS,
+    timestamp: 0,
+  };
+  listeners.forEach((listener) => listener());
 }
 
 export function setCachedCoins(coins: number): void {

@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { getCachedCoins, setCachedCoins, subscribeCoinsChanges, isCacheValid } from '../shared/coinsCache';
+import { DEFAULT_COINS, getCachedCoins, setCachedCoins, subscribeCoinsChanges, isCacheValid } from '../shared/coinsCache';
 
 export function useCoinsCached() {
   const coins = useSyncExternalStore(
@@ -23,7 +23,7 @@ export function useCoinsCached() {
           }
           const data = await response.json();
           if (active) {
-            setCachedCoins(data.coins ?? 1250);
+            setCachedCoins(data.coins ?? DEFAULT_COINS);
             setLoading(false);
           }
         } catch {
