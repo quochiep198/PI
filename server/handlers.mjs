@@ -1,14 +1,11 @@
 ﻿import crypto from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { put } from '@vercel/blob';
 import { execute, query } from './db.mjs';
 
 const scryptAsync = promisify(crypto.scrypt);
 const SESSION_COOKIE_NAME = 'python_adventure_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-const AVATAR_UPLOAD_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads/avatars');
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqPrimaryModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -1026,6 +1023,7 @@ function parseAvatarDataUrl(value) {
   return {
     buffer,
     extension,
+    mimeType,
   };
 }
 
@@ -1035,14 +1033,18 @@ async function saveAvatarForUser(userId, avatarDataUrl) {
     throw new Error('Avatar must be a valid image under 2MB.');
   }
 
-  await mkdir(AVATAR_UPLOAD_DIR, { recursive: true });
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is required for avatar uploads.');
+  }
 
-  const filename = `user-${userId}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${parsedAvatar.extension}`;
-  const filePath = path.join(AVATAR_UPLOAD_DIR, filename);
-  const avatarUrl = `/uploads/avatars/${filename}`;
-
-  await writeFile(filePath, parsedAvatar.buffer);
-  return avatarUrl;
+  const blobFilename = `avatars/user-${userId}.${parsedAvatar.extension}`;
+  const blob = await put(blobFilename, parsedAvatar.buffer, {
+    access: 'public',
+    addRandomSuffix: true,
+    contentType: parsedAvatar.mimeType,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+  });
+  return blob.url;
 }
 
 async function deleteExpiredSessions() {

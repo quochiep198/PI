@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   authMeHandler,
   checkInHandler,
@@ -27,7 +25,6 @@ import {
 import { runMigrations } from '../server/db.mjs';
 
 const app = express();
-const uploadsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads');
 
 await runMigrations();
 
@@ -38,7 +35,6 @@ app.use(
   }),
 );
 app.use(express.json({ limit: '5mb' }));
-app.use('/uploads', express.static(uploadsDir));
 
 app.get('/api/health', healthHandler);
 

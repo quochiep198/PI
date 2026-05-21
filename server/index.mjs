@@ -1,8 +1,6 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   authMeHandler,
   checkInHandler,
@@ -31,7 +29,6 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.API_PORT || 3001);
-const uploadsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads');
 
 app.use(
   cors({
@@ -40,7 +37,6 @@ app.use(
   }),
 );
 app.use(express.json({ limit: '5mb' }));
-app.use('/uploads', express.static(uploadsDir));
 
 app.get('/api/health', healthHandler);
 app.get('/api/auth/me', authMeHandler);
