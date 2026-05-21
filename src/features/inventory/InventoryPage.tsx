@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { InventoryTab } from './types';
 
-const DEFAULT_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCIkAiQkgSAnU6vT1eJbdd29RFBKCvirjBnjNFsbvtTYJOIoPqMDkzoGgeeMQbtOWZ1QsotjNXoRQRlfPJRtx_RqWNJX8TJuj95nAeZPhEt4u2W4NboSi5oi0bTO1bevMSPHeAoDqmC0xXCSEya7HFfa-hkhgpZpLhJhQYnC5p8Dh0_upeGYKLTOqWJGPxaBRbnzR8a3vcPh8sE8yW9rqrn9uH6gQT-Ycc9mEm72iSk57LF4B_07q7u2MaajmO2Lgh9fmJsFRpX3WUl';
 const BOT_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDXqdRO6SjMOvckH7v5nZuYJQHYG5y5FtuGan2T4KfSejVa9SNn5nANq5q-_SsBR-NvlyaYO9Mw6nnLabHT8eYrTvf4ad8MO_O7On3FUniYNrIvbbAlLVh-e3syV8Oc-JY9-86xxyj6zNQYJ1jkBShR-eh-n2nu6PBQvHlEPNVHBYSr4ZD_HJtz_PQyIOiwEhXa-Okd_oLele8Q_rQ2ppqyBNoy6ByFxlNEd_SP5kzq9ig4R7VVbwj5xS9aIWiR57LFqVeHzaq7blUu';
 
 const TABS: { id: InventoryTab; label: string; icon: string }[] = [
