@@ -18,9 +18,10 @@ Xây dựng tính năng Inventory phục vụ gamification cho hệ thống:
 ## 3. Storage cho asset
 
 - Asset có thể lưu trên Vercel Blob.
+- Có thể tách bảng `avatars` để lưu danh sách nhân vật/base avatar của hệ thống nếu cần quản lý nhiều avatar gốc.
 - `asset_url` dùng cho model/asset chính.
 - `thumbnail_url` dùng cho ảnh preview trong danh sách item.
-- `base_avatar_url` là asset gốc của avatar, có thể lấy từ cấu hình server hoặc bảng cấu hình riêng.
+- `base_avatar_url` là asset gốc của avatar, có thể lấy từ cấu hình server, từ bảng `avatars`, hoặc bảng cấu hình riêng.
 
 ## 4. Flow trang bị item
 
@@ -61,6 +62,10 @@ Lưu ý:
 - Codebase hiện tại đang dùng `users.id` kiểu `INTEGER/SERIAL`, không dùng UUID.
 - Tất cả foreign key tới `users` phải dùng `INTEGER`.
 - Item vẫn có thể dùng `UUID` để tiện quản lý độc lập.
+
+Ghi chú tương thích:
+- Repo hiện đã có migration `007_user_avatar.sql` thêm cột `users.avatar_url`.
+- Phase này không sửa migration cũ mà bổ sung schema mới để quản lý Inventory đúng domain hơn.
 
 ### 6.1. items
 
@@ -128,6 +133,30 @@ Business rule ở mức DB/service:
 - Mỗi slot chỉ chứa tối đa 1 item.
 - Item được equip phải thuộc đúng type tương ứng với slot.
 - Item được equip phải là item user đang sở hữu.
+- `user_avatar` lưu trạng thái avatar hiện tại của từng user, không phải danh mục nhân vật gốc của hệ thống.
+
+### 6.4. avatars
+
+```sql
+CREATE TABLE avatars (
+  id UUID PRIMARY KEY,
+  code VARCHAR(100) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  base_avatar_url TEXT NOT NULL,
+  thumbnail_url TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Ghi chú:
+- `avatars` dùng để lưu danh sách nhân vật/base avatar của hệ thống.
+- Nếu phase 1 chỉ có một base avatar mặc định, backend có thể dùng 1 bản ghi mặc định hoặc tạm lấy từ cấu hình server.
+
+Ghi chú chuyển tiếp:
+- Có thể giữ `users.avatar_url` như fallback tương thích ngược trong giai đoạn chuyển tiếp.
+- Không dùng cột này thay cho `user_avatar`.
 
 ## 7. API
 
