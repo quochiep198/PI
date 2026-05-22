@@ -360,7 +360,7 @@ ON CONFLICT (slug) DO UPDATE SET
 
 
 
-  UPDATE lessons
+UPDATE lessons
 SET starter_code = CASE slug
     WHEN 'hello-python' THEN '# Bài học:
 # print() dùng để hiển thị nội dung ra màn hình.
@@ -670,6 +670,66 @@ SET starter_code = CASE slug
 
 # Viết code bên dưới:
 '
+END,
+completion_check_type = CASE slug
+    WHEN 'hello-python' THEN 'output_contains'
+    WHEN 'print-multiple-lines' THEN 'code_contains'
+    WHEN 'variables-basic' THEN 'code_contains'
+    WHEN 'numbers-and-math' THEN 'code_contains'
+    WHEN 'strings-basic' THEN 'output_contains'
+    WHEN 'input-simulation' THEN 'output_contains'
+    WHEN 'comparison-operators' THEN 'output_contains'
+    WHEN 'if-basic' THEN 'output_contains'
+    WHEN 'if-else' THEN 'output_contains'
+    WHEN 'elif-branches' THEN 'code_contains'
+    WHEN 'for-range' THEN 'code_contains'
+    WHEN 'for-list' THEN 'code_contains'
+    WHEN 'while-loop' THEN 'code_contains'
+    WHEN 'break-continue' THEN 'code_contains'
+    WHEN 'functions-basic' THEN 'code_contains'
+    WHEN 'functions-return' THEN 'code_contains'
+    WHEN 'function-parameters' THEN 'code_contains'
+    WHEN 'lists-basic' THEN 'code_contains'
+    WHEN 'lists-update' THEN 'code_contains'
+    WHEN 'list-slicing' THEN 'code_contains'
+    WHEN 'strings-methods' THEN 'code_contains'
+    WHEN 'dictionaries-basic' THEN 'code_contains'
+    WHEN 'dictionaries-update' THEN 'code_contains'
+    WHEN 'nested-data' THEN 'code_contains'
+    WHEN 'import-math' THEN 'code_contains'
+    WHEN 'random-module' THEN 'code_contains'
+    WHEN 'mini-project-quiz' THEN 'code_contains'
+    WHEN 'mini-project-greeter' THEN 'code_contains'
+END,
+completion_check_value = CASE slug
+    WHEN 'hello-python' THEN 'Chào Py-Bot!'
+    WHEN 'print-multiple-lines' THEN 'print('
+    WHEN 'variables-basic' THEN 'name'
+    WHEN 'numbers-and-math' THEN '+'
+    WHEN 'strings-basic' THEN 'Chào'
+    WHEN 'input-simulation' THEN 'Xin chào'
+    WHEN 'comparison-operators' THEN 'True'
+    WHEN 'if-basic' THEN 'Đạt'
+    WHEN 'if-else' THEN 'Qua bài'
+    WHEN 'elif-branches' THEN 'elif'
+    WHEN 'for-range' THEN 'range(3)'
+    WHEN 'for-list' THEN 'for'
+    WHEN 'while-loop' THEN 'while'
+    WHEN 'break-continue' THEN 'continue'
+    WHEN 'functions-basic' THEN 'def greet'
+    WHEN 'functions-return' THEN 'return'
+    WHEN 'function-parameters' THEN 'def describe_pet'
+    WHEN 'lists-basic' THEN '[0]'
+    WHEN 'lists-update' THEN 'append('
+    WHEN 'list-slicing' THEN '[:2]'
+    WHEN 'strings-methods' THEN 'upper('
+    WHEN 'dictionaries-basic' THEN '["name"]'
+    WHEN 'dictionaries-update' THEN '["city"]'
+    WHEN 'nested-data' THEN '["subjects"][0]'
+    WHEN 'import-math' THEN 'import math'
+    WHEN 'random-module' THEN 'random.choice'
+    WHEN 'mini-project-quiz' THEN 'if'
+    WHEN 'mini-project-greeter' THEN 'for'
 END
 WHERE slug IN (
     'hello-python',

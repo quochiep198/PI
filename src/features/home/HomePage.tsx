@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { VI_MESSAGES } from '../../content/messages';
 import type { AuthUser } from '../auth/types';
 import { LessonPanel } from './components/LessonPanel';
@@ -8,6 +8,7 @@ import { useLessons, type Lesson } from './useLessons';
 import { useLessonProgress } from './useLessonProgress';
 import { usePyodideRunner } from './usePyodideRunner';
 import { useXP } from './useXP';
+import { playCelebrationChime } from '../shared/soundEffects';
 
 type OutputTone = 'idle' | 'success' | 'error';
 type RuntimeFeedback = {
@@ -31,6 +32,25 @@ function getInitialCode() {
     return DEFAULT_CODE;
   }
   return normalizeEditorCode(window.localStorage.getItem(STORAGE_KEY));
+}
+
+function stripPythonComments(source: string) {
+  return source
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('#')) {
+        return '';
+      }
+
+      const commentIndex = line.indexOf('#');
+      if (commentIndex === -1) {
+        return line;
+      }
+
+      return line.slice(0, commentIndex);
+    })
+    .join('\n');
 }
 
 type HomePageProps = {
@@ -59,6 +79,7 @@ export function HomePage({ user }: HomePageProps) {
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [isErrorFeedbackLoading, setIsErrorFeedbackLoading] = useState(false);
   const [lastRuntimeFeedback, setLastRuntimeFeedback] = useState<RuntimeFeedback>(null);
+  const previousCompletedLessonCountRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (status === 'loading' || status === 'error') {
@@ -81,6 +102,22 @@ export function HomePage({ user }: HomePageProps) {
     }
     window.localStorage.setItem(STORAGE_KEY, code);
   }, [code]);
+
+  useEffect(() => {
+    if (previousCompletedLessonCountRef.current === null) {
+      previousCompletedLessonCountRef.current = completedLessonIds.length;
+      return;
+    }
+
+    if (completedLessonIds.length > previousCompletedLessonCountRef.current) {
+      playCelebrationChime({
+        enabled: user.musicEnabled ?? true,
+        volume: user.soundVolume ?? 80,
+      });
+    }
+
+    previousCompletedLessonCountRef.current = completedLessonIds.length;
+  }, [completedLessonIds.length, user.musicEnabled, user.soundVolume]);
 
   const tracks = useMemo(() => {
     const uniqueTracks = Array.from(new Set(lessons.map((lesson) => lesson.track)));
@@ -125,7 +162,7 @@ export function HomePage({ user }: HomePageProps) {
 
   function doesLessonPassCompletionCheck(lesson: Lesson, currentCode: string, currentOutput: string) {
     if (lesson.completionCheckType === 'code_contains') {
-      return currentCode.includes(lesson.completionCheckValue);
+      return stripPythonComments(currentCode).includes(lesson.completionCheckValue);
     }
     return currentOutput.includes(lesson.completionCheckValue);
   }
@@ -208,14 +245,31 @@ export function HomePage({ user }: HomePageProps) {
       void recordFirstSuccess(selectedLesson.id);
     }
 
-    if (
-      result.kind === 'success' &&
-      selectedLesson &&
-      !completedLessonIds.includes(selectedLesson.id) &&
-      doesLessonPassCompletionCheck(selectedLesson, code, result.output)
-    ) {
+    if (result.kind !== 'success' || !selectedLesson) {
+      return;
+    }
+
+    if (completedLessonIds.includes(selectedLesson.id)) {
+      return;
+    }
+
+    const passedCompletionCheck = doesLessonPassCompletionCheck(selectedLesson, code, result.output);
+    if (!passedCompletionCheck) {
+      setOutput(
+        `${result.output}\n\nChưa được tính hoàn thành bài học.\nHãy kiểm tra lại yêu cầu của bài và đảm bảo kết quả hoặc mã của bạn khớp mục tiêu.`,
+      );
+      return;
+    }
+
+    try {
       await markLessonCompleted(selectedLesson.id);
       setOutput(VI_MESSAGES.home.output.completedLesson(selectedLesson.title, result.output));
+    } catch (error) {
+      setOutput(
+        `${result.output}\n\nĐã chạy đúng nhưng chưa thể lưu trạng thái hoàn thành.\n${
+          error instanceof Error ? error.message : 'Có lỗi xảy ra khi lưu tiến độ.'
+        }`,
+      );
     }
   }
 

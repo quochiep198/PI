@@ -14,6 +14,7 @@ import { useOnlineLearners } from './features/home/useOnlineLearners';
 import { MobileNavigation } from './features/navigate/NavigateNavigation';
 import { clearCachedXp } from './features/shared/xpCache';
 import { clearCachedCoins } from './features/shared/coinsCache';
+import { installAudioUnlock } from './features/shared/soundEffects';
 
 type View = 'home' | 'practice' | 'inventory' | 'accessories' | 'settings';
 
@@ -80,6 +81,10 @@ export default function App() {
 
     document.documentElement.dataset.theme = user?.theme === 'dark' ? 'dark' : 'light';
   }, [user?.theme]);
+
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
 
   useEffect(() => {
     if (view === 'accessories' && !user?.isAdmin) {

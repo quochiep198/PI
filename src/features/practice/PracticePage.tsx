@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AuthUser } from '../auth/types';
 import { Leaderboard } from './components/Leaderboard';
 import { StreakCalendar } from './components/StreakCalendar';
@@ -6,6 +6,7 @@ import { ChallengeCard } from './components/ChallengeCard';
 import { ChallengeWorkspace } from './components/ChallengeWorkspace';
 import { useChallenges } from './hooks/useChallenges';
 import type { Challenge } from './types/challenge';
+import { playCelebrationChime } from '../shared/soundEffects';
 
 type PracticePageProps = {
   user: AuthUser;
@@ -21,9 +22,27 @@ type PracticePageProps = {
 export function PracticePage({ user, onNavigateUpgrade }: PracticePageProps) {
   const { challenges, loading, error, markCompleted } = useChallenges();
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
+  const previousCompletedChallengeCountRef = useRef<number | null>(null);
   const visibleChallengeCount = user.isPro ? 5 : 3;
   const visibleChallenges = challenges.slice(0, visibleChallengeCount);
   const hasLockedChallenges = !user.isPro && challenges.length > visibleChallengeCount;
+  const completedChallengeCount = challenges.filter((challenge) => challenge.completed).length;
+
+  useEffect(() => {
+    if (previousCompletedChallengeCountRef.current === null) {
+      previousCompletedChallengeCountRef.current = completedChallengeCount;
+      return;
+    }
+
+    if (completedChallengeCount > previousCompletedChallengeCountRef.current) {
+      playCelebrationChime({
+        enabled: user.musicEnabled ?? true,
+        volume: user.soundVolume ?? 80,
+      });
+    }
+
+    previousCompletedChallengeCountRef.current = completedChallengeCount;
+  }, [completedChallengeCount, user.musicEnabled, user.soundVolume]);
 
   const handleStartChallenge = (challenge: Challenge) => {
     setActiveChallenge(challenge);

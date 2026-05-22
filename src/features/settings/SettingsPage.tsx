@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { saveSettings } from '../auth/authApi';
 import type { AuthUser } from '../auth/types';
+import { playCelebrationChime } from '../shared/soundEffects';
 
 const DEFAULT_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgNKNaVqWu7orFFAIrGfAV1JelJ5ydOTJh-a_CLY_Ww3ICx4EixAV4wmC6kZzUbUCVT5Aq8T2byBaHQokPgO-84ihTNK0z0BE-rSnlPo4tngru4pBNgLBUQPHWNq1g6CfN1ziiZ9X0Za8eeoDlKF9PdiEmS3aR5-AJSc2mX6SxpYHdVxGleH4gk6Eky81qYE8xTcg-Wga4U8aZoGDVXlxtTasNy5fYhcwYyRbB6xh5chhTBGbAfoumChi4mzMmQFP5gO87Sd6huTtZ';
 const PYBOT_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuAPHAHh5RESROfJz7silhkCtpTjeR4DhtCWtmbqOsl7fJaaRUr7sxtkrFhabr2K0ekL3dUwOtPmKn5aK59VvJnMk2SfES1F41gvTxJs3HPg-1J6_eCBrZoA5D7yTFV4DLOto7Z50XEM62Sv9ylMv6Db0mvEO2UcXqGzkQINzvCvcjxNKZH5v-VYG_Uq1fHdPVMScHBhjI6JeLmIRt00hCIH66QpFMuRIv4vzS6KQTPPpIBKsngbKbWmZj4D3pVGOUa-JCaAUOwA_1zm';
@@ -366,6 +367,20 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
                   <span className="settings-switch__thumb" />
                 </button>
               </div>
+
+              <button
+                type="button"
+                className="settings-secondary-btn pressable"
+                onClick={() =>
+                  playCelebrationChime({
+                    enabled: musicEnabled,
+                    volume,
+                  })
+                }
+              >
+                <span className="material-symbols-outlined">volume_up</span>
+                Nghe thử âm thanh
+              </button>
 
               <div className="settings-theme">
                 <p className="settings-theme__title">Chế độ giao diện</p>
