@@ -964,11 +964,12 @@ function hashSessionToken(token) {
 }
 
 function generateOtp() {
-  const digits = [];
+  let otp = '';
+  const bytes = crypto.randomBytes(6);
   for (let i = 0; i < OTP_LENGTH; i++) {
-    digits.push(Math.floor(crypto.randomBytes(1)[0] / 25.6 * 10));
+    otp += String(bytes[i] % 10);
   }
-  return digits.join('');
+  return otp;
 }
 
 function hashOtp(otp) {
