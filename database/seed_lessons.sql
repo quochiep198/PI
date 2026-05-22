@@ -356,3 +356,348 @@ ON CONFLICT (slug) DO UPDATE SET
   starter_code = EXCLUDED.starter_code,
   completion_check_type = EXCLUDED.completion_check_type,
   completion_check_value = EXCLUDED.completion_check_value;
+
+
+
+
+  UPDATE lessons
+SET starter_code = CASE slug
+    WHEN 'hello-python' THEN '# Bài học:
+# print() dùng để hiển thị nội dung ra màn hình.
+
+# Nhiệm vụ:
+# In ra dòng chữ Chào Py-Bot!
+
+# Gợi ý:
+# Dùng hàm print(...)
+
+# Viết code bên dưới:
+'
+    WHEN 'print-multiple-lines' THEN '# Bài học:
+# Mỗi lệnh print() sẽ in ra một dòng.
+
+# Nhiệm vụ:
+# In ra hai dòng văn bản khác nhau.
+
+# Gợi ý:
+# Dùng 2 lệnh print(...)
+
+# Viết code bên dưới:
+'
+    WHEN 'variables-basic' THEN '# Bài học:
+# Biến giúp lưu dữ liệu để dùng lại.
+
+# Nhiệm vụ:
+# Tạo biến name và in giá trị của nó.
+
+# Gợi ý:
+# name = ... và print(...)
+
+# Viết code bên dưới:
+'
+    WHEN 'numbers-and-math' THEN '# Bài học:
+# Python có thể thực hiện phép tính.
+
+# Nhiệm vụ:
+# Tạo hai số và in tổng của chúng.
+
+# Gợi ý:
+# Dùng dấu +
+
+# Viết code bên dưới:
+'
+    WHEN 'strings-basic' THEN '# Bài học:
+# Chuỗi là dữ liệu dạng văn bản.
+
+# Nhiệm vụ:
+# Ghép hai chuỗi để tạo lời chào.
+
+# Gợi ý:
+# Dùng dấu + để nối chuỗi
+
+# Viết code bên dưới:
+'
+    WHEN 'input-simulation' THEN '# Bài học:
+# Có thể mô phỏng dữ liệu người dùng bằng biến.
+
+# Nhiệm vụ:
+# Tạo biến user_name và in lời chào.
+
+# Gợi ý:
+# Ghép chuỗi với biến
+
+# Viết code bên dưới:
+'
+    WHEN 'comparison-operators' THEN '# Bài học:
+# Toán tử so sánh giúp kiểm tra điều kiện.
+
+# Nhiệm vụ:
+# Kiểm tra một số có lớn hơn hoặc bằng 5 không.
+
+# Gợi ý:
+# Dùng >=
+
+# Viết code bên dưới:
+'
+    WHEN 'if-basic' THEN '# Bài học:
+# if dùng để kiểm tra điều kiện.
+
+# Nhiệm vụ:
+# Nếu điểm >= 5 thì in Đạt.
+
+# Gợi ý:
+# if điều_kiện:
+
+# Viết code bên dưới:
+'
+    WHEN 'if-else' THEN '# Bài học:
+# if else giúp xử lý hai trường hợp.
+
+# Nhiệm vụ:
+# Nếu đạt thì in Qua bài, ngược lại in Làm lại.
+
+# Gợi ý:
+# Dùng if và else
+
+# Viết code bên dưới:
+'
+    WHEN 'elif-branches' THEN '# Bài học:
+# elif dùng để kiểm tra nhiều trường hợp.
+
+# Nhiệm vụ:
+# Phân loại điểm thành Giỏi, Khá hoặc Cần cố gắng.
+
+# Gợi ý:
+# Dùng if, elif, else
+
+# Viết code bên dưới:
+'
+    WHEN 'for-range' THEN '# Bài học:
+# for kết hợp range() để lặp nhiều lần.
+
+# Nhiệm vụ:
+# Viết vòng lặp chạy 3 lần.
+
+# Gợi ý:
+# range(3)
+
+# Viết code bên dưới:
+'
+    WHEN 'for-list' THEN '# Bài học:
+# for có thể duyệt từng phần tử trong danh sách.
+
+# Nhiệm vụ:
+# In từng món đồ trong list.
+
+# Gợi ý:
+# for item in items:
+
+# Viết code bên dưới:
+'
+    WHEN 'while-loop' THEN '# Bài học:
+# while lặp khi điều kiện còn đúng.
+
+# Nhiệm vụ:
+# Đếm từ 1 đến 3.
+
+# Gợi ý:
+# Nhớ tăng biến đếm
+
+# Viết code bên dưới:
+'
+    WHEN 'break-continue' THEN '# Bài học:
+# continue giúp bỏ qua một lần lặp.
+
+# Nhiệm vụ:
+# In từ 1 đến 5 nhưng bỏ qua số 3.
+
+# Gợi ý:
+# if i == 3: continue
+
+# Viết code bên dưới:
+'
+    WHEN 'functions-basic' THEN '# Bài học:
+# Hàm giúp tái sử dụng code.
+
+# Nhiệm vụ:
+# Tạo hàm greet và gọi hàm.
+
+# Gợi ý:
+# def greet(...):
+
+# Viết code bên dưới:
+'
+    WHEN 'functions-return' THEN '# Bài học:
+# return dùng để trả về kết quả.
+
+# Nhiệm vụ:
+# Viết hàm cộng hai số.
+
+# Gợi ý:
+# return a + b
+
+# Viết code bên dưới:
+'
+    WHEN 'function-parameters' THEN '# Bài học:
+# Tham số giúp truyền dữ liệu vào hàm.
+
+# Nhiệm vụ:
+# Tạo hàm nhận tên con vật.
+
+# Gợi ý:
+# def describe_pet(name):
+
+# Viết code bên dưới:
+'
+    WHEN 'lists-basic' THEN '# Bài học:
+# Danh sách lưu nhiều giá trị.
+
+# Nhiệm vụ:
+# In phần tử đầu tiên của list.
+
+# Gợi ý:
+# list[0]
+
+# Viết code bên dưới:
+'
+    WHEN 'lists-update' THEN '# Bài học:
+# append() dùng để thêm phần tử.
+
+# Nhiệm vụ:
+# Thêm phần tử mới vào list.
+
+# Gợi ý:
+# list.append(...)
+
+# Viết code bên dưới:
+'
+    WHEN 'list-slicing' THEN '# Bài học:
+# Slicing giúp lấy một phần danh sách.
+
+# Nhiệm vụ:
+# In ra hai phần tử đầu tiên.
+
+# Gợi ý:
+# numbers[:2]
+
+# Viết code bên dưới:
+'
+    WHEN 'strings-methods' THEN '# Bài học:
+# Chuỗi có nhiều phương thức hữu ích.
+
+# Nhiệm vụ:
+# Chuyển chuỗi thành in hoa.
+
+# Gợi ý:
+# upper()
+
+# Viết code bên dưới:
+'
+    WHEN 'dictionaries-basic' THEN '# Bài học:
+# Dictionary lưu dữ liệu dạng key-value.
+
+# Nhiệm vụ:
+# In tên từ dictionary.
+
+# Gợi ý:
+# student["name"]
+
+# Viết code bên dưới:
+'
+    WHEN 'dictionaries-update' THEN '# Bài học:
+# Có thể thêm dữ liệu mới vào dictionary.
+
+# Nhiệm vụ:
+# Thêm key city.
+
+# Gợi ý:
+# student["city"] = ...
+
+# Viết code bên dưới:
+'
+    WHEN 'nested-data' THEN '# Bài học:
+# Dữ liệu có thể lồng nhau.
+
+# Nhiệm vụ:
+# Lấy môn học đầu tiên trong list.
+
+# Gợi ý:
+# student["subjects"][0]
+
+# Viết code bên dưới:
+'
+    WHEN 'import-math' THEN '# Bài học:
+# Python có các module hỗ trợ sẵn.
+
+# Nhiệm vụ:
+# In căn bậc hai của 16.
+
+# Gợi ý:
+# import math
+
+# Viết code bên dưới:
+'
+    WHEN 'random-module' THEN '# Bài học:
+# random giúp chọn dữ liệu ngẫu nhiên.
+
+# Nhiệm vụ:
+# Chọn ngẫu nhiên một màu.
+
+# Gợi ý:
+# random.choice(...)
+
+# Viết code bên dưới:
+'
+    WHEN 'mini-project-quiz' THEN '# Bài học:
+# Kết hợp biến và điều kiện.
+
+# Nhiệm vụ:
+# Kiểm tra câu trả lời đúng hay sai.
+
+# Gợi ý:
+# Dùng if
+
+# Viết code bên dưới:
+'
+    WHEN 'mini-project-greeter' THEN '# Bài học:
+# Kết hợp hàm và vòng lặp.
+
+# Nhiệm vụ:
+# In lời chào nhiều lần.
+
+# Gợi ý:
+# Gọi hàm trong vòng lặp
+
+# Viết code bên dưới:
+'
+END
+WHERE slug IN (
+    'hello-python',
+    'print-multiple-lines',
+    'variables-basic',
+    'numbers-and-math',
+    'strings-basic',
+    'input-simulation',
+    'comparison-operators',
+    'if-basic',
+    'if-else',
+    'elif-branches',
+    'for-range',
+    'for-list',
+    'while-loop',
+    'break-continue',
+    'functions-basic',
+    'functions-return',
+    'function-parameters',
+    'lists-basic',
+    'lists-update',
+    'list-slicing',
+    'strings-methods',
+    'dictionaries-basic',
+    'dictionaries-update',
+    'nested-data',
+    'import-math',
+    'random-module',
+    'mini-project-quiz',
+    'mini-project-greeter'
+);
