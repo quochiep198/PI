@@ -27,7 +27,6 @@ export const sideNavItems: IconNavItem[] = [
 
 export const mobileNavItems: IconNavItem[] = [
   { icon: 'menu_book', label: 'Bài học', active: true },
-  { icon: 'code', label: 'Playground' },
-  { icon: 'military_tech', label: 'Thành tích' },
-  { icon: 'account_circle', label: 'Tôi' },
+  { icon: 'code', label: 'Luyện Tập' },
+  { icon: 'military_tech', label: 'Cài Đặt' }
 ];

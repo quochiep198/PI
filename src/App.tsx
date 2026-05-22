@@ -153,7 +153,12 @@ export default function App() {
                 : <SettingsPage user={user} onUserUpdated={handleUserUpdated} onLogout={handleLogout} />}
       </div>
 
-      <MobileNavigation />
+      <MobileNavigation
+        activeView={view === 'home' ? 'home' : view === 'practice' ? 'practice' : 'settings'}
+        onNavigateLessons={() => setView('home')}
+        onNavigatePractice={() => setView('practice')}
+        onNavigateSettings={() => setView('settings')}
+      />
     </div>
   );
 }

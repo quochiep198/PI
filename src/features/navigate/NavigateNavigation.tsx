@@ -1,4 +1,4 @@
-import { mobileNavItems, sideNavItems, type IconNavItem } from './navigation';
+import { sideNavItems, type IconNavItem } from './navigation';
 
 interface NavButtonProps {
   item: IconNavItem;
@@ -43,14 +43,55 @@ export function SideNavigation({ activeLabel, itemClickHandlers }: SideNavigatio
   );
 }
 
-export function MobileNavigation() {
+type MobileNavView = 'home' | 'practice' | 'settings';
+
+interface MobileNavigationProps {
+  activeView: MobileNavView;
+  onNavigateLessons?: () => void;
+  onNavigatePractice?: () => void;
+  onNavigateSettings?: () => void;
+}
+
+export function MobileNavigation({
+  activeView,
+  onNavigateLessons,
+  onNavigatePractice,
+  onNavigateSettings,
+}: MobileNavigationProps) {
+  const items: Array<{
+    icon: string;
+    label: string;
+    isActive: boolean;
+    onClick?: () => void;
+  }> = [
+    {
+      icon: 'menu_book',
+      label: 'Bài Học',
+      isActive: activeView === 'home',
+      onClick: onNavigateLessons,
+    },
+    {
+      icon: 'code',
+      label: 'Luyện Tập',
+      isActive: activeView === 'practice',
+      onClick: onNavigatePractice,
+    },
+    {
+      icon: 'settings',
+      label: 'Cài Đặt',
+      isActive: activeView === 'settings',
+      onClick: onNavigateSettings,
+    },
+  ];
+
   return (
     <nav className="mobile-nav" aria-label="Mobile">
-      {mobileNavItems.map((item) => (
+      {items.map((item) => (
         <button
           key={item.label}
-          className={`mobile-nav__item${item.active ? ' is-active' : ''}`}
+          className={`mobile-nav__item${item.isActive ? ' is-active' : ''}`}
           type="button"
+          onClick={item.onClick}
         >
           <span aria-hidden="true" className="material-symbols-outlined">
             {item.icon}
