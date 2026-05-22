@@ -11,11 +11,11 @@ type PracticePageProps = {
   user: AuthUser;
 };
 
-const storeItems = [
-  { name: 'Theme Ocean', price: 120, image: 'OCEAN', featured: true },
-  { name: 'Avatar Ninja', price: 180, image: 'NINJA' },
-  { name: 'XP Boost 2x', price: 90, image: 'BOOST' },
-];
+// const storeItems = [
+//   { name: 'Theme Ocean', price: 120, image: 'OCEAN', featured: true },
+//   { name: 'Avatar Ninja', price: 180, image: 'NINJA' },
+//   { name: 'XP Boost 2x', price: 90, image: 'BOOST' },
+// ];
 
 export function PracticePage({ user }: PracticePageProps) {
   const { challenges, loading, error, markCompleted } = useChallenges();
