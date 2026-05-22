@@ -1411,6 +1411,9 @@ select {
   caret-color: var(--color-primary-container);
   white-space: pre;
   tab-size: 4;
+  text-rendering: auto;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .editor-shell__actions {
@@ -2465,6 +2468,9 @@ select {
   font-size: 14px;
   line-height: 1.6;
   color: var(--color-on-surface);
+  text-rendering: auto;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .workspace-panel__code:focus {
@@ -2490,6 +2496,9 @@ select {
   color: var(--color-on-surface);
   white-space: pre-wrap;
   overflow-y: auto;
+  text-rendering: auto;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .workspace-panel--reward {

@@ -206,6 +206,10 @@ export function ChallengeWorkspace({ challenge, isOpen, onClose, onComplete }: C
               onChange={(e) => setCode(e.target.value)}
               placeholder="Viết code Python ở đây..."
               spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
+              data-gramm="false"
               disabled={result?.success && !result.alreadyCompleted}
             />
           </div>

@@ -73,6 +73,10 @@ export function WorkspacePanel({
               aria-label="Python code editor"
               className="editor-surface__input"
               spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
+              data-gramm="false"
               value={code}
               onChange={handleChange}
               onKeyDown={onEditorKeyDown}

@@ -24,6 +24,18 @@ const PYODIDE_VERSION = 'v0.29.4';
 const PYODIDE_BASE_URL = `https://cdn.jsdelivr.net/pyodide/${PYODIDE_VERSION}/full/`;
 
 let pyodidePromise: Promise<PyodideInterface> | null = null;
+const STANDALONE_OPERATOR_HINTS: Record<string, string> = {
+  '!=': 'Toán tử `!=` không thể đứng một mình. Hãy dùng ví dụ như `print(3 != 4)` hoặc `if a != b:`.',
+  '==': 'Toán tử `==` không thể đứng một mình. Hãy dùng ví dụ như `print(3 == 4)` hoặc `if a == b:`.',
+  '>': 'Toán tử `>` không thể đứng một mình. Hãy dùng ví dụ như `print(5 > 3)` hoặc `if a > b:`.',
+  '<': 'Toán tử `<` không thể đứng một mình. Hãy dùng ví dụ như `print(2 < 7)` hoặc `if a < b:`.',
+  '>=': 'Toán tử `>=` không thể đứng một mình. Hãy dùng ví dụ như `print(5 >= 3)` hoặc `if a >= b:`.',
+  '<=': 'Toán tử `<=` không thể đứng một mình. Hãy dùng ví dụ như `print(2 <= 7)` hoặc `if a <= b:`.',
+};
+
+function getStandaloneOperatorHint(code: string) {
+  return STANDALONE_OPERATOR_HINTS[code.trim()] ?? null;
+}
 
 function isMobileLikeDevice() {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
@@ -124,6 +136,15 @@ export function usePyodideRunner() {
       return {
         kind: 'error',
         output: VI_MESSAGES.pyodide.mobileFallback,
+      };
+    }
+
+    const standaloneOperatorHint = getStandaloneOperatorHint(code);
+    if (standaloneOperatorHint) {
+      setStatus('ready');
+      return {
+        kind: 'error',
+        output: standaloneOperatorHint,
       };
     }
 
