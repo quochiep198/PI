@@ -69,7 +69,7 @@ export function PracticePage({ user }: PracticePageProps) {
             ))}
           </section>
 
-          <section className="practice-store">
+          {/* <section className="practice-store">
             <div className="practice-store__header">
               <h2 className="practice-store__title">Đổi qua bằng coin</h2>
               <button type="button" className="practice-store__view-all">
@@ -100,7 +100,7 @@ export function PracticePage({ user }: PracticePageProps) {
                 </article>
               ))}
             </div>
-          </section>
+          </section> */}
         </div>
 
         <aside className="practice-sidebar">
