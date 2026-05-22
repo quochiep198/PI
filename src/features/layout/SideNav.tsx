@@ -98,7 +98,7 @@ export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineL
             onClick={() => handleNavigation('Achievements')}
           >
             <span aria-hidden="true" className="material-symbols-outlined">military_tech</span>
-            <span>Upload Admin</span>
+            <span>Upload Ảnh</span>
           </button>
         ) : null}
 

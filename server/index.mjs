@@ -5,10 +5,16 @@ import {
   authMeHandler,
   checkInHandler,
   completeProgressHandler,
+  createAvatarHandler,
+  createItemHandler,
   createLessonHandler,
   errorFeedbackHandler,
   forgotPasswordHandler,
+  getAvatarsHandler,
+  getCoinsHandler,
+  getItemsHandler,
   getLeaderboardHandler,
+  getStreakHandler,
   getXpHandler,
   healthHandler,
   hintHandler,
@@ -20,12 +26,10 @@ import {
   registerHandler,
   verifyOtpHandler,
   postXpHandler,
-  getCoinsHandler,
-  getStreakHandler,
+  submitChallengeHandler,
   updateAvatarHandler,
   updateSettingsHandler,
   getChallengesHandler,
-  submitChallengeHandler,
 } from './handlers.mjs';
 import { runMigrations } from './db.mjs';
 
@@ -63,6 +67,14 @@ app.get('/api/streak/:userId', getStreakHandler);
 app.post('/api/streak/:userId/checkin', checkInHandler);
 app.get('/api/challenges', getChallengesHandler);
 app.post('/api/challenges/submit', submitChallengeHandler);
+
+// Avatar routes (admin only)
+app.get('/api/avatars', getAvatarsHandler);
+app.post('/api/avatars', createAvatarHandler);
+
+// Item routes (admin only)
+app.get('/api/items', getItemsHandler);
+app.post('/api/items', createItemHandler);
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
 app.post('/api/lessons', createLessonHandler);

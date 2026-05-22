@@ -2987,4 +2987,192 @@ export async function submitChallengeHandler(request, response) {
   }
 }
 
+// Avatar CRUD handlers
+export async function createAvatarHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    // Check if user is admin
+    if (!user.isAdmin) {
+      response.status(403).json({ message: 'Chỉ admin mới có quyền tạo avatar.' });
+      return;
+    }
+
+    const { name, description, imageData } = getRequestBody(request);
+
+    if (!name?.trim()) {
+      response.status(400).json({ message: 'Tên avatar không được để trống.' });
+      return;
+    }
+
+    if (!imageData?.trim()) {
+      response.status(400).json({ message: 'Hình ảnh không được để trống.' });
+      return;
+    }
+
+    // Check if image data is valid base64
+    if (!imageData.startsWith('data:image/')) {
+      response.status(400).json({ message: 'Định dạng hình ảnh không hợp lệ.' });
+      return;
+    }
+
+    // Save the avatar (imageData stored as TEXT for simplicity, can switch to BLOB later)
+    const rows = await query(
+      `
+        INSERT INTO avatars (user_id, name, description, image_data)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (user_id) DO UPDATE
+          SET name = EXCLUDED.name,
+              description = EXCLUDED.description,
+              image_data = EXCLUDED.image_data,
+              updated_at = CURRENT_TIMESTAMP
+        RETURNING id, name, description, image_data AS "imageData", created_at AS "createdAt", updated_at AS "updatedAt"
+      `,
+      [user.id, name.trim(), description?.trim() || null, imageData],
+    );
+
+    response.status(201).json({
+      success: true,
+      message: 'Avatar đã được lưu thành công.',
+      avatar: rows[0],
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Không thể tạo avatar.',
+    });
+  }
+}
+
+export async function getAvatarsHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const rows = await query(
+      `
+        SELECT id, name, description, image_data AS "imageData", created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM avatars
+        WHERE user_id = $1
+        ORDER BY updated_at DESC
+      `,
+      [user.id],
+    );
+
+    response.json({ avatars: rows });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Không thể lấy danh sách avatar.',
+    });
+  }
+}
+
+// Item CRUD handlers
+export async function createItemHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    // Check if user is admin
+    if (!user.isAdmin) {
+      response.status(403).json({ message: 'Chỉ admin mới có quyền tạo item.' });
+      return;
+    }
+
+    const { name, assetType, description, price, imageData } = getRequestBody(request);
+
+    if (!name?.trim()) {
+      response.status(400).json({ message: 'Tên item không được để trống.' });
+      return;
+    }
+
+    if (!assetType) {
+      response.status(400).json({ message: 'Loại item không được để trống.' });
+      return;
+    }
+
+    if (assetType === 'avatar') {
+      response.status(400).json({ message: 'Không thể tạo item với loại avatar. Sử dụng API avatars.' });
+      return;
+    }
+
+    if (!imageData?.trim()) {
+      response.status(400).json({ message: 'Hình ảnh không được để trống.' });
+      return;
+    }
+
+    if (!imageData.startsWith('data:image/')) {
+      response.status(400).json({ message: 'Định dạng hình ảnh không hợp lệ.' });
+      return;
+    }
+
+    // Check if user has an avatar
+    const avatarRows = await query(
+      `SELECT id FROM avatars WHERE user_id = $1 LIMIT 1`,
+      [user.id],
+    );
+
+    if (avatarRows.length === 0) {
+      response.status(400).json({ message: 'Bạn cần tạo avatar trước khi thêm items.' });
+      return;
+    }
+
+    const avatarId = avatarRows[0].id;
+    const itemPrice = typeof price === 'number' && price >= 0 ? price : 0;
+
+    // Save the item
+    const rows = await query(
+      `
+        INSERT INTO items (avatar_id, name, asset_type, description, image_data, price)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, avatar_id AS "avatarId", name, asset_type AS "assetType", description, image_data AS "imageData", price, created_at AS "createdAt", updated_at AS "updatedAt"
+      `,
+      [avatarId, name.trim(), assetType, description?.trim() || null, imageData, itemPrice],
+    );
+
+    response.status(201).json({
+      success: true,
+      message: 'Item đã được lưu thành công.',
+      item: rows[0],
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Không thể tạo item.',
+    });
+  }
+}
+
+export async function getItemsHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    // Get items for user's avatar
+    const rows = await query(
+      `
+        SELECT i.id, i.avatar_id AS "avatarId", i.name, i.asset_type AS "assetType", i.description, i.image_data AS "imageData", i.price, i.created_at AS "createdAt", i.updated_at AS "updatedAt"
+        FROM items i
+        INNER JOIN avatars a ON a.id = i.avatar_id
+        WHERE a.user_id = $1
+        ORDER BY i.created_at DESC
+      `,
+      [user.id],
+    );
+
+    response.json({ items: rows });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Không thể lấy danh sách items.',
+    });
+  }
+}
+
 

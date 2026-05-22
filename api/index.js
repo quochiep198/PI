@@ -4,11 +4,15 @@ import {
   authMeHandler,
   checkInHandler,
   completeProgressHandler,
+  createAvatarHandler,
+  createItemHandler,
   createLessonHandler,
   errorFeedbackHandler,
   forgotPasswordHandler,
+  getAvatarsHandler,
   getChallengesHandler,
   getCoinsHandler,
+  getItemsHandler,
   getLeaderboardHandler,
   getStreakHandler,
   getXpHandler,
@@ -71,5 +75,13 @@ app.post('/api/hint', hintHandler);
 // Challenge routes
 app.get('/api/challenges', getChallengesHandler);
 app.post('/api/challenges/submit', submitChallengeHandler);
+
+// Avatar routes (admin only)
+app.get('/api/avatars', getAvatarsHandler);
+app.post('/api/avatars', createAvatarHandler);
+
+// Item routes (admin only)
+app.get('/api/items', getItemsHandler);
+app.post('/api/items', createItemHandler);
 
 export default app;
