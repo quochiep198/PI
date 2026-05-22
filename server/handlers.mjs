@@ -9,6 +9,8 @@ const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_GENERIC_MESSAGE = 'Nếu tài khoản tồn tại, chúng tôi đã gửi mã xác thực đến email của bạn.';
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const OTP_LENGTH = 6;
+const OTP_REQUEST_WINDOW_MS = 60 * 1000; // 1 minute
+const OTP_REQUEST_LIMIT = 3; // max 3 OTP requests per minute per email
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqPrimaryModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -1013,10 +1015,37 @@ function getPasswordStrengthError(password) {
   return null;
 }
 
+async function checkOtpRequestRateLimit(email) {
+  const windowStart = new Date(Date.now() - OTP_REQUEST_WINDOW_MS).toISOString();
+
+  const rows = await query(
+    `
+      SELECT COUNT(*)::int AS count
+      FROM password_reset_otps
+      WHERE user_id = (SELECT id FROM users WHERE email = $1)
+        AND created_at >= $2
+    `,
+    [email, windowStart],
+  );
+
+  const count = rows[0]?.count || 0;
+  return count >= OTP_REQUEST_LIMIT;
+}
+
 async function createPasswordResetOtp(userId) {
   const otp = generateOtp();
   const otpHash = hashOtp(otp);
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+
+  await execute(
+    `
+      UPDATE password_reset_otps
+      SET used_at = CURRENT_TIMESTAMP
+      WHERE user_id = $1
+        AND used_at IS NULL
+    `,
+    [userId],
+  );
 
   await execute(
     `
@@ -1622,6 +1651,14 @@ export async function forgotPasswordHandler(request, response) {
   }
 
   try {
+    const isRateLimited = await checkOtpRequestRateLimit(normalizedEmail);
+    if (isRateLimited) {
+      response.status(429).json({
+        message: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.',
+      });
+      return;
+    }
+
     const users = await query(
       `
         SELECT id, username, email
