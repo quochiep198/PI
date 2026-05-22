@@ -19,6 +19,7 @@ Spec-pack này xác định hành vi mục tiêu của khu vực `Login`, đồn
 - Trang Login và Register của ứng dụng
 - UI/UX tham chiếu trực tiếp từ `docs/raw/design/Login/code.html`
 - API đăng nhập, đăng xuất, đăng ký user mới
+- API quên mật khẩu bằng OTP gửi qua email
 - Cơ chế session/cookie tồn tại 30 ngày
 - Cơ chế giữ trạng thái đăng nhập khi người dùng refresh trang
 - Lưu trữ mật khẩu ở dạng mã hóa băm an toàn
@@ -27,7 +28,6 @@ Spec-pack này xác định hành vi mục tiêu của khu vực `Login`, đồn
 
 ### Ngoài phạm vi
 - Đăng nhập mạng xã hội Google/GitHub thực tế
-- Quên mật khẩu / reset mật khẩu qua email
 - Xác thực đa yếu tố
 - Quản trị user / phân quyền admin
 - Chỉnh sửa profile ngoài thông tin cần thiết cho auth
@@ -46,6 +46,7 @@ Spec-pack này xác định hành vi mục tiêu của khu vực `Login`, đồn
 | 6 | Password Hash | Chuỗi băm mật khẩu đã được xử lý an toàn, không lưu plaintext |
 | 7 | User Progress | Tiến trình bài học gắn theo user thay vì theo khóa ẩn danh local |
 | 8 | Raw Design | File HTML thiết kế chuẩn tại `docs/raw/design/Login/code.html` |
+| 9 | OTP | Mã xác thực dùng một lần được gửi qua email để xác minh yêu cầu đổi mật khẩu |
 
 ---
 
@@ -251,159 +252,77 @@ Spec-pack này xác định hành vi mục tiêu của khu vực `Login`, đồn
 
 ---
 
-### 5.8 Quên mật khẩu
-# Forgot Password Flow
+### 5.8 Quên mật khẩu bằng OTP email
 
-## 1. User chọn “Quên mật khẩu”
+**Pre-conditions:**
+- User chưa đăng nhập và cần đặt lại mật khẩu.
 
-Tại màn hình đăng nhập:
+**Luồng chính:**
+1. Tại màn hình login, user chọn link `Quên mật khẩu?`.
+2. Hệ thống hiển thị form yêu cầu nhập `email` đã đăng ký.
+3. User nhập email và gửi yêu cầu.
+4. Backend luôn trả về thông báo generic, ví dụ: `Nếu tài khoản tồn tại, chúng tôi đã gửi mã xác thực đến email của bạn.`
+5. Nếu email tồn tại:
+   - tạo OTP ngẫu nhiên dùng một lần
+   - gắn OTP với đúng user yêu cầu reset mật khẩu
+   - lưu thời điểm hết hạn sau 5 phút kể từ lúc phát hành
+   - gửi OTP qua email
+6. User mở email, lấy OTP và nhập OTP vào form đổi mật khẩu cùng với `mật khẩu mới` và `xác nhận mật khẩu mới`.
+7. Backend kiểm tra:
+   - email có yêu cầu reset hợp lệ
+   - OTP khớp
+   - OTP chưa hết hạn
+   - OTP chưa bị sử dụng
+   - mật khẩu mới đạt rule độ mạnh
+8. Nếu hợp lệ:
+   - băm mật khẩu mới bằng cơ chế chuẩn của hệ thống
+   - cập nhật password hash trong DB
+   - đánh dấu OTP đã dùng hoặc vô hiệu hóa OTP
+   - thu hồi các session đang hoạt động của user
+9. Hệ thống hiển thị trạng thái đổi mật khẩu thành công và điều hướng user về màn hình login để đăng nhập lại bằng mật khẩu mới.
 
-- User click vào button/link: `Quên mật khẩu?`
+**Business rules:**
+- BR-22: Luồng quên mật khẩu chỉ nhận `email`; không dùng `username` hoặc `số điện thoại` cho phase này.
+- BR-23: OTP phải có thời hạn hiệu lực đúng 5 phút tính từ thời điểm gửi thành công.
+- BR-24: OTP là mã dùng một lần; sau khi đổi mật khẩu thành công hoặc phát hành OTP mới thì OTP cũ phải mất hiệu lực.
+- BR-25: Thông báo phản hồi cho bước yêu cầu OTP phải là generic, không làm lộ email có tồn tại hay không.
+- BR-26: Phải có rate limit cho yêu cầu gửi OTP và cho bước nhập OTP để giảm rủi ro brute force/spam email.
+- BR-27: Không log OTP hoặc mật khẩu mới ở client, server, email provider callback log, hoặc audit log.
+- BR-28: Sau khi đổi mật khẩu thành công, tất cả session hiện có của user phải bị thu hồi và user phải đăng nhập lại.
+- BR-29: Form đổi mật khẩu phải validate tối thiểu: độ dài tối thiểu, có xác nhận mật khẩu khớp, và không cho phép dùng lại mật khẩu hiện tại nếu backend có thể đối chiếu.
 
----
+**Post-conditions:**
+- User đổi được mật khẩu bằng OTP email hợp lệ trong vòng 5 phút và phải đăng nhập lại sau khi hoàn tất.
 
-## 2. Nhập thông tin tài khoản
-
-Người dùng nhập:
-
-- Email
-hoặc
-- Username
-hoặc
-- Số điện thoại
-
----
-
-## 3. Hệ thống kiểm tra tài khoản
-
-### Trường hợp tài khoản không tồn tại
-
-Hệ thống trả về message chung:
-
-```text
-Nếu tài khoản tồn tại, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu.
-```
-
-> Mục đích:
-> Không expose thông tin account tồn tại hay không.
-
-### Trường hợp tài khoản tồn tại
-
-Hệ thống:
-
-- Reset Token
-- Lưu expiration time
-- Gửi email
-
----
-
-## 4. Reset Link
-
-```text
-https://python.thtsolution.online/reset-password?token=abcxyz
-```
-
-Token:
-
-- Chỉ dùng 1 lần
-- Có thời gian hết hạn
-
----
-
-## 5. Người dùng xác thực
-
-User thực hiện:
-
-- Click reset link
-
-Hệ thống kiểm tra:
-
-- Token hợp lệ
-- Chưa hết hạn
-- Chưa được sử dụng
-
----
-
-## 6. Nhập mật khẩu mới
-
-Validate:
-
-- Độ dài tối thiểu
-- Có chữ hoa/thường
-- Có ký tự đặc biệt
-- Không trùng mật khẩu cũ
-- Confirm password đúng
-
-Ví dụ:
-
-```text
-Password phải từ 8 ký tự trở lên
-Bao gồm chữ hoa, chữ thường và ký tự đặc biệt
-```
-
----
-
-## 7. Cập nhật mật khẩu
-
-Hệ thống:
-
-- Hash password (bcrypt/argon2)
-- Update DB
-- Invalidate token/OTP
-- Logout các session cũ (optional)
-
----
-
-## 8. Hoàn tất
-
-Hiển thị:
-
-```text
-Đổi mật khẩu thành công
-```
-
-Sau đó:
-
-- Redirect về màn hình Login
-
----
-
-# Sequence Flow
+**Sequence flow:**
 
 ```text
 Login Screen
    ↓
 Forgot Password
    ↓
-Input Email/Phone
+Input Registered Email
    ↓
-Send OTP / Reset Link
+Send OTP Email
    ↓
-Verify OTP / Token
+Input OTP + New Password
    ↓
-Input New Password
+Verify OTP (<= 5 minutes)
    ↓
 Update Password
+   ↓
+Invalidate Existing Sessions
    ↓
 Login Again
 ```
 
----
-
-# Security Recommendation
-
-## Nên có
-
-- Rate limit API
-- Token one-time-use
-- Audit log
-
-## Không nên
-
-- Trả message:
-  `Email không tồn tại`
-- Token không expire
-- Lưu password dạng plain text
+**Security recommendations:**
+- Rate limit API gửi OTP và verify OTP.
+- OTP phải đủ khó đoán, one-time-use, và có expiry 5 phút.
+- Ghi audit log cho yêu cầu reset mật khẩu và kết quả xác minh OTP, nhưng không ghi lộ OTP.
+- Không trả message kiểu `Email không tồn tại`.
+- Không cho OTP sống quá 5 phút.
+- Không lưu password dạng plain text.
 
 ---
 
@@ -417,6 +336,7 @@ Login Again
 | 4 | Tính bền vững session | Phiên đăng nhập phải tồn tại 30 ngày nếu chưa logout hoặc bị thu hồi |
 | 5 | Tương thích refresh | Refresh trình duyệt không làm mất đăng nhập nếu cookie còn hiệu lực |
 | 6 | Tách biệt dữ liệu | Progress giữa các user phải được cách ly tuyệt đối |
+| 7 | Khôi phục mật khẩu | OTP quên mật khẩu phải được gửi qua email và hết hạn sau 5 phút |
 
 ---
 
@@ -434,6 +354,9 @@ Login Again
 | 8 | AC-LOGIN-8 | Logout xóa session hiện tại và refresh không tự đăng nhập lại | E2E |
 | 9 | AC-LOGIN-9 | Sai password phải trả lỗi generic, không lộ user tồn tại hay không | E2E / Security |
 | 10 | AC-LOGIN-10 | Nếu session hết hạn, refresh phải đưa user về login | E2E |
+| 11 | AC-LOGIN-11 | User yêu cầu quên mật khẩu bằng email hợp lệ phải nhận OTP qua email với thời hạn 5 phút | API / E2E |
+| 12 | AC-LOGIN-12 | User chỉ đổi được mật khẩu khi nhập đúng OTP chưa hết hạn; OTP sai, hết hạn, hoặc đã dùng phải bị từ chối | E2E / Security |
+| 13 | AC-LOGIN-13 | Sau khi đổi mật khẩu thành công, các session cũ của user bị thu hồi và user phải đăng nhập lại bằng mật khẩu mới | API / E2E |
 
 ---
 
@@ -445,6 +368,7 @@ Login Again
 2. **Refresh vẫn giữ phiên:** User vừa login, nhấn F5 hoặc refresh tab, app vẫn giữ user đã đăng nhập và tiếp tục hiển thị tiến trình đúng.
 3. **Đăng ký tài khoản mới:** User nhập username/email/password hợp lệ, hệ thống tạo user mới và cho phép bắt đầu học.
 4. **Tiến trình riêng theo user:** User A hoàn thành 3 bài, logout; User B đăng nhập chỉ thấy đúng tiến trình của B.
+5. **Quên mật khẩu thành công:** User nhập email đã đăng ký, nhận OTP qua email, nhập OTP cùng mật khẩu mới trong vòng 5 phút và được chuyển về login.
 
 ### Các luồng lỗi
 
@@ -452,12 +376,14 @@ Login Again
 2. **Email đã tồn tại khi đăng ký:** User đăng ký bằng email đã dùng, hệ thống báo lỗi trùng email.
 3. **Session hết hạn:** Sau 30 ngày hoặc khi session bị thu hồi, refresh sẽ chuyển user về login.
 4. **Cookie không hợp lệ:** Nếu cookie bị sửa hoặc giả mạo, backend từ chối session và yêu cầu đăng nhập lại.
+5. **OTP sai hoặc hết hạn:** User nhập OTP không đúng hoặc sau hơn 5 phút, hệ thống từ chối đổi mật khẩu và yêu cầu nhập lại hoặc gửi OTP mới.
 
 ### Các trường hợp biên
 
 1. **Đổi user trên cùng trình duyệt:** Logout user A rồi login user B, progress phải chuyển sang dữ liệu của B.
 2. **Mở lại tab sau vài ngày:** Nếu còn trong 30 ngày và session hợp lệ, user vẫn được giữ đăng nhập.
 3. **Thiếu backend social login:** Nút Google/GitHub vẫn hiển thị đúng UI theo raw design nhưng không được gây lỗi JS nếu chưa tích hợp.
+4. **Yêu cầu gửi lại OTP:** Khi user yêu cầu OTP mới, OTP cũ phải bị vô hiệu để tránh tồn tại nhiều mã hợp lệ cùng lúc.
 
 ---
 
@@ -495,6 +421,7 @@ Ghi chú:
 | 3 | Chọn thư viện hash nào: `argon2` hay `bcrypt`? | BE/Security | TBD |
 | 4 | Social login chỉ là UI placeholder hay sẽ được triển khai ở phase sau? | FE/BE | TBD |
 | 5 | Session store dùng DB, Redis hay signed cookie session? | BE | TBD |
+| 6 | OTP sẽ có bao nhiêu chữ số/ký tự và thời gian chờ giữa hai lần gửi lại là bao lâu? | BE/UX/Security | TBD |
 
 ---
 
@@ -507,6 +434,8 @@ Ghi chú:
 | 3 | Lưu password không an toàn | Thấp | Rất cao | Chỉ dùng Argon2/bcrypt, review bảo mật backend |
 | 4 | Progress của user cũ rò sang user mới trên cùng máy | Trung bình | Cao | Ràng buộc truy vấn progress theo `userId`, clear auth state khi logout |
 | 5 | Cookie thiếu `Secure`/`HttpOnly` làm tăng rủi ro tấn công | Trung bình | Cao | Chốt cờ cookie trong middleware/auth layer |
+| 6 | OTP bị brute force hoặc spam gửi email | Trung bình | Cao | Rate limit, OTP expiry 5 phút, khóa tạm thời theo ngưỡng, audit log |
+| 7 | Email OTP gửi chậm khiến user hết hạn trước khi nhập | Trung bình | Trung bình | Theo dõi deliverability, có cơ chế resend OTP và thông báo thời hạn rõ ràng |
 
 ---
 
@@ -522,3 +451,6 @@ Ghi chú:
 | 6 | AC-LOGIN-6 | `POST /auth/register` | Users | Access log | Public | E2E |
 | 7 | AC-LOGIN-7 | Homepage progress API theo user | Progress | Access log | Authenticated | E2E |
 | 8 | AC-LOGIN-8 | `POST /auth/logout` | Sessions | Access log | Authenticated | E2E |
+| 9 | AC-LOGIN-11 | `POST /auth/forgot-password/request` | Users, PasswordResetOtps | Email/audit log | Public | API / E2E |
+| 10 | AC-LOGIN-12 | `POST /auth/forgot-password/confirm` | Users, PasswordResetOtps | Audit log | Public | E2E / Security |
+| 11 | AC-LOGIN-13 | `POST /auth/forgot-password/confirm`, session revocation | Users, PasswordResetOtps, Sessions | Audit log | Public | API / E2E |
