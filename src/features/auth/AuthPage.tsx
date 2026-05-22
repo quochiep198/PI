@@ -15,16 +15,20 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
     password,
     confirmPassword,
     forgotIdentifier,
+    resetEmail,
+    otp,
     isSubmitting,
     error,
     successMessage,
-    resetPreviewUrl,
+    resetPreviewOtp,
     setIdentifier,
     setUsername,
     setEmail,
     setPassword,
     setConfirmPassword,
     setForgotIdentifier,
+    setResetEmail,
+    setOtp,
     switchMode,
     handleSubmit,
   } = useAuthForm({ onAuthenticated });
@@ -48,8 +52,8 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
     : isRegister
       ? 'Tạo tài khoản để lưu tiến trình học Python của riêng bạn.'
       : isForgot
-        ? 'Nhập email, tên đăng nhập hoặc số điện thoại để nhận hướng dẫn đặt lại mật khẩu.'
-        : 'Tạo mật khẩu mới mạnh hơn để quay lại PythonQuest.';
+        ? 'Nhập email đã đăng ký để nhận mã xác thực đặt lại mật khẩu.'
+        : 'Nhập mã xác thực đã gửi qua email và tạo mật khẩu mới.';
 
   return (
     <div className="auth-page">
@@ -158,25 +162,69 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
               {isForgot ? (
                 <label className="auth-field">
-                  <span className="auth-field__label">Email, tên đăng nhập hoặc số điện thoại</span>
+                  <span className="auth-field__label">Email đã đăng ký</span>
                   <input
-                    autoComplete="username"
+                    autoComplete="email"
                     className="auth-input"
-                    placeholder="be@example.com hoặc explorer_01"
-                    type="text"
+                    placeholder="be@example.com"
+                    type="email"
                     value={forgotIdentifier}
                     onChange={(event) => setForgotIdentifier(event.target.value)}
                   />
                 </label>
               ) : null}
 
-              {!isForgot ? (
+              {!isForgot && !isReset ? (
                 <label className="auth-field">
                   <span className="auth-field__label">
                     {isReset ? 'Mật khẩu mới' : VI_MESSAGES.auth.labels.password}
                   </span>
                   <input
                     autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    className="auth-input"
+                    placeholder="........"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </label>
+              ) : null}
+
+              {isReset ? (
+                <label className="auth-field">
+                  <span className="auth-field__label">Email đã đăng ký</span>
+                  <input
+                    autoComplete="email"
+                    className="auth-input"
+                    placeholder="be@example.com"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(event) => setResetEmail(event.target.value)}
+                  />
+                </label>
+              ) : null}
+
+              {isReset ? (
+                <label className="auth-field">
+                  <span className="auth-field__label">Mã xác thực (6 chữ số)</span>
+                  <input
+                    autoComplete="one-time-code"
+                    className="auth-input"
+                    placeholder="000000"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
+                  />
+                </label>
+              ) : null}
+
+              {isReset ? (
+                <label className="auth-field">
+                  <span className="auth-field__label">Mật khẩu mới</span>
+                  <input
+                    autoComplete="new-password"
                     className="auth-input"
                     placeholder="........"
                     type="password"
@@ -217,12 +265,9 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
               {error ? <p className="auth-error">{error}</p> : null}
               {successMessage ? <p className="auth-success">{successMessage}</p> : null}
-              {resetPreviewUrl ? (
+              {resetPreviewOtp ? (
                 <p className="auth-helper">
-                  Link test local:{' '}
-                  <a href={resetPreviewUrl} rel="noreferrer" target="_blank">
-                    {resetPreviewUrl}
-                  </a>
+                  Mã OTP test (dev): <strong style={{ fontFamily: 'monospace', fontSize: '1.2em' }}>{resetPreviewOtp}</strong>
                 </p>
               ) : null}
 
@@ -235,8 +280,8 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                       : isRegister
                         ? 'Tạo tài khoản'
                         : isForgot
-                          ? 'Gửi hướng dẫn'
-                          : 'Cập nhật mật khẩu'}
+                          ? 'Gửi mã xác thực'
+                          : 'Đặt lại mật khẩu'}
                 </span>
                 <span aria-hidden="true" className="material-symbols-outlined">
                   {isLogin ? 'rocket_launch' : isRegister ? 'person_add' : isForgot ? 'mail' : 'lock_reset'}

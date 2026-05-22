@@ -6,8 +6,9 @@ import { execute, query } from './db.mjs';
 const scryptAsync = promisify(crypto.scrypt);
 const SESSION_COOKIE_NAME = 'python_adventure_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-const PASSWORD_RESET_TOKEN_MAX_AGE_MS = Number(process.env.PASSWORD_RESET_TOKEN_MAX_AGE_MS || 60 * 60 * 1000);
-const PASSWORD_RESET_GENERIC_MESSAGE = 'Nếu tài khoản tồn tại, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu.';
+const PASSWORD_RESET_GENERIC_MESSAGE = 'Nếu tài khoản tồn tại, chúng tôi đã gửi mã xác thực đến email của bạn.';
+const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const OTP_LENGTH = 6;
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const groqApiKey = process.env.GROQ_API_KEY;
 const groqPrimaryModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
@@ -962,8 +963,16 @@ function hashSessionToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-function hashPasswordResetToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
+function generateOtp() {
+  const digits = [];
+  for (let i = 0; i < OTP_LENGTH; i++) {
+    digits.push(Math.floor(crypto.randomBytes(1)[0] / 25.6 * 10));
+  }
+  return digits.join('');
+}
+
+function hashOtp(otp) {
+  return crypto.createHash('sha256').update(otp).digest('hex');
 }
 
 async function hashPassword(password) {
@@ -1003,48 +1012,26 @@ function getPasswordStrengthError(password) {
   return null;
 }
 
-function getPasswordResetBaseUrl() {
-  const explicitBaseUrl =
-    process.env.PASSWORD_RESET_BASE_URL || process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL;
-
-  if (explicitBaseUrl) {
-    return explicitBaseUrl.replace(/\/+$/, '');
-  }
-
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-
-  return 'http://localhost:5173';
-}
-
-function buildPasswordResetUrl(token) {
-  const url = new URL(getPasswordResetBaseUrl());
-  url.pathname = '/';
-  url.searchParams.set('token', token);
-  return url.toString();
-}
-
-async function createPasswordResetToken(userId) {
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenHash = hashPasswordResetToken(token);
-  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_MAX_AGE_MS);
+async function createPasswordResetOtp(userId) {
+  const otp = generateOtp();
+  const otpHash = hashOtp(otp);
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
 
   await execute(
     `
-      INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+      INSERT INTO password_reset_otps (user_id, otp_hash, expires_at)
       VALUES ($1, $2, $3)
     `,
-    [userId, tokenHash, expiresAt.toISOString()],
+    [userId, otpHash, expiresAt.toISOString()],
   );
 
   return {
-    token,
+    otp,
     expiresAt,
   };
 }
 
-async function sendPasswordResetEmail({ email, username, resetUrl }) {
+async function sendPasswordResetOtpEmail({ email, username, otp }) {
   const resendApiKey = process.env.RESEND_API_KEY;
   const resendFromEmail = process.env.RESEND_FROM_EMAIL;
 
@@ -1061,19 +1048,19 @@ async function sendPasswordResetEmail({ email, username, resetUrl }) {
     body: JSON.stringify({
       from: resendFromEmail,
       to: [email],
-      subject: 'Đặt lại mật khẩu PythonQuest',
+      subject: 'Mã xác thực đặt lại mật khẩu PythonQuest',
       html: [
         `<p>Chào ${username || 'bạn'},</p>`,
         '<p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản PythonQuest của bạn.</p>',
-        `<p><a href="${resetUrl}">Đặt lại mật khẩu</a></p>`,
-        `<p>Nếu nút không hoạt động, hãy dùng liên kết này:</p><p>${resetUrl}</p>`,
-        `<p>Liên kết này sẽ hết hạn sau ${Math.round(PASSWORD_RESET_TOKEN_MAX_AGE_MS / 60000)} phút và chỉ dùng được một lần.</p>`,
+        `<p>Mã xác thực của bạn là: <strong style="font-size: 24px; letter-spacing: 4px;">${otp}</strong></p>`,
+        `<p>Mã này sẽ hết hạn sau 5 phút và chỉ dùng được một lần.</p>`,
+        '<p>Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.</p>',
       ].join(''),
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to send reset email: ${response.status}`);
+    throw new Error(`Failed to send OTP email: ${response.status}`);
   }
 
   return true;
@@ -1622,12 +1609,13 @@ export async function loginHandler(request, response) {
 }
 
 export async function forgotPasswordHandler(request, response) {
-  const { identifier } = getRequestBody(request);
-  const normalizedIdentifier = normalizeIdentifier(identifier);
+  const { email, identifier } = getRequestBody(request);
+  const inputEmail = email || identifier;
+  const normalizedEmail = normalizeIdentifier(inputEmail);
 
-  if (!normalizedIdentifier) {
+  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
     response.status(400).json({
-      message: 'Vui lòng nhập email, tên đăng nhập hoặc số điện thoại.',
+      message: 'Vui lòng nhập địa chỉ email hợp lệ.',
     });
     return;
   }
@@ -1637,37 +1625,37 @@ export async function forgotPasswordHandler(request, response) {
       `
         SELECT id, username, email
         FROM users
-        WHERE username = $1 OR email = $1
+        WHERE email = $1
         LIMIT 1
       `,
-      [normalizedIdentifier],
+      [normalizedEmail],
     );
 
     const user = users[0];
-    let resetUrl = null;
+    let previewOtp = null;
 
     if (user) {
-      const { token } = await createPasswordResetToken(user.id);
-      resetUrl = buildPasswordResetUrl(token);
+      const { otp } = await createPasswordResetOtp(user.id);
 
       try {
-        const sent = await sendPasswordResetEmail({
+        const sent = await sendPasswordResetOtpEmail({
           email: user.email,
           username: user.username,
-          resetUrl,
+          otp,
         });
 
         if (!sent && !isProduction()) {
-          console.warn(`Password reset email not configured. Preview link for ${user.email}: ${resetUrl}`);
+          console.warn(`Password reset OTP email not configured. Preview OTP for ${user.email}: ${otp}`);
+          previewOtp = otp;
         }
       } catch (error) {
-        console.error(error instanceof Error ? error.message : 'Failed to send password reset email.');
+        console.error(error instanceof Error ? error.message : 'Failed to send OTP email.');
       }
     }
 
     response.json({
       message: PASSWORD_RESET_GENERIC_MESSAGE,
-      resetUrl: !isProduction() ? resetUrl : undefined,
+      previewOtp: !isProduction() ? previewOtp : undefined,
     });
   } catch (error) {
     response.status(500).json({
@@ -1676,15 +1664,17 @@ export async function forgotPasswordHandler(request, response) {
   }
 }
 
-export async function resetPasswordHandler(request, response) {
-  const { token, password, confirmPassword } = getRequestBody(request);
-  const rawToken = String(token || '').trim();
+export async function verifyOtpHandler(request, response) {
+  const { email, identifier, otp, password, confirmPassword } = getRequestBody(request);
+  const inputEmail = email || identifier;
+  const normalizedEmail = normalizeIdentifier(inputEmail);
+  const rawOtp = String(otp || '').trim();
   const rawPassword = String(password || '');
   const rawConfirmPassword = String(confirmPassword || '');
 
-  if (!rawToken) {
+  if (!normalizedEmail || !rawOtp) {
     response.status(400).json({
-      message: 'Thiếu token đặt lại mật khẩu.',
+      message: 'Email và mã xác thực là bắt buộc.',
     });
     return;
   }
@@ -1705,32 +1695,34 @@ export async function resetPasswordHandler(request, response) {
   }
 
   try {
-    const tokenHash = hashPasswordResetToken(rawToken);
+    const otpHash = hashOtp(rawOtp);
     const rows = await query(
       `
         SELECT
-          password_reset_tokens.id,
-          password_reset_tokens.user_id AS "userId",
+          password_reset_otps.id,
+          password_reset_otps.user_id AS "userId",
           users.password_hash AS "passwordHash"
-        FROM password_reset_tokens
-        INNER JOIN users ON users.id = password_reset_tokens.user_id
-        WHERE password_reset_tokens.token_hash = $1
-          AND password_reset_tokens.used_at IS NULL
-          AND password_reset_tokens.expires_at > CURRENT_TIMESTAMP
+        FROM password_reset_otps
+        INNER JOIN users ON users.id = password_reset_otps.user_id
+        WHERE password_reset_otps.otp_hash = $1
+          AND users.email = $2
+          AND password_reset_otps.used_at IS NULL
+          AND password_reset_otps.expires_at > CURRENT_TIMESTAMP
+        ORDER BY password_reset_otps.created_at DESC
         LIMIT 1
       `,
-      [tokenHash],
+      [otpHash, normalizedEmail],
     );
 
-    const tokenRecord = rows[0];
-    if (!tokenRecord) {
+    const otpRecord = rows[0];
+    if (!otpRecord) {
       response.status(400).json({
-        message: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+        message: 'Mã xác thực không hợp lệ hoặc đã hết hạn.',
       });
       return;
     }
 
-    const isSameAsCurrentPassword = await verifyPassword(rawPassword, tokenRecord.passwordHash);
+    const isSameAsCurrentPassword = await verifyPassword(rawPassword, otpRecord.passwordHash);
     if (isSameAsCurrentPassword) {
       response.status(400).json({
         message: 'Mật khẩu mới không được trùng với mật khẩu cũ.',
@@ -1739,24 +1731,6 @@ export async function resetPasswordHandler(request, response) {
     }
 
     const nextPasswordHash = await hashPassword(rawPassword);
-    const claimedTokenRows = await query(
-      `
-        UPDATE password_reset_tokens
-        SET used_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-          AND used_at IS NULL
-          AND expires_at > CURRENT_TIMESTAMP
-        RETURNING user_id AS "userId"
-      `,
-      [tokenRecord.id],
-    );
-
-    if (!claimedTokenRows[0]?.userId) {
-      response.status(400).json({
-        message: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
-      });
-      return;
-    }
 
     await execute(
       `
@@ -1764,7 +1738,17 @@ export async function resetPasswordHandler(request, response) {
         SET password_hash = $2
         WHERE id = $1
       `,
-      [tokenRecord.userId, nextPasswordHash],
+      [otpRecord.userId, nextPasswordHash],
+    );
+
+    await execute(
+      `
+        UPDATE password_reset_otps
+        SET used_at = CURRENT_TIMESTAMP
+        WHERE user_id = $1
+          AND used_at IS NULL
+      `,
+      [otpRecord.userId],
     );
 
     await execute(
@@ -1772,16 +1756,7 @@ export async function resetPasswordHandler(request, response) {
         DELETE FROM user_sessions
         WHERE user_id = $1
       `,
-      [tokenRecord.userId],
-    );
-
-    await execute(
-      `
-        UPDATE password_reset_tokens
-        SET used_at = COALESCE(used_at, CURRENT_TIMESTAMP)
-        WHERE user_id = $1
-      `,
-      [tokenRecord.userId],
+      [otpRecord.userId],
     );
 
     response.json({

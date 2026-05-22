@@ -1,28 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { login, register, requestPasswordReset, resetPassword } from './authApi';
+import { login, register, requestPasswordReset, verifyOtp } from './authApi';
 import type { AuthMode, AuthUser } from './types';
 
 type UseAuthFormOptions = {
   onAuthenticated: (user: AuthUser) => void;
 };
-
-function readResetTokenFromLocation() {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  return new URLSearchParams(window.location.search).get('token')?.trim() || '';
-}
-
-function clearResetTokenFromLocation() {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  const url = new URL(window.location.href);
-  url.searchParams.delete('token');
-  window.history.replaceState({}, '', url.toString());
-}
 
 function getPasswordStrengthError(password: string) {
   if (password.length < 8) {
@@ -37,29 +19,29 @@ function getPasswordStrengthError(password: string) {
 }
 
 export function useAuthForm({ onAuthenticated }: UseAuthFormOptions) {
-  const initialResetToken = readResetTokenFromLocation();
-  const [mode, setMode] = useState<AuthMode>(initialResetToken ? 'reset' : 'login');
+  const [mode, setMode] = useState<AuthMode>('login');
   const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [forgotIdentifier, setForgotIdentifier] = useState('');
-  const [resetToken, setResetToken] = useState(initialResetToken);
+  const [resetEmail, setResetEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [resetPreviewUrl, setResetPreviewUrl] = useState<string | null>(null);
+  const [resetPreviewOtp, setResetPreviewOtp] = useState<string | null>(null);
 
   function switchMode(nextMode: AuthMode) {
     setMode(nextMode);
     setError(null);
     setSuccessMessage(null);
-    setResetPreviewUrl(null);
+    setResetPreviewOtp(null);
+    setOtp('');
 
-    if (nextMode !== 'reset') {
-      setResetToken('');
-      clearResetTokenFromLocation();
+    if (nextMode === 'forgot' || nextMode === 'login') {
+      setResetEmail('');
     }
   }
 
@@ -82,15 +64,19 @@ export function useAuthForm({ onAuthenticated }: UseAuthFormOptions) {
 
     if (mode === 'forgot') {
       if (!forgotIdentifier.trim()) {
-        return 'Vui lòng nhập email, tên đăng nhập hoặc số điện thoại.';
+        return 'Vui lòng nhập địa chỉ email đã đăng ký.';
       }
 
       return null;
     }
 
     if (mode === 'reset') {
-      if (!resetToken) {
-        return 'Thiếu token đặt lại mật khẩu.';
+      if (!resetEmail.trim()) {
+        return 'Vui lòng nhập địa chỉ email.';
+      }
+
+      if (!otp.trim() || otp.length !== 6) {
+        return 'Mã xác thực phải gồm 6 chữ số.';
       }
 
       const passwordStrengthError = getPasswordStrengthError(password);
@@ -116,7 +102,8 @@ export function useAuthForm({ onAuthenticated }: UseAuthFormOptions) {
     event.preventDefault();
     setError(null);
     setSuccessMessage(null);
-    setResetPreviewUrl(null);
+    setResetPreviewOtp(null);
+    setOtp('');
 
     const validationError = validate();
     if (validationError) {
@@ -142,16 +129,19 @@ export function useAuthForm({ onAuthenticated }: UseAuthFormOptions) {
       if (mode === 'forgot') {
         const result = await requestPasswordReset(forgotIdentifier);
         setSuccessMessage(result.message);
-        setResetPreviewUrl(result.resetUrl);
+        setResetPreviewOtp(result.previewOtp || null);
+        setResetEmail(forgotIdentifier);
+        setMode('reset');
+        setForgotIdentifier('');
         return;
       }
 
-      const result = await resetPassword(resetToken, password, confirmPassword);
+      const result = await verifyOtp(resetEmail, otp, password, confirmPassword);
       setSuccessMessage(result.message);
       setPassword('');
       setConfirmPassword('');
-      setResetToken('');
-      clearResetTokenFromLocation();
+      setOtp('');
+      setResetEmail('');
       setMode('login');
     } catch (submitError) {
       setError(
@@ -170,18 +160,20 @@ export function useAuthForm({ onAuthenticated }: UseAuthFormOptions) {
     password,
     confirmPassword,
     forgotIdentifier,
-    resetToken,
+    resetEmail,
+    otp,
     isSubmitting,
     error,
     successMessage,
-    resetPreviewUrl,
+    resetPreviewOtp,
     setIdentifier,
     setUsername,
     setEmail,
     setPassword,
     setConfirmPassword,
     setForgotIdentifier,
-    setResetToken,
+    setResetEmail,
+    setOtp,
     switchMode,
     handleSubmit,
   };

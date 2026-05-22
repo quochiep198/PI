@@ -7,7 +7,7 @@ type AuthResponse = {
 
 type PasswordResetRequestResponse = {
   message?: string;
-  resetUrl?: string;
+  previewOtp?: string | null;
 };
 
 async function readJsonSafely<T>(response: Response): Promise<T | null> {
@@ -90,19 +90,20 @@ export async function requestPasswordReset(identifier: string) {
   }
 
   return {
-    message: data?.message || 'Neu tai khoan ton tai, chung toi da gui huong dan dat lai mat khau.',
-    resetUrl: data?.resetUrl || null,
+    message: data?.message || 'Nếu tài khoản tồn tại, chúng tôi đã gửi mã xác thực đến email của bạn.',
+    previewOtp: data?.previewOtp || null,
   };
 }
 
-export async function resetPassword(token: string, password: string, confirmPassword: string) {
-  const response = await fetch('/api/auth/reset-password', {
+export async function verifyOtp(email: string, otp: string, password: string, confirmPassword: string) {
+  const response = await fetch('/api/auth/forgot-password/verify-otp', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      token,
+      email,
+      otp,
       password,
       confirmPassword,
     }),
@@ -110,11 +111,11 @@ export async function resetPassword(token: string, password: string, confirmPass
 
   const data = await readJsonSafely<PasswordResetRequestResponse>(response);
   if (!response.ok) {
-    throw new Error(data?.message || 'Khong the dat lai mat khau.');
+    throw new Error(data?.message || 'Không thể đặt lại mật khẩu.');
   }
 
   return {
-    message: data?.message || 'Doi mat khau thanh cong.',
+    message: data?.message || 'Đổi mật khẩu thành công.',
   };
 }
 
