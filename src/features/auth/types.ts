@@ -2,6 +2,7 @@ export type AuthUser = {
   id: number;
   username: string;
   email: string;
+  isAdmin?: boolean;
   isPro?: boolean;
   avatarUrl?: string;
   theme?: 'light' | 'dark';

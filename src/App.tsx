@@ -81,6 +81,12 @@ export default function App() {
     document.documentElement.dataset.theme = user?.theme === 'dark' ? 'dark' : 'light';
   }, [user?.theme]);
 
+  useEffect(() => {
+    if (view === 'accessories' && !user?.isAdmin) {
+      setView('home');
+    }
+  }, [user?.isAdmin, view]);
+
   function handleAuthenticated(nextUser: AuthUser) {
     clearCachedXp();
     clearCachedCoins();
@@ -120,6 +126,7 @@ export default function App() {
       <div className="quest-layout">
         <SideNav
           activeLabel={view === 'home' ? 'Lessons' : view === 'practice' ? 'Daily Practice' : view === 'inventory' ? 'Inventory' : view === 'accessories' ? 'Achievements' : 'Settings'}
+          isAdmin={Boolean(user.isAdmin)}
           onlineCount={onlineLearners}
           onlineLoading={!onlineConnected && !onlineFailed}
           onlineError={onlineFailed}
@@ -136,7 +143,7 @@ export default function App() {
             ? <PracticePage user={user} />
             : view === 'inventory'
               ? <InventoryPage />
-              : view === 'accessories'
+              : view === 'accessories' && user.isAdmin
                 ? <AccessoriesPage />
                 : <SettingsPage user={user} onUserUpdated={handleUserUpdated} onLogout={handleLogout} />}
       </div>

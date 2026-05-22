@@ -1,5 +1,6 @@
 export type SideNavProps = {
   activeLabel?: string;
+  isAdmin?: boolean;
   onlineCount?: number;
   onlineLoading?: boolean;
   onlineError?: boolean;
@@ -10,7 +11,7 @@ export type SideNavProps = {
   onNavigateSettings?: () => void;
 };
 
-export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice, onNavigateInventory, onNavigateAccessories, onNavigateSettings }: SideNavProps) {
+export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice, onNavigateInventory, onNavigateAccessories, onNavigateSettings }: SideNavProps) {
   const handleNavigation = (label: string) => {
     switch (label) {
       case 'Lessons':
@@ -90,14 +91,16 @@ export function SideNav({ activeLabel, onlineCount = 0, onlineLoading = false, o
           <span>Inventory</span>
         </button>
 
-        <button
-          className={`pressable sidenav__item${activeLabel === 'Achievements' ? ' is-active' : ''}`}
-          type="button"
-          onClick={() => handleNavigation('Achievements')}
-        >
-          <span aria-hidden="true" className="material-symbols-outlined">military_tech</span>
-          <span>Achievements</span>
-        </button>
+        {isAdmin ? (
+          <button
+            className={`pressable sidenav__item${activeLabel === 'Achievements' ? ' is-active' : ''}`}
+            type="button"
+            onClick={() => handleNavigation('Achievements')}
+          >
+            <span aria-hidden="true" className="material-symbols-outlined">military_tech</span>
+            <span>Upload Admin</span>
+          </button>
+        ) : null}
 
         <button
           className={`pressable sidenav__item${activeLabel === 'Settings' ? ' is-active' : ''}`}

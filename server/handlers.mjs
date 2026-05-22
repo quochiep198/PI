@@ -1088,6 +1088,7 @@ function sanitizeUser(user) {
     id: user.id,
     username: user.username,
     email: user.email,
+    isAdmin: Boolean(user.isAdmin ?? user.is_admin),
     isPro: Boolean(user.isPro ?? user.is_pro),
     avatarUrl: user.avatarUrl ?? user.avatar_url ?? null,
     theme: user.theme === 'dark' ? 'dark' : 'light',
@@ -1187,6 +1188,7 @@ async function getAuthenticatedUser(request) {
         users.id,
         users.username,
         users.email,
+        users.is_admin AS "isAdmin",
         users.is_pro AS "isPro",
         users.avatar_url AS "avatarUrl",
         users.theme,
@@ -1280,6 +1282,7 @@ export async function updateAvatarHandler(request, response) {
           id,
           username,
           email,
+          is_admin AS "isAdmin",
           is_pro AS "isPro",
           avatar_url AS "avatarUrl",
           theme,
@@ -1425,6 +1428,7 @@ export async function updateSettingsHandler(request, response) {
           id,
           username,
           email,
+          is_admin AS "isAdmin",
           is_pro AS "isPro",
           avatar_url AS "avatarUrl",
           theme,
@@ -1551,7 +1555,7 @@ export async function registerHandler(request, response) {
       `
         INSERT INTO users (username, email, password_hash)
         VALUES ($1, $2, $3)
-        RETURNING id, username, email, is_pro AS "isPro", avatar_url AS "avatarUrl"
+        RETURNING id, username, email, is_admin AS "isAdmin", is_pro AS "isPro", avatar_url AS "avatarUrl"
       `,
       [normalizedUsername, normalizedEmail, passwordHash],
     );
@@ -1585,7 +1589,7 @@ export async function loginHandler(request, response) {
   try {
     const users = await query(
       `
-        SELECT id, username, email, is_pro AS "isPro", avatar_url AS "avatarUrl", password_hash AS "passwordHash"
+        SELECT id, username, email, is_admin AS "isAdmin", is_pro AS "isPro", avatar_url AS "avatarUrl", password_hash AS "passwordHash"
         FROM users
         WHERE username = $1 OR email = $1
         LIMIT 1
