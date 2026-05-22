@@ -1020,6 +1020,9 @@ function getPasswordResetBaseUrl() {
 
 function buildPasswordResetUrl(token) {
   const url = new URL(getPasswordResetBaseUrl());
+  if (!url.pathname || url.pathname === '/') {
+    url.pathname = '/reset-password';
+  }
   url.searchParams.set('token', token);
   return url.toString();
 }
