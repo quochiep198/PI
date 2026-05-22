@@ -429,7 +429,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
             </button>
           </div>
 
-          <article className="settings-highlight">
+          {/* <article className="settings-highlight">
             <div className="settings-highlight__content">
               <h2 className="settings-highlight__title">Thử thách hàng ngày</h2>
               <p className="settings-highlight__text">
@@ -441,7 +441,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               </div>
               <p className="settings-highlight__meta">2/3 bài tập đã hoàn thành</p>
             </div>
-          </article>
+          </article> */}
         </section>
       </div>
     </main>
