@@ -112,12 +112,12 @@ export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineL
         </button>
       </nav>
 
-      <div className="upgrade-card">
+      {/* <div className="upgrade-card">
         <p className="upgrade-card__title">Học không giới hạn!</p>
         <button className="pressable upgrade-card__button" type="button">
           Nâng cấp Pro
         </button>
-      </div>
+      </div> */}
     </aside>
   );
 }

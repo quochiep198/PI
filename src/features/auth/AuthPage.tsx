@@ -246,7 +246,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
             {showToggle ? (
               <>
-                <div className="auth-divider">
+                {/* <div className="auth-divider">
                   <span>Hoặc đăng nhập bằng</span>
                 </div>
 
@@ -274,7 +274,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                     </svg>
                     <span>Github</span>
                   </button>
-                </div>
+                </div> */}
 
                 <footer className="auth-footer">
                   <p>
