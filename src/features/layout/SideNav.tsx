@@ -62,7 +62,7 @@ export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineL
           onClick={() => handleNavigation('Lessons')}
         >
           <span aria-hidden="true" className="material-symbols-outlined">menu_book</span>
-          <span>Lessons</span>
+          <span>Bài Học</span>
         </button>
 
         <button
@@ -71,7 +71,7 @@ export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineL
           onClick={() => handleNavigation('Daily Practice')}
         >
           <span aria-hidden="true" className="material-symbols-outlined">event_repeat</span>
-          <span>Daily Practice</span>
+          <span>Luyện Tập</span>
         </button>
 
         {/* <button
@@ -108,7 +108,7 @@ export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineL
           onClick={() => handleNavigation('Settings')}
         >
           <span aria-hidden="true" className="material-symbols-outlined">settings</span>
-          <span>Settings</span>
+          <span>Cài Đặt</span>
         </button>
       </nav>
 
