@@ -3001,7 +3001,7 @@ export async function createAvatarHandler(request, response) {
       return;
     }
 
-    const { name, description, imageData } = getRequestBody(request);
+    const { name, description, imageData, setActive } = getRequestBody(request);
 
     if (!name?.trim()) {
       response.status(400).json({ message: 'Tên avatar không được để trống.' });
@@ -3019,20 +3019,46 @@ export async function createAvatarHandler(request, response) {
       return;
     }
 
-    // Save the avatar (imageData stored as TEXT for simplicity, can switch to BLOB later)
-    const rows = await query(
-      `
-        INSERT INTO avatars (user_id, name, description, image_data)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (user_id) DO UPDATE
-          SET name = EXCLUDED.name,
-              description = EXCLUDED.description,
-              image_data = EXCLUDED.image_data,
-              updated_at = CURRENT_TIMESTAMP
-        RETURNING id, name, description, image_data AS "imageData", created_at AS "createdAt", updated_at AS "updatedAt"
-      `,
-      [user.id, name.trim(), description?.trim() || null, imageData],
+    // Start transaction to ensure only one active avatar
+    const shouldSetActive = setActive === true;
+
+    if (shouldSetActive) {
+      // Deactivate all other avatars for this user
+      await execute(
+        `UPDATE avatars SET is_active = FALSE WHERE user_id = $1`,
+        [user.id],
+      );
+    }
+
+    // Check if this avatar name already exists for user
+    const existingAvatar = await query(
+      `SELECT id FROM avatars WHERE user_id = $1 AND name = $2`,
+      [user.id, name.trim()],
     );
+
+    let rows;
+    if (existingAvatar.length > 0) {
+      // Update existing avatar
+      rows = await query(
+        `
+          UPDATE avatars
+          SET description = $3, image_data = $4, is_active = $5, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $1 AND user_id = $2
+          RETURNING id, name, description, image_data AS "imageData", is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt"
+        `,
+        [existingAvatar[0].id, user.id, description?.trim() || null, imageData, shouldSetActive],
+      );
+    } else {
+      // Insert new avatar
+      rows = await query(
+        `
+          INSERT INTO avatars (user_id, name, description, image_data, is_active)
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING id, name, description, image_data AS "imageData", is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt"
+        `,
+        [user.id, name.trim(), description?.trim() || null, imageData, shouldSetActive],
+      );
+    }
 
     response.status(201).json({
       success: true,
@@ -3055,10 +3081,10 @@ export async function getAvatarsHandler(request, response) {
 
     const rows = await query(
       `
-        SELECT id, name, description, image_data AS "imageData", created_at AS "createdAt", updated_at AS "updatedAt"
+        SELECT id, name, description, image_data AS "imageData", is_active AS "isActive", created_at AS "createdAt", updated_at AS "updatedAt"
         FROM avatars
         WHERE user_id = $1
-        ORDER BY updated_at DESC
+        ORDER BY is_active DESC, updated_at DESC
       `,
       [user.id],
     );
@@ -3112,9 +3138,9 @@ export async function createItemHandler(request, response) {
       return;
     }
 
-    // Check if user has an avatar
+    // Check if user has an active avatar (priority) or any avatar (fallback)
     const avatarRows = await query(
-      `SELECT id FROM avatars WHERE user_id = $1 LIMIT 1`,
+      `SELECT id FROM avatars WHERE user_id = $1 ORDER BY is_active DESC, created_at DESC LIMIT 1`,
       [user.id],
     );
 
