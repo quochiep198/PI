@@ -270,7 +270,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               <span className="material-symbols-outlined settings-card__icon settings-card__icon--tertiary">
                 shield
               </span>
-              <h2 className="settings-card__title">Quyên riêng tư và bảo mật</h2>
+              <h2 className="settings-card__title">Quyền riêng tư và bảo mật</h2>
             </div>
 
             <div className="settings-toggle-list">
