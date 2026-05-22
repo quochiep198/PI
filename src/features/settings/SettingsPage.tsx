@@ -62,7 +62,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
     }
 
     if (!file.type.startsWith('image/')) {
-      setAvatarError('Vui long chon mot tep hinh anh hop le.');
+      setAvatarError('Vui long chon một tệp hình ảnh hợp lệ.');
       event.target.value = '';
       return;
     }
@@ -80,7 +80,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result || ''));
-        reader.onerror = () => reject(new Error('Khong the doc tep hinh anh.'));
+        reader.onerror = () => reject(new Error('Không thể đọc tệp hình ảnh.'));
         reader.readAsDataURL(file);
       });
 
@@ -88,7 +88,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
       setPendingAvatarDataUrl(dataUrl);
     } catch (error) {
       setAvatarPreviewUrl(user.avatarUrl ?? DEFAULT_AVATAR);
-      setAvatarError(error instanceof Error ? error.message : 'Khong the tai avatar len server.');
+      setAvatarError(error instanceof Error ? error.message : 'Không thể tải avatar lên server.');
     } finally {
       event.target.value = '';
     }
@@ -98,7 +98,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
     setAvatarError(null);
     setSaveMessage(null);
     if (newPassword && newPassword !== confirmNewPassword) {
-      setAvatarError('Xac nhan mat khau moi khong khop.');
+      setAvatarError('Xác nhận mật khẩu mới không khớp.');
       return;
     }
 
@@ -125,7 +125,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
       setConfirmNewPassword('');
       setSaveMessage('Da luu tat ca cai dat thanh cong.');
     } catch (error) {
-      setAvatarError(error instanceof Error ? error.message : 'Khong the luu cai dat.');
+      setAvatarError(error instanceof Error ? error.message : 'Không thể lưu cài đặt.');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -147,10 +147,9 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
     <main className="settings-main">
       <header className="settings-hero">
         <div className="settings-hero__copy">
-          <h1 className="settings-hero__title">Cai dat</h1>
+          <h1 className="settings-hero__title">Cài đặt</h1>
           <p className="settings-hero__subtitle">
-            Tuy chinh hanh trinh hoc Python cua ban de moi buoi hoc deu gan gui, ro rang va
-            vui hon.
+            Tùy chinh giao diện, thông báo, quyền riêng tư và nhiều hơn nữa để có trải nghiệm học tập tốt nhất.
           </p>
         </div>
 
@@ -159,8 +158,8 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
             <img alt="Py-Bot" src={PYBOT_AVATAR} />
           </div>
           <div className="settings-bot__content">
-            <p className="settings-bot__name">Py-Bot dang doi!</p>
-            <p className="settings-bot__message">Can minh giup ban chinh giao dien khong?</p>
+            <p className="settings-bot__name">Py-Bot đang đợi!</p>
+            <p className="settings-bot__message">Cần mình giúp bạn chỉnh lại giao diện không?</p>
           </div>
         </div>
       </header>
@@ -170,7 +169,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
           <article className="settings-card">
             <div className="settings-card__header">
               <span className="material-symbols-outlined settings-card__icon">person</span>
-              <h2 className="settings-card__title">Thong tin ca nhan</h2>
+              <h2 className="settings-card__title">Thông tin cá nhân</h2>
             </div>
 
             <div className="settings-profile">
@@ -181,7 +180,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
                 <button
                   type="button"
                   className="settings-profile__edit pressable"
-                  aria-label="Chinh avatar"
+                  aria-label="Chỉnh avatar"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingAvatar}
                 >
@@ -198,7 +197,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
 
               <div className="settings-form">
                 <label className="settings-field">
-                  <span className="settings-field__label">Ten hien thi</span>
+                  <span className="settings-field__label">Tên hiển thị</span>
                   <input
                     className="settings-field__input"
                     type="text"
@@ -220,9 +219,9 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
             </div>
 
             {pendingAvatarDataUrl ? (
-              <p className="settings-avatar__status">Avatar moi dang cho luu. Nhan "Luu thay doi" de cap nhat.</p>
+              <p className="settings-avatar__status">Avatar mới đang chờ lưu. Nhấn "Lưu thay đổi" để cập nhật.</p>
             ) : null}
-            {isUploadingAvatar ? <p className="settings-avatar__status">Dang luu avatar len server...</p> : null}
+            {isUploadingAvatar ? <p className="settings-avatar__status">Đang lưu avatar lên server...</p> : null}
             {saveMessage ? <p className="settings-avatar__status settings-avatar__status--success">{saveMessage}</p> : null}
             {avatarError ? <p className="settings-avatar__status settings-avatar__status--error">{avatarError}</p> : null}
           </article>
@@ -230,12 +229,12 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
           <article className="settings-card">
             <div className="settings-card__header">
               <span className="material-symbols-outlined settings-card__icon">lock</span>
-              <h2 className="settings-card__title">Doi mat khau</h2>
+              <h2 className="settings-card__title">Đổi mật khẩu</h2>
             </div>
 
             <div className="settings-form">
               <label className="settings-field">
-                <span className="settings-field__label">Mat khau hien tai</span>
+                <span className="settings-field__label">Mật khẩu hiện tại</span>
                 <input
                   className="settings-field__input"
                   type="password"
@@ -245,7 +244,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               </label>
 
               <label className="settings-field">
-                <span className="settings-field__label">Mat khau moi</span>
+                <span className="settings-field__label">Mật khẩu mới</span>
                 <input
                   className="settings-field__input"
                   type="password"
@@ -255,7 +254,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               </label>
 
               <label className="settings-field">
-                <span className="settings-field__label">Xac nhan mat khau moi</span>
+                <span className="settings-field__label">Xác nhận mật khẩu mới</span>
                 <input
                   className="settings-field__input"
                   type="password"
@@ -271,7 +270,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               <span className="material-symbols-outlined settings-card__icon settings-card__icon--tertiary">
                 shield
               </span>
-              <h2 className="settings-card__title">Quyen rieng tu va bao mat</h2>
+              <h2 className="settings-card__title">Quyên riêng tư và bảo mật</h2>
             </div>
 
             <div className="settings-toggle-list">
@@ -281,9 +280,9 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
                     <span className="material-symbols-outlined">public</span>
                   </div>
                   <div>
-                    <p className="settings-toggle-row__title">Hien thi ho so cong khai</p>
+                    <p className="settings-toggle-row__title">Hiển thị hồ sơ công khai</p>
                     <p className="settings-toggle-row__text">
-                      Cho phep ban be xem tien do va thanh tich Python cua ban.
+                      Cho phép bạn bè xem tiến độ và thành tích Python của bạn.
                     </p>
                   </div>
                 </div>
@@ -304,9 +303,9 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
                     <span className="material-symbols-outlined">mail</span>
                   </div>
                   <div>
-                    <p className="settings-toggle-row__title">Nhan thong bao qua email</p>
+                    <p className="settings-toggle-row__title">Nhận thông báo qua email</p>
                     <p className="settings-toggle-row__text">
-                      Nhan cap nhat ve bai hoc moi, su kien va thong tin he thong.
+                      Nhận cập nhật về bài học mới, sự kiện và thông tin hệ thống.
                     </p>
                   </div>
                 </div>
@@ -330,7 +329,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               <span className="material-symbols-outlined settings-card__icon settings-card__icon--secondary">
                 tune
               </span>
-              <h2 className="settings-card__title">Trai nghiem</h2>
+              <h2 className="settings-card__title">Trải nghiệm</h2>
             </div>
 
             <div className="settings-experience">
@@ -338,7 +337,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
                 <div className="settings-slider__meta">
                   <div className="settings-slider__label">
                     <span className="material-symbols-outlined">volume_up</span>
-                    <span>Am thanh</span>
+                    <span>Âm thanh</span>
                   </div>
                   <span className="settings-slider__value">{volume}%</span>
                 </div>
@@ -356,7 +355,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               <div className="settings-inline-toggle">
                 <div className="settings-inline-toggle__label">
                   <span className="material-symbols-outlined">music_note</span>
-                  <span>Nhac nen</span>
+                  <span>Âm nhạc</span>
                 </div>
                 <button
                   type="button"
@@ -369,7 +368,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               </div>
 
               <div className="settings-theme">
-                <p className="settings-theme__title">Che do giao dien</p>
+                <p className="settings-theme__title">Chế độ giao diện</p>
                 <div className="settings-theme__grid">
                   <button
                     type="button"
@@ -377,7 +376,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
                     onClick={() => setTheme('light')}
                   >
                     <span className="material-symbols-outlined">light_mode</span>
-                    <span>Sang</span>
+                    <span>Ánh sáng</span>
                   </button>
 
                   <button
@@ -386,7 +385,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
                     onClick={() => setTheme('dark')}
                   >
                     <span className="material-symbols-outlined">dark_mode</span>
-                    <span>Toi</span>
+                    <span>Tối</span>
                   </button>
                 </div>
               </div>
@@ -401,7 +400,7 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               disabled={isUploadingAvatar}
             >
               <span className="material-symbols-outlined">save</span>
-              Luu thay doi
+              Lưu thay đổi
             </button>
 
             <button
@@ -411,21 +410,21 @@ export function SettingsPage({ user, onUserUpdated, onLogout }: SettingsPageProp
               disabled={isLoggingOut}
             >
               <span className="material-symbols-outlined">logout</span>
-              {isLoggingOut ? 'Dang dang xuat...' : 'Dang xuat khoi tai khoan'}
+              {isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất khỏi tài khoản'}
             </button>
           </div>
 
           <article className="settings-highlight">
             <div className="settings-highlight__content">
-              <h2 className="settings-highlight__title">Thu thach hang ngay</h2>
+              <h2 className="settings-highlight__title">Thử thách hàng ngày</h2>
               <p className="settings-highlight__text">
-                Hoan thanh 3 bai tap Python de mo huy hieu Code Master trong ngay hom nay.
+                Hoàn thành 3 bài tập Python để mở khóa hiệu quả Code Master trong ngày hôm nay.
               </p>
 
               <div className="settings-highlight__progress">
                 <div className="settings-highlight__progress-bar" style={{ width: '66%' }} />
               </div>
-              <p className="settings-highlight__meta">2/3 bai tap da hoan thanh</p>
+              <p className="settings-highlight__meta">2/3 bài tập đã hoàn thành</p>
             </div>
           </article>
         </section>
