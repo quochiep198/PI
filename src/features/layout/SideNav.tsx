@@ -82,14 +82,14 @@ export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineL
           <span>Playground</span>
         </button> */}
 
-        {/* <button
+        <button
           className={`pressable sidenav__item${activeLabel === 'Inventory' ? ' is-active' : ''}`}
           type="button"
           onClick={() => handleNavigation('Inventory')}
         >
           <span aria-hidden="true" className="material-symbols-outlined">inventory_2</span>
-          <span>Inventory</span>
-        </button> */}
+          <span>Thành Tựu</span>
+        </button>
 
         {isAdmin ? (
           <button

@@ -1,5 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { InventoryTab } from './types';
+
+interface Avatar {
+  id: number;
+  name: string;
+  description: string;
+  imageData: string;
+  isActive: boolean;
+}
 
 const BOT_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDXqdRO6SjMOvckH7v5nZuYJQHYG5y5FtuGan2T4KfSejVa9SNn5nANq5q-_SsBR-NvlyaYO9Mw6nnLabHT8eYrTvf4ad8MO_O7On3FUniYNrIvbbAlLVh-e3syV8Oc-JY9-86xxyj6zNQYJ1jkBShR-eh-n2nu6PBQvHlEPNVHBYSr4ZD_HJtz_PQyIOiwEhXa-Okd_oLele8Q_rQ2ppqyBNoy6ByFxlNEd_SP5kzq9ig4R7VVbwj5xS9aIWiR57LFqVeHzaq7blUu';
 
@@ -28,25 +36,76 @@ const RARITY_COLORS: Record<string, string> = {
 
 export function InventoryPage() {
   const [activeTab, setActiveTab] = useState<InventoryTab>('hats');
+  const [avatars, setAvatars] = useState<Avatar[]>([]);
+  const [currentAvatarIndex, setCurrentAvatarIndex] = useState<number>(0);
+
+  useEffect(() => {
+    let active = true;
+    async function fetchAvatars() {
+      try {
+        const response = await fetch('/api/avatars');
+        if (response.ok) {
+          const data = await response.json();
+          if (active && data.avatars && data.avatars.length > 0) {
+            setAvatars(data.avatars);
+            const activeIndex = data.avatars.findIndex((a: Avatar) => a.isActive);
+            if (activeIndex !== -1) {
+              setCurrentAvatarIndex(activeIndex);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch avatars:', error);
+      }
+    }
+    void fetchAvatars();
+    return () => { active = false; };
+  }, []);
+
+  const handlePrevAvatar = () => {
+    setCurrentAvatarIndex((prev) => (prev > 0 ? prev - 1 : avatars.length - 1));
+  };
+
+  const handleNextAvatar = () => {
+    setCurrentAvatarIndex((prev) => (prev < avatars.length - 1 ? prev + 1 : 0));
+  };
 
   return (
     <div className="inventory-layout">
       {/* Left: Character Preview */}
       <section className="inventory-character">
         <div className="inventory-character__bg" />
-        <h2 className="inventory-character__title">Tạo Nhân Vật</h2>
+        <h2 className="inventory-character__title">Chọn Nhân Vật</h2>
 
         <div className="inventory-character__stage">
           <div className="inventory-character__glow" />
           <div className="inventory-character__bot">
+            {avatars.length > 1 && (
+              <button
+                className="inventory-character__nav-btn prev-btn"
+                onClick={handlePrevAvatar}
+                type="button"
+                aria-label="Previous Avatar"
+              >
+                <span className="material-symbols-outlined">chevron_left</span>
+              </button>
+            )}
             <img
               alt="Py-Bot Base"
               className="inventory-character__bot-image"
-              src={BOT_AVATAR}
+              src={avatars.length > 0 ? avatars[currentAvatarIndex].imageData : BOT_AVATAR}
             />
-            <div className="inventory-character__equipped-hat">
-              <span className="material-symbols-outlined">fort</span>
-            </div>
+            {avatars.length > 1 && (
+              <button
+                className="inventory-character__nav-btn next-btn"
+                onClick={handleNextAvatar}
+                type="button"
+                aria-label="Next Avatar"
+              >
+                <span className="material-symbols-outlined">chevron_right</span>
+              </button>
+            )}
+            
           </div>
           <div className="inventory-character__shadow" />
         </div>

@@ -1,36 +1,15 @@
 import express from 'express';
 import cors from 'cors';
-import {
-  authMeHandler,
-  checkInHandler,
-  completeProgressHandler,
-  createAvatarHandler,
-  createItemHandler,
-  createLessonHandler,
-  errorFeedbackHandler,
-  forgotPasswordHandler,
-  getAvatarsHandler,
-  getChallengesHandler,
-  getCoinsHandler,
-  getItemsHandler,
-  getLeaderboardHandler,
-  getStreakHandler,
-  getXpHandler,
-  healthHandler,
-  hintHandler,
-  lessonsHandler,
-  loginHandler,
-  logoutHandler,
-  onlinePresenceStreamHandler,
-  postXpHandler,
-  progressHandler,
-  registerHandler,
-  submitChallengeHandler,
-  updateAvatarHandler,
-  updateSettingsHandler,
-  verifyOtpHandler,
-} from '../server/handlers.mjs';
 import { runMigrations } from '../server/db.mjs';
+import { authMeHandler, loginHandler, registerHandler, forgotPasswordHandler, verifyOtpHandler, logoutHandler } from '../server/controllers/auth.mjs';
+import { lessonsHandler, createLessonHandler } from '../server/controllers/lessons.mjs';
+import { progressHandler, completeProgressHandler } from '../server/controllers/progress.mjs';
+import { updateAvatarHandler, updateSettingsHandler } from '../server/controllers/users.mjs';
+import { getXpHandler, postXpHandler, addXpHandler, getCoinsHandler, getLeaderboardHandler, getStreakHandler, checkInHandler, recordFirstSuccessHandler } from '../server/controllers/gamification.mjs';
+import { getChallengesHandler, submitChallengeHandler } from '../server/controllers/challenges.mjs';
+import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler } from '../server/controllers/admin.mjs';
+import { healthHandler, onlinePresenceStreamHandler } from '../server/controllers/system.mjs';
+import { errorFeedbackHandler, hintHandler } from '../server/controllers/ai.mjs';
 
 const app = express();
 

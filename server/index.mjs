@@ -1,37 +1,16 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import {
-  authMeHandler,
-  checkInHandler,
-  completeProgressHandler,
-  createAvatarHandler,
-  createItemHandler,
-  createLessonHandler,
-  errorFeedbackHandler,
-  forgotPasswordHandler,
-  getAvatarsHandler,
-  getCoinsHandler,
-  getItemsHandler,
-  getLeaderboardHandler,
-  getStreakHandler,
-  getXpHandler,
-  healthHandler,
-  hintHandler,
-  lessonsHandler,
-  loginHandler,
-  onlinePresenceStreamHandler,
-  logoutHandler,
-  progressHandler,
-  registerHandler,
-  verifyOtpHandler,
-  postXpHandler,
-  submitChallengeHandler,
-  updateAvatarHandler,
-  updateSettingsHandler,
-  getChallengesHandler,
-} from './handlers.mjs';
 import { runMigrations } from './db.mjs';
+import { authMeHandler, loginHandler, registerHandler, forgotPasswordHandler, verifyOtpHandler, logoutHandler } from './controllers/auth.mjs';
+import { lessonsHandler, createLessonHandler } from './controllers/lessons.mjs';
+import { progressHandler, completeProgressHandler } from './controllers/progress.mjs';
+import { updateAvatarHandler, updateSettingsHandler } from './controllers/users.mjs';
+import { getXpHandler, postXpHandler, addXpHandler, getCoinsHandler, getLeaderboardHandler, getStreakHandler, checkInHandler, recordFirstSuccessHandler } from './controllers/gamification.mjs';
+import { getChallengesHandler, submitChallengeHandler } from './controllers/challenges.mjs';
+import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler } from './controllers/admin.mjs';
+import { healthHandler, onlinePresenceStreamHandler } from './controllers/system.mjs';
+import { errorFeedbackHandler, hintHandler } from './controllers/ai.mjs';
 
 dotenv.config();
 
