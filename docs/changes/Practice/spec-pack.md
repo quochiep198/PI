@@ -229,7 +229,18 @@ type UseStreakReturn = {
 
 ## 6. Challenges Section
 
-3 challenge cards với:
+Rule hiển thị challenge theo gói tài khoản:
+- User thường (`isPro !== true`) chỉ được hiển thị **3 challenge cards đầu tiên**
+- User Pro (`isPro === true`) được hiển thị **5 challenge cards**
+- Với user thường, phía dưới danh sách challenge phải hiển thị CTA nâng cấp, ví dụ `Nâng cấp Pro để mở thêm thử thách`
+- CTA nâng cấp phải dẫn tới luồng nâng cấp tài khoản Pro hoặc mở UI upgrade tương ứng
+
+Danh sách challenge:
+- Tổng số challenge có thể trả về từ backend cho Practice page là tối thiểu 5 item
+- Frontend render số lượng item theo quyền của user, không render quá giới hạn của gói hiện tại
+- Nếu user thường bấm vào CTA nâng cấp thì không mở challenge bị khóa trực tiếp, mà phải chuyển sang luồng nâng cấp Pro
+
+3 challenge cards mặc định cho user thường, 5 challenge cards cho user Pro, với:
 
 **Icon Colors:**
 | Modifier | Màu | Icon |
@@ -247,6 +258,8 @@ type UseStreakReturn = {
 -Tạo bảng db Challenges để lưu thử thách  (dữ liệu tạo mẫu giúp tôi)
 -Lấy thông tin dữ liệu từ Challenges để hiển thị
 -Challenges sẽ có 3 cấp độ easy, medium, hard
+- Backend/API cần trả về đủ dữ liệu challenge để frontend có thể cắt theo quyền `isPro`
+- Nếu user không phải Pro, challenge thứ 4 trở đi không được hiển thị trong list chính
 -Khi nhấn vào bắt đầu thì sẽ hiển thị modal loadPyodide để thực hiện code, giao diện .workspace-panel
 - Cập nhật lại số điểm xp và coin mỗi khi hoàn thành thử thách
   - **Hệ thống thưởng XP/Coins:**
@@ -384,6 +397,10 @@ type AuthUser = {
 };
 ```
 
+**Rule dùng trong Practice page:**
+- `isPro === true`: hiển thị tối đa 5 challenges
+- `isPro !== true`: hiển thị tối đa 3 challenges + CTA nâng cấp Pro
+
 ### XpLevel
 ```typescript
 type XpLevel = {
@@ -435,6 +452,7 @@ type CheckInResult = {
 | 3 | Leaderboard data từ API hay mock? | Mock |
 | 4 | Tip content có dynamic không? | No (static) |
 | 5 | Streak check-in có nhận reward thực sự? | Mock (coins tăng tượng trưng) |
+| 6 | CTA nâng cấp Pro ở Challenges sẽ navigate sang Settings, trang pricing, hay modal upgrade riêng? | Pending |
 
 ---
 

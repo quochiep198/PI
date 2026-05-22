@@ -9,6 +9,7 @@ import type { Challenge } from './types/challenge';
 
 type PracticePageProps = {
   user: AuthUser;
+  onNavigateUpgrade?: () => void;
 };
 
 // const storeItems = [
@@ -17,9 +18,12 @@ type PracticePageProps = {
 //   { name: 'XP Boost 2x', price: 90, image: 'BOOST' },
 // ];
 
-export function PracticePage({ user }: PracticePageProps) {
+export function PracticePage({ user, onNavigateUpgrade }: PracticePageProps) {
   const { challenges, loading, error, markCompleted } = useChallenges();
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
+  const visibleChallengeCount = user.isPro ? 5 : 3;
+  const visibleChallenges = challenges.slice(0, visibleChallengeCount);
+  const hasLockedChallenges = !user.isPro && challenges.length > visibleChallengeCount;
 
   const handleStartChallenge = (challenge: Challenge) => {
     setActiveChallenge(challenge);
@@ -60,13 +64,30 @@ export function PracticePage({ user }: PracticePageProps) {
                 <p>Hoàn thành các bài học để mở khóa thử thách!</p>
               </div>
             )}
-            {!loading && !error && challenges.length > 0 && challenges.map((challenge) => (
+            {!loading && !error && visibleChallenges.length > 0 && visibleChallenges.map((challenge) => (
               <ChallengeCard
                 key={challenge.id}
                 challenge={challenge}
                 onStart={handleStartChallenge}
               />
             ))}
+            {!loading && !error && hasLockedChallenges ? (
+              <div className="practice-challenges__upgrade">
+                <div className="practice-challenges__upgrade-copy">
+                  <p className="practice-challenges__upgrade-title">Mở thêm thử thách Pro</p>
+                  <p className="practice-challenges__upgrade-text">
+                    Tài khoản thường chỉ xem được 3 thử thách mỗi ngày. Nâng cấp Pro để mở 5 thử thách và luyện tập nhiều hơn.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="pressable practice-challenges__upgrade-btn"
+                  onClick={onNavigateUpgrade}
+                >
+                  Nâng cấp Pro
+                </button>
+              </div>
+            ) : null}
           </section>
 
           {/* <section className="practice-store">

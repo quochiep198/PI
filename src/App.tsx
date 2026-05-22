@@ -140,7 +140,7 @@ export default function App() {
         {view === 'home'
           ? <HomePage user={user} />
           : view === 'practice'
-            ? <PracticePage user={user} />
+            ? <PracticePage user={user} onNavigateUpgrade={() => setView('settings')} />
             : view === 'inventory'
               ? <InventoryPage />
               : view === 'accessories' && user.isAdmin

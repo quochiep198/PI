@@ -1,7 +1,7 @@
 export const VI_MESSAGES = {
   tracks: {
-    basicGrade6: 'Cơ bản lớp 6',
-    advancedGrade6: 'Nâng cao lớp 6',
+    basicGrade6: 'Cơ bản',
+    advancedGrade6: 'Nâng cao',
   },
   auth: {
     labels: {
