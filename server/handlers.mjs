@@ -1635,9 +1635,9 @@ export async function forgotPasswordHandler(request, response) {
     let previewOtp = null;
 
     if (user) {
-      const { otp } = await createPasswordResetOtp(user.id);
-
       try {
+        const { otp } = await createPasswordResetOtp(user.id);
+
         const sent = await sendPasswordResetOtpEmail({
           email: user.email,
           username: user.username,
@@ -1649,7 +1649,7 @@ export async function forgotPasswordHandler(request, response) {
           previewOtp = otp;
         }
       } catch (error) {
-        console.error(error instanceof Error ? error.message : 'Failed to send OTP email.');
+        console.error(error instanceof Error ? error.message : 'Failed to create OTP or send email.');
       }
     }
 
