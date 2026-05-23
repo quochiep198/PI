@@ -7,7 +7,7 @@ import { progressHandler, completeProgressHandler } from '../server/controllers/
 import { updateAvatarHandler, updateSettingsHandler } from '../server/controllers/users.mjs';
 import { getXpHandler, postXpHandler, addXpHandler, getCoinsHandler, getLeaderboardHandler, getStreakHandler, checkInHandler, recordFirstSuccessHandler } from '../server/controllers/gamification.mjs';
 import { getChallengesHandler, submitChallengeHandler } from '../server/controllers/challenges.mjs';
-import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler } from '../server/controllers/admin.mjs';
+import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler, setActiveAvatarHandler, getUserItemsHandler, setActiveUserItemHandler, addUserItemHandler } from '../server/controllers/admin.mjs';
 import { healthHandler, onlinePresenceStreamHandler } from '../server/controllers/system.mjs';
 import { errorFeedbackHandler, hintHandler } from '../server/controllers/ai.mjs';
 
@@ -58,9 +58,15 @@ app.post('/api/challenges/submit', submitChallengeHandler);
 // Avatar routes (admin only)
 app.get('/api/avatars', getAvatarsHandler);
 app.post('/api/avatars', createAvatarHandler);
+app.post('/api/avatars/set-active', setActiveAvatarHandler);
 
 // Item routes (admin only)
 app.get('/api/items', getItemsHandler);
 app.post('/api/items', createItemHandler);
+
+// User Items routes (user inventory)
+app.post('/api/user-items', addUserItemHandler);
+app.post('/api/user-items/list', getUserItemsHandler);
+app.post('/api/user-items/set-active', setActiveUserItemHandler);
 
 export default app;

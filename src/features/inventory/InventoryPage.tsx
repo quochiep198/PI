@@ -9,36 +9,40 @@ interface Avatar {
   isActive: boolean;
 }
 
+interface UserItem {
+  id: number;
+  itemId: number;
+  name: string;
+  assetType: string;
+  description: string;
+  imageData: string;
+  price: number;
+  isActive: boolean;
+}
+
 const BOT_AVATAR = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDXqdRO6SjMOvckH7v5nZuYJQHYG5y5FtuGan2T4KfSejVa9SNn5nANq5q-_SsBR-NvlyaYO9Mw6nnLabHT8eYrTvf4ad8MO_O7On3FUniYNrIvbbAlLVh-e3syV8Oc-JY9-86xxyj6zNQYJ1jkBShR-eh-n2nu6PBQvHlEPNVHBYSr4ZD_HJtz_PQyIOiwEhXa-Okd_oLele8Q_rQ2ppqyBNoy6ByFxlNEd_SP5kzq9ig4R7VVbwj5xS9aIWiR57LFqVeHzaq7blUu';
 
-const TABS: { id: InventoryTab; label: string; icon: string }[] = [
-  { id: 'hats', label: 'Mũ/Tóc', icon: 'style' },
-  { id: 'glasses', label: 'Kính', icon: 'visibility' },
-  { id: 'clothes', label: 'Trang phục', icon: 'apparel' },
-  { id: 'back', label: 'Phụ kiện lưng', icon: 'backpack' },
+const TABS: { id: InventoryTab; label: string; icon: string; assetType: string }[] = [
+  { id: 'hats', label: 'Mũ/Tóc', icon: 'style', assetType: 'hat' },
+  { id: 'glasses', label: 'Kính', icon: 'visibility', assetType: 'glasses' },
+  { id: 'clothes', label: 'Trang phục', icon: 'apparel', assetType: 'jacket' },
+  { id: 'back', label: 'Phụ kiện lưng', icon: 'backpack', assetType: 'backpack' },
 ];
-
-const SAMPLE_ITEMS = [
-  { id: '1', name: 'Mũ Quý Tộc', icon: 'fort', rarity: 'rare' as const, equipped: true },
-  { id: '2', name: 'Balo Tên Lửa', icon: 'rocket_launch', rarity: 'epic' as const, equipped: false },
-  { id: '3', name: 'Kính Cyber', icon: 'smart_toy', rarity: 'common' as const, equipped: false },
-  { id: '4', name: 'Tai Nghe Neon', icon: 'headphones', rarity: 'common' as const, equipped: false },
-  { id: '5', name: 'Giáp Python', icon: 'shield', rarity: 'rare' as const, equipped: false },
-  { id: '6', name: 'Vương Miện', icon: 'crown', rarity: 'legendary' as const, equipped: false },
-];
-
-const RARITY_COLORS: Record<string, string> = {
-  common: 'var(--color-outline)',
-  rare: 'var(--color-secondary)',
-  epic: 'var(--color-tertiary-container)',
-  legendary: 'var(--color-primary)',
-};
 
 export function InventoryPage() {
   const [activeTab, setActiveTab] = useState<InventoryTab>('hats');
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [currentAvatarIndex, setCurrentAvatarIndex] = useState<number>(0);
+  const [isLoadingAvatars, setIsLoadingAvatars] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
+  const [userItems, setUserItems] = useState<UserItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+
+  const currentTab = TABS.find((t) => t.id === activeTab);
+
+  // Fetch avatars
   useEffect(() => {
     let active = true;
     async function fetchAvatars() {
@@ -46,21 +50,56 @@ export function InventoryPage() {
         const response = await fetch('/api/avatars');
         if (response.ok) {
           const data = await response.json();
-          if (active && data.avatars && data.avatars.length > 0) {
-            setAvatars(data.avatars);
-            const activeIndex = data.avatars.findIndex((a: Avatar) => a.isActive);
+          if (active) {
+            setAvatars(data.avatars || []);
+            setIsLoadingAvatars(false);
+            const activeIndex = data.avatars?.findIndex((a: Avatar) => a.isActive) ?? -1;
             if (activeIndex !== -1) {
               setCurrentAvatarIndex(activeIndex);
             }
           }
+        } else {
+          if (active) setIsLoadingAvatars(false);
         }
       } catch (error) {
         console.error('Failed to fetch avatars:', error);
+        if (active) setIsLoadingAvatars(false);
       }
     }
     void fetchAvatars();
     return () => { active = false; };
   }, []);
+
+  // Fetch user items by type when tab changes
+  useEffect(() => {
+    let active = true;
+    async function fetchUserItems() {
+      if (!currentTab) return;
+
+      setIsLoadingItems(true);
+      try {
+        const response = await fetch('/api/user-items/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: currentTab.assetType }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (active) {
+            setUserItems(data.items || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch user items:', error);
+        if (active) setUserItems([]);
+      } finally {
+        if (active) setIsLoadingItems(false);
+      }
+    }
+    void fetchUserItems();
+    return () => { active = false; };
+  }, [activeTab, currentTab]);
 
   const handlePrevAvatar = () => {
     setCurrentAvatarIndex((prev) => (prev > 0 ? prev - 1 : avatars.length - 1));
@@ -68,6 +107,62 @@ export function InventoryPage() {
 
   const handleNextAvatar = () => {
     setCurrentAvatarIndex((prev) => (prev < avatars.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleSaveAvatar = async () => {
+    if (avatars.length === 0 || !avatars[currentAvatarIndex]) return;
+
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch('/api/avatars/set-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarId: avatars[currentAvatarIndex].id }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const updatedAvatars = avatars.map((avatar, index) => ({
+          ...avatar,
+          isActive: index === currentAvatarIndex,
+        }));
+        setAvatars(updatedAvatars);
+        setSaveMessage('Đã lưu thành công!');
+        setTimeout(() => setSaveMessage(null), 2000);
+      } else {
+        setSaveMessage(data.message || 'Lỗi khi lưu.');
+      }
+    } catch (error) {
+      console.error('Failed to save avatar:', error);
+      setSaveMessage('Không thể kết nối server.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleItem = async (item: UserItem) => {
+    try {
+      const response = await fetch('/api/user-items/set-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userItemId: item.id }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setUserItems((prev) =>
+          prev.map((i) => ({
+            ...i,
+            isActive: i.id === item.id,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Failed to toggle item:', error);
+    }
   };
 
   return (
@@ -80,39 +175,51 @@ export function InventoryPage() {
         <div className="inventory-character__stage">
           <div className="inventory-character__glow" />
           <div className="inventory-character__bot">
-            {avatars.length > 1 && (
-              <button
-                className="inventory-character__nav-btn prev-btn"
-                onClick={handlePrevAvatar}
-                type="button"
-                aria-label="Previous Avatar"
-              >
-                <span className="material-symbols-outlined">chevron_left</span>
-              </button>
+            {isLoadingAvatars ? (
+              <div className="inventory-character__loading">
+                <span className="material-symbols-outlined rotating">hourglass_empty</span>
+              </div>
+            ) : (
+              <>
+                {avatars.length > 1 && (
+                  <button
+                    className="inventory-character__nav-btn prev-btn"
+                    onClick={handlePrevAvatar}
+                    type="button"
+                    aria-label="Previous Avatar"
+                  >
+                    <span className="material-symbols-outlined">chevron_left</span>
+                  </button>
+                )}
+                <img
+                  className="inventory-character__bot-image"
+                  src={avatars[currentAvatarIndex]?.imageData || BOT_AVATAR}
+                  alt={avatars[currentAvatarIndex]?.name || 'Bot Avatar'}
+                />
+                {avatars.length > 1 && (
+                  <button
+                    className="inventory-character__nav-btn next-btn"
+                    onClick={handleNextAvatar}
+                    type="button"
+                    aria-label="Next Avatar"
+                  >
+                    <span className="material-symbols-outlined">chevron_right</span>
+                  </button>
+                )}
+              </>
             )}
-            <img
-              alt="Py-Bot Base"
-              className="inventory-character__bot-image"
-              src={avatars.length > 0 ? avatars[currentAvatarIndex].imageData : BOT_AVATAR}
-            />
-            {avatars.length > 1 && (
-              <button
-                className="inventory-character__nav-btn next-btn"
-                onClick={handleNextAvatar}
-                type="button"
-                aria-label="Next Avatar"
-              >
-                <span className="material-symbols-outlined">chevron_right</span>
-              </button>
-            )}
-            
           </div>
           <div className="inventory-character__shadow" />
         </div>
 
-        <button className="inventory-character__save-btn" type="button">
-          <span className="material-symbols-outlined">save</span>
-          Lưu Nhân Vật
+        <button
+          className="inventory-character__save-btn"
+          type="button"
+          onClick={handleSaveAvatar}
+          disabled={isSaving || avatars.length === 0}
+        >
+          <span className="material-symbols-outlined">{isSaving ? 'hourglass_empty' : 'save'}</span>
+          {isSaving ? 'Đang lưu...' : saveMessage || 'Lưu Nhân Vật'}
         </button>
       </section>
 
@@ -121,7 +228,7 @@ export function InventoryPage() {
         <div className="inventory-header">
           <div className="inventory-header__title-row">
             <h3 className="inventory-header__title">Kho Đồ Của Bạn</h3>
-            <span className="inventory-header__count">48/100 Vật phẩm</span>
+            <span className="inventory-header__count">{userItems.length} vật phẩm</span>
           </div>
 
           <div className="inventory-tabs">
@@ -140,27 +247,49 @@ export function InventoryPage() {
         </div>
 
         <div className="inventory-items-container">
-          <div className="inventory-items">
-            {SAMPLE_ITEMS.map((item) => (
-              <div
-                key={item.id}
-                className={`inventory-item${item.equipped ? ' is-equipped' : ''}`}
-              >
-                <div className="inventory-item__check">
-                  <span className="material-symbols-outlined">check</span>
+          {isLoadingItems ? (
+            <div className="inventory-items__loading">
+              <span className="material-symbols-outlined rotating">hourglass_empty</span>
+              <span>Đang tải...</span>
+            </div>
+          ) : userItems.length === 0 ? (
+            <div className="inventory-items__empty">
+              <span className="material-symbols-outlined">inventory_2</span>
+              <p>Chưa có vật phẩm nào</p>
+              <span className="inventory-items__empty-hint">Mua vật phẩm tại cửa hàng</span>
+            </div>
+          ) : (
+            <div className="inventory-items">
+              {userItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`inventory-item${item.isActive ? ' is-equipped' : ''}`}
+                  onClick={() => handleToggleItem(item)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && handleToggleItem(item)}
+                >
+                  <div className="inventory-item__check">
+                    <span className="material-symbols-outlined">check</span>
+                  </div>
+                  {item.imageData && (
+                    <img
+                      className="inventory-item__image"
+                      src={item.imageData}
+                      alt={item.name}
+                    />
+                  )}
+                  <p className="inventory-item__name">{item.name}</p>
+                  {item.price > 0 && (
+                    <p className="inventory-item__price">
+                      <span className="material-symbols-outlined">toll</span>
+                      {item.price}
+                    </p>
+                  )}
                 </div>
-                <div className="inventory-item__icon">
-                  <span className="material-symbols-outlined" style={{ color: RARITY_COLORS[item.rarity] }}>
-                    {item.icon}
-                  </span>
-                </div>
-                <p className="inventory-item__name">{item.name}</p>
-                <p className="inventory-item__rarity">
-                  Rarity: {item.rarity.charAt(0).toUpperCase()}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

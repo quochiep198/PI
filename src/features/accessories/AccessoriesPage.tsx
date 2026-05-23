@@ -10,6 +10,42 @@ const ASSET_TYPES = [
   { value: 'backpack', label: 'Backpack' },
 ];
 
+async function compressImage(base64: string): Promise<string> {
+  return new Promise((resolve) => {
+    if (!base64.startsWith('data:image')) {
+      resolve(base64);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const maxWidth = 800;
+      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height, 1);
+      const newWidth = Math.round(img.width * ratio);
+      const newHeight = Math.round(img.height * ratio);
+
+      if (img.width <= maxWidth && img.height <= maxWidth) {
+        resolve(base64);
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+        resolve(canvas.toDataURL('image/webp', 0.92));
+      } else {
+        resolve(base64);
+      }
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
+}
+
 export function AccessoriesPage() {
   const [name, setName] = useState('');
   const [assetType, setAssetType] = useState('avatar');
@@ -18,24 +54,36 @@ export function AccessoriesPage() {
   const [imageData, setImageData] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropzoneRef = useRef<HTMLDivElement>(null);
 
-  function processFile(file: File) {
+  async function processFile(file: File) {
     if (!file.type.startsWith('image/')) {
       setMessage({ type: 'error', text: 'Vui lòng chọn file hình ảnh.' });
       return;
     }
 
+    // Show loading state immediately
+    setIsCompressing(true);
+    setPreviewUrl(null);
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const base64 = e.target?.result as string;
-      setImageData(base64);
-      setPreviewUrl(base64);
+      // Compress image before saving
+      const compressed = await compressImage(base64);
+      setImageData(compressed);
+      setPreviewUrl(compressed);
+      setIsCompressing(false);
       setMessage(null);
+    };
+    reader.onerror = () => {
+      setIsCompressing(false);
+      setMessage({ type: 'error', text: 'Lỗi đọc file.' });
     };
     reader.readAsDataURL(file);
   }
@@ -213,18 +261,19 @@ export function AccessoriesPage() {
               onDrop={handleDrop}
             >
               <div className="accessories-dropzone__icon">
-                <span className="material-symbols-outlined">cloud_upload</span>
+                <span className="material-symbols-outlined">{isCompressing ? 'hourglass_empty' : 'cloud_upload'}</span>
               </div>
-              <h3 className="accessories-dropzone__title">Kéo và thả ảnh vào đây</h3>
+              <h3 className="accessories-dropzone__title">{isCompressing ? 'Đang xử lý...' : 'Kéo và thả ảnh vào đây'}</h3>
               <p className="accessories-dropzone__hint">
-                Supports PNG, SVG, and WEBP (Recommended 1024x1024)
+                {isCompressing ? 'Vui lòng đợi' : 'Supports PNG, SVG, and WEBP (Recommended 400x400)'}
               </p>
               <button
                 className="accessories-dropzone__browse"
                 type="button"
                 onClick={handleBrowseClick}
+                disabled={isCompressing}
               >
-                Browse Files
+                {isCompressing ? 'Đang xử lý...' : 'Browse Files'}
               </button>
               <input
                 ref={fileInputRef}
@@ -249,7 +298,11 @@ export function AccessoriesPage() {
           <div className="accessories-preview-card">
             <p className="accessories-preview-label">Live Preview</p>
             <div className="accessories-preview-stage">
-              {previewUrl ? (
+              {isCompressing ? (
+                <div className="accessories-preview-placeholder">
+                  <span className="material-symbols-outlined rotating">hourglass_empty</span>
+                </div>
+              ) : previewUrl ? (
                 <img
                   alt="Asset preview"
                   className="accessories-preview-image"
