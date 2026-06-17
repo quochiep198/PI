@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { runMigrations } from '../server/db.mjs';
-import { authMeHandler, loginHandler, registerHandler, forgotPasswordHandler, verifyOtpHandler, logoutHandler } from '../server/controllers/auth.mjs';
+import { authMeHandler, loginHandler, registerHandler, forgotPasswordHandler, verifyOtpHandler, logoutHandler, googleLoginHandler, googleCallbackHandler } from '../server/controllers/auth.mjs';
 import { lessonsHandler, createLessonHandler } from '../server/controllers/lessons.mjs';
 import { progressHandler, completeProgressHandler } from '../server/controllers/progress.mjs';
 import { updateAvatarHandler, updateSettingsHandler } from '../server/controllers/users.mjs';
@@ -32,6 +32,8 @@ app.post('/api/auth/register', registerHandler);
 app.post('/api/auth/forgot-password', forgotPasswordHandler);
 app.post('/api/auth/forgot-password/verify-otp', verifyOtpHandler);
 app.post('/api/auth/logout', logoutHandler);
+app.get('/api/auth/google', googleLoginHandler);
+app.get('/api/auth/google/callback', googleCallbackHandler);
 app.post('/api/users/me/avatar', updateAvatarHandler);
 app.post('/api/users/me/settings', updateSettingsHandler);
 

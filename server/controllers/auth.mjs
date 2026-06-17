@@ -428,3 +428,179 @@ export async function logoutHandler(request, response) {
   }
 }
 
+export async function googleLoginHandler(request, response) {
+  const clientHint = process.env.GOOGLE_CLIENT_ID;
+  if (!clientHint) {
+    response.status(500).json({
+      message: 'GOOGLE_CLIENT_ID is not configured on the server.',
+    });
+    return;
+  }
+
+  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/api/auth/google/callback';
+  const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const options = {
+    redirect_uri: callbackUrl,
+    client_id: clientHint,
+    access_type: 'offline',
+    response_type: 'code',
+    prompt: 'consent',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ].join(' '),
+  };
+
+  const googleAuthUrl = `${rootUrl}?${new URLSearchParams(options).toString()}`;
+  response.redirect(googleAuthUrl);
+}
+
+export async function googleCallbackHandler(request, response) {
+  const code = request.query.code;
+  if (!code) {
+    response.redirect('/login?error=no_authorization_code');
+    return;
+  }
+
+  const clientHint = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/api/auth/google/callback';
+
+  if (!clientHint || !clientSecret) {
+    response.status(500).json({
+      message: 'Google OAuth credentials are not configured on the server.',
+    });
+    return;
+  }
+
+  try {
+    // 1. Exchange auth code for tokens
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const values = {
+      code,
+      client_id: clientHint,
+      client_secret: clientSecret,
+      redirect_uri: callbackUrl,
+      grant_type: 'authorization_code',
+    };
+
+    const tokenRes = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(values),
+    });
+
+    if (!tokenRes.ok) {
+      const errorText = await tokenRes.text();
+      console.error('Failed to exchange code for tokens:', errorText);
+      response.redirect('/login?error=token_exchange_failed');
+      return;
+    }
+
+    const tokenData = await tokenRes.json();
+    const { access_token, id_token } = tokenData;
+
+    // 2. Fetch user profile info
+    const googleUserRes = await fetch(
+      `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${access_token}`,
+      {
+        headers: {
+          Authorization: `Bearer ${id_token}`,
+        },
+      }
+    );
+
+    if (!googleUserRes.ok) {
+      const errorText = await googleUserRes.text();
+      console.error('Failed to fetch Google user info:', errorText);
+      response.redirect('/login?error=userinfo_fetch_failed');
+      return;
+    }
+
+    const googleUser = await googleUserRes.json();
+    const email = normalizeIdentifier(googleUser.email);
+    if (!email) {
+      response.redirect('/login?error=invalid_google_email');
+      return;
+    }
+
+    // 3. Check existing user
+    const users = await query(
+      `
+        SELECT id, username, email, is_admin AS "isAdmin", is_pro AS "isPro", avatar_url AS "avatarUrl"
+        FROM users
+        WHERE email = $1
+        LIMIT 1
+      `,
+      [email],
+    );
+
+    let userRecord = users[0];
+
+    if (userRecord) {
+      // User exists, optionally update avatar if they don't have one
+      if (!userRecord.avatarUrl && googleUser.picture) {
+        await execute(
+          `
+            UPDATE users
+            SET avatar_url = $2
+            WHERE id = $1
+          `,
+          [userRecord.id, googleUser.picture],
+        );
+        userRecord.avatarUrl = googleUser.picture;
+      }
+    } else {
+      // User does not exist, auto-register
+      // Generate a unique username
+      let baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+      if (baseUsername.length < 3) {
+        baseUsername = 'user_' + baseUsername;
+      }
+      let finalUsername = baseUsername;
+      let isUnique = false;
+      let suffixAttempts = 0;
+
+      while (!isUnique && suffixAttempts < 10) {
+        const check = await query(`SELECT id FROM users WHERE username = $1 LIMIT 1`, [finalUsername]);
+        if (check.length === 0) {
+          isUnique = true;
+        } else {
+          finalUsername = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+          suffixAttempts += 1;
+        }
+      }
+
+      if (!isUnique) {
+        finalUsername = `${baseUsername}_${Date.now()}`;
+      }
+
+      // Generate a random password hash for scrypt compatibility since column is NOT NULL
+      const randomPass = 'google-oauth-locked-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      const passwordHash = await hashPassword(randomPass);
+
+      const newUserRows = await query(
+        `
+          INSERT INTO users (username, email, password_hash, avatar_url)
+          VALUES ($1, $2, $3, $4)
+          RETURNING id, username, email, is_admin AS "isAdmin", is_pro AS "isPro", avatar_url AS "avatarUrl"
+        `,
+        [finalUsername, email, passwordHash, googleUser.picture || null],
+      );
+      userRecord = newUserRows[0];
+    }
+
+    // 4. Clean user data and start session
+    const user = sanitizeUser(userRecord);
+    const sessionToken = await createSession(user.id);
+
+    response.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE_NAME, sessionToken, SESSION_MAX_AGE_MS));
+    response.redirect('/');
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    response.redirect('/login?error=google_auth_exception');
+  }
+}
+

@@ -291,12 +291,18 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
 
             {showToggle ? (
               <>
-                {/* <div className="auth-divider">
+                <div className="auth-divider">
                   <span>Hoặc đăng nhập bằng</span>
                 </div>
 
                 <div className="auth-social">
-                  <button className="pressable auth-social__button" disabled type="button">
+                  <button
+                    className="pressable auth-social__button"
+                    type="button"
+                    onClick={() => {
+                      window.location.href = '/api/auth/google';
+                    }}
+                  >
                     <img
                       alt="Google"
                       src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkccZawS2sDX8JfJFSyk6R4xO-BaWZ05VmDV1CCLfmSdM9eUuZqX_nuzLdDvsAppWPH9b3BdejbJhlGrVN1qVUWAraR1ui5fdGSPusrnWNoIWYlUPwIr-xWPIa9PXHsuB9YbNOgcYihQv8_mfXWX1vJ0PfqYltgy-l0edBuVpUteBwWqrjYMXiN8D3hpsvcKyRZrri68vCVOCd1HDrAHUjHpBmbybtZgA13_9-5Ha4sT2SFrkqeFtFr2c-JyBy-JSHQBXpFi6OayI8"
@@ -319,7 +325,7 @@ export function AuthPage({ onAuthenticated }: AuthPageProps) {
                     </svg>
                     <span>Github</span>
                   </button>
-                </div> */}
+                </div>
 
                 <footer className="auth-footer">
                   <p>

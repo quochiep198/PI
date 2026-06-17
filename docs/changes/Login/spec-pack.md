@@ -25,9 +25,10 @@ Spec-pack này xác định hành vi mục tiêu của khu vực `Login`, đồn
 - Lưu trữ mật khẩu ở dạng mã hóa băm an toàn
 - Gắn tiến trình học với user đã đăng nhập
 - Nạp lại tiến trình học đúng user ở Homepage
+- Đăng nhập mạng xã hội bằng Google OAuth 2.0 thực tế
 
 ### Ngoài phạm vi
-- Đăng nhập mạng xã hội Google/GitHub thực tế
+- Đăng nhập mạng xã hội GitHub thực tế
 - Xác thực đa yếu tố
 - Quản trị user / phân quyền admin
 - Chỉnh sửa profile ngoài thông tin cần thiết cho auth
@@ -324,6 +325,38 @@ Login Again
 - Không cho OTP sống quá 5 phút.
 - Không lưu password dạng plain text.
 
+### 5.9 Đăng nhập mạng xã hội qua Google OAuth
+
+**Pre-conditions:**
+- Người dùng chưa đăng nhập hệ thống và có tài khoản Google hợp lệ.
+- Hệ thống đã được cấu hình các thông tin xác thực Google Client ID, Client Secret và Callback URL.
+
+**Luồng chính:**
+1. Tại màn hình Login, người dùng bấm nút `Đăng nhập bằng Google`.
+2. Frontend điều hướng người dùng tới trang đăng nhập Google OAuth 2.0 (hoặc mở cửa sổ Google Sign-In) sử dụng các scope `email`, `profile`, và `openid`.
+3. Người dùng đăng nhập tài khoản Google thành công và xác nhận cấp quyền cho ứng dụng.
+4. Google chuyển hướng trình duyệt của người dùng trở lại URL Callback của backend kèm theo authorization code.
+5. Backend nhận request callback (`GET /api/auth/google/callback` hoặc tương đương) chứa code:
+   - Gửi yêu cầu HTTPS tới Google OAuth API để đổi code lấy Google access token và ID token.
+   - Giải mã ID token và trích xuất thông tin: email, tên hiển thị, hình ảnh avatar.
+6. Backend kiểm tra tài khoản trong hệ thống:
+   - Nếu email đã tồn tại:
+     - Liên kết và cập nhật thông tin profile của người dùng (tên hiển thị, avatar nếu cần).
+     - Khởi tạo auth session và cookie 30 ngày cho tài khoản này.
+   - Nếu email chưa tồn tại:
+     - Đăng ký tự động tài khoản mới: tạo username tự sinh duy nhất dựa trên email/tên hiển thị, lưu email, gán avatar từ Google.
+     - Khởi tạo auth session và cookie 30 ngày cho tài khoản mới.
+7. Backend chuyển hướng (redirect) người dùng về trang chủ của ứng dụng ở trạng thái đã đăng nhập.
+
+**Business rules:**
+- BR-GO-1: Tài khoản tạo bằng Google OAuth không cần mật khẩu. Mật khẩu lưu trong DB được thiết lập giá trị null hoặc mã ngẫu nhiên không thể đăng nhập trực tiếp bằng form thường. Người dùng có thể sử dụng tính năng "Quên mật khẩu" nếu muốn tạo mật khẩu thường sau này.
+- BR-GO-2: Nếu email nhận được từ Google trùng với email của tài khoản đăng ký truyền thống trước đó, hệ thống tự động liên kết đăng nhập thành công vào tài khoản đó.
+- BR-GO-3: Các thông tin Client ID, Client Secret phải được lưu an toàn dưới dạng các biến môi trường (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) và không bao giờ được hardcode trong source code.
+- BR-GO-4: Phiên đăng nhập qua Google OAuth tuân thủ hoàn toàn quy tắc cookie HttpOnly 30 ngày và tự động duy trì khi refresh.
+
+**Post-conditions:**
+- Người dùng đăng nhập thành công và tiến trình học tập được tải đúng tài khoản Google.
+
 ---
 
 ## 6. Yêu cầu phi chức năng
@@ -357,6 +390,8 @@ Login Again
 | 11 | AC-LOGIN-11 | User yêu cầu quên mật khẩu bằng email hợp lệ phải nhận OTP qua email với thời hạn 5 phút | API / E2E |
 | 12 | AC-LOGIN-12 | User chỉ đổi được mật khẩu khi nhập đúng OTP chưa hết hạn; OTP sai, hết hạn, hoặc đã dùng phải bị từ chối | E2E / Security |
 | 13 | AC-LOGIN-13 | Sau khi đổi mật khẩu thành công, các session cũ của user bị thu hồi và user phải đăng nhập lại bằng mật khẩu mới | API / E2E |
+| 14 | AC-LOGIN-14 | User có thể bấm nút đăng nhập bằng Google để đăng nhập và tự động đăng ký tài khoản mới nếu chưa tồn tại | E2E |
+| 15 | AC-LOGIN-15 | User có tài khoản truyền thống trước đó có cùng email với tài khoản Google sẽ đăng nhập thành công vào tài khoản đó | E2E / Integration |
 
 ---
 
@@ -382,7 +417,7 @@ Login Again
 
 1. **Đổi user trên cùng trình duyệt:** Logout user A rồi login user B, progress phải chuyển sang dữ liệu của B.
 2. **Mở lại tab sau vài ngày:** Nếu còn trong 30 ngày và session hợp lệ, user vẫn được giữ đăng nhập.
-3. **Thiếu backend social login:** Nút Google/GitHub vẫn hiển thị đúng UI theo raw design nhưng không được gây lỗi JS nếu chưa tích hợp.
+3. **Thiếu backend social login:** Nút GitHub vẫn hiển thị đúng UI theo raw design nhưng không được gây lỗi JS nếu chưa tích hợp (Google OAuth đã được triển khai).
 4. **Yêu cầu gửi lại OTP:** Khi user yêu cầu OTP mới, OTP cũ phải bị vô hiệu để tránh tồn tại nhiều mã hợp lệ cùng lúc.
 
 ---
@@ -419,7 +454,7 @@ Ghi chú:
 | 1 | Route register sẽ là trang riêng hay modal/inline switch từ login? | FE/UX | TBD |
 | 2 | Có tự động migrate progress anonymous hiện tại sang user mới sau login không? | FE/BE | TBD |
 | 3 | Chọn thư viện hash nào: `argon2` hay `bcrypt`? | BE/Security | TBD |
-| 4 | Social login chỉ là UI placeholder hay sẽ được triển khai ở phase sau? | FE/BE | TBD |
+| 4 | Google OAuth đã được quyết định triển khai, còn GitHub login vẫn là UI placeholder? | FE/BE | Đã giải quyết (Chỉ triển khai Google OAuth) |
 | 5 | Session store dùng DB, Redis hay signed cookie session? | BE | TBD |
 | 6 | OTP sẽ có bao nhiêu chữ số/ký tự và thời gian chờ giữa hai lần gửi lại là bao lâu? | BE/UX/Security | TBD |
 
@@ -436,6 +471,7 @@ Ghi chú:
 | 5 | Cookie thiếu `Secure`/`HttpOnly` làm tăng rủi ro tấn công | Trung bình | Cao | Chốt cờ cookie trong middleware/auth layer |
 | 6 | OTP bị brute force hoặc spam gửi email | Trung bình | Cao | Rate limit, OTP expiry 5 phút, khóa tạm thời theo ngưỡng, audit log |
 | 7 | Email OTP gửi chậm khiến user hết hạn trước khi nhập | Trung bình | Trung bình | Theo dõi deliverability, có cơ chế resend OTP và thông báo thời hạn rõ ràng |
+| 8 | Rò rỉ thông tin xác thực Google Client Secret | Thấp | Cao | Chỉ lưu trữ trong biến môi trường bảo mật, không hardcode |
 
 ---
 
@@ -454,3 +490,5 @@ Ghi chú:
 | 9 | AC-LOGIN-11 | `POST /auth/forgot-password/request` | Users, PasswordResetOtps | Email/audit log | Public | API / E2E |
 | 10 | AC-LOGIN-12 | `POST /auth/forgot-password/confirm` | Users, PasswordResetOtps | Audit log | Public | E2E / Security |
 | 11 | AC-LOGIN-13 | `POST /auth/forgot-password/confirm`, session revocation | Users, PasswordResetOtps, Sessions | Audit log | Public | API / E2E |
+| 12 | AC-LOGIN-14 | `GET /api/auth/google`, `GET /api/auth/google/callback` | Users, Sessions | Auth audit log | Public | E2E |
+| 13 | AC-LOGIN-15 | `GET /api/auth/google/callback` | Users, Sessions | Auth audit log | Public | E2E / Integration |
