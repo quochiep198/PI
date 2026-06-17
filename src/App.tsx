@@ -39,7 +39,7 @@ export default function App() {
   const [view, setView] = useState<View>('home');
   const { coins } = useCoinsCached();
   const { xpData } = useXPCached();
-  const { onlineLearners, connected: onlineConnected, failed: onlineFailed } = useOnlineLearners();
+  const { onlineLearners, connected: onlineConnected, failed: onlineFailed } = useOnlineLearners(!!user);
 
   useEffect(() => {
     let active = true;

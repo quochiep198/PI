@@ -7,12 +7,19 @@ type PresencePayload = {
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 3000;
 
-export function useOnlineLearners() {
+export function useOnlineLearners(isAuthenticated = false) {
   const [onlineLearners, setOnlineLearners] = useState(0);
   const [connected, setConnected] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setOnlineLearners(0);
+      setConnected(false);
+      setFailed(false);
+      return;
+    }
+
     let active = true;
     let retryCount = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -69,7 +76,7 @@ export function useOnlineLearners() {
         clearTimeout(retryTimer);
       }
     };
-  }, []);
+  }, [isAuthenticated]);
 
   return {
     onlineLearners,
