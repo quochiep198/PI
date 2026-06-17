@@ -176,6 +176,17 @@ export function useXP() {
     [animateXpGain],
   );
 
+  const animateAndCacheXp = useCallback((data: XpResponse) => {
+    const grantedXp = data.xpAdded || 0;
+    if (grantedXp > 0) {
+      animateXpGain(grantedXp);
+    }
+    setCachedXp(toXpLevel(data));
+    if (data.leveledUp) {
+      setShowLevelUpModal(true);
+    }
+  }, [animateXpGain]);
+
   const dismissLevelUpModal = useCallback(() => {
     setShowLevelUpModal(false);
   }, []);
@@ -195,6 +206,7 @@ export function useXP() {
     pendingXpAnimation,
     addXp,
     recordFirstSuccess,
+    animateAndCacheXp,
     dismissLevelUpModal,
   };
 }

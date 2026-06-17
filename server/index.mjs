@@ -10,7 +10,7 @@ import { getXpHandler, postXpHandler, addXpHandler, getCoinsHandler, getLeaderbo
 import { getChallengesHandler, submitChallengeHandler } from './controllers/challenges.mjs';
 import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler, setActiveAvatarHandler, getUserItemsHandler, setActiveUserItemHandler, addUserItemHandler } from './controllers/admin.mjs';
 import { healthHandler, onlinePresenceStreamHandler } from './controllers/system.mjs';
-import { errorFeedbackHandler, hintHandler } from './controllers/ai.mjs';
+import { errorFeedbackHandler, hintHandler, codeReviewHandler, getChatHistoryHandler, chatHandler } from './controllers/ai.mjs';
 
 dotenv.config();
 
@@ -62,6 +62,9 @@ app.get('/api/items', getItemsHandler);
 app.post('/api/items', createItemHandler);
 app.post('/api/error-feedback', errorFeedbackHandler);
 app.post('/api/hint', hintHandler);
+app.post('/api/ai/review-code', codeReviewHandler);
+app.get('/api/ai/chat/history', getChatHistoryHandler);
+app.post('/api/ai/chat', chatHandler);
 app.post('/api/lessons', createLessonHandler);
 
 await runMigrations();

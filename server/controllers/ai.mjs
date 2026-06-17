@@ -111,6 +111,8 @@ import {
   XP_DAILY_CHALLENGE,
   XP_DAILY_CHALLENGE_BONUS,
   COINS_LESSON_COMPLETE,
+  COINS_CODE_REVIEW,
+  XP_CODE_REVIEW,
   COINS_STREAK_BASE,
   COINS_STREAK_STEP,
   STREAK_ACHIEVEMENTS,
@@ -411,4 +413,326 @@ PHONG CÁCH:
     });
   }
 }
+
+export async function codeReviewHandler(request, response) {
+  const { lessonId, code } = getRequestBody(request);
+
+  if (!groqApiKey) {
+    response.status(500).json({
+      message: 'GROQ_API_KEY is not configured on the server.',
+    });
+    return;
+  }
+
+  if (!lessonId || !code) {
+    response.status(400).json({
+      message: 'Missing lessonId or code.',
+    });
+    return;
+  }
+
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const lesson = await getLessonById(lessonId);
+    if (!lesson) {
+      response.status(404).json({
+        message: 'Lesson not found.',
+      });
+      return;
+    }
+
+    if (!canAccessTrack(user, lesson.track)) {
+      response.status(403).json({
+        message: 'This lesson is only available for Pro accounts.',
+      });
+      return;
+    }
+
+    const existingReviews = await query(
+      `SELECT EXISTS (
+         SELECT 1 FROM user_lesson_reviews 
+         WHERE user_id = $1 AND lesson_id = $2 AND coins_earned > 0
+       ) AS "alreadyRewarded"`,
+      [user.id, lesson.id]
+    );
+    const alreadyRewarded = existingReviews[0]?.alreadyRewarded || false;
+
+    const systemPrompt = `
+Bạn là Mascot AI đáng yêu (một người bạn lập trình cùng lớp học sinh lớp 6) đồng hành học Python.
+Nhiệm vụ của bạn là nhận xét mã nguồn Python của học sinh một cách dễ thương, khích lệ và tập trung vào lập trình sạch (Clean Code).
+
+BẮT BUỘC ĐÁP ỨNG CÁC NGUYÊN TẮC:
+1. KHEN NGỢI: Khen ngợi một điểm tốt trong code của học sinh (ví dụ: cách đặt tên biến rõ ràng, cách dùng vòng lặp, cách sắp xếp câu lệnh ngăn nắp).
+2. GỢI Ý CẢI TIẾN: Đưa ra 1 gợi ý nhẹ nhàng để code sạch hơn (ví dụ: thụt lề chuẩn, thay các con số cố định bằng biến, hoặc rút gọn câu lệnh trùng lặp).
+3. KHÍCH LỆ: Kết thúc bằng lời chúc dễ thương và tích cực để học sinh có thêm động lực học tiếp.
+4. RÀNG BUỘC NGHIÊM NGẶT: Không viết sẵn code giải hoàn chỉnh hay đáp án sửa lỗi. Chỉ nhận xét và hướng dẫn ý tưởng.
+5. PHONG CÁCH: Dùng tiếng Việt đơn giản cho trẻ 11-12 tuổi. Sử dụng xưng hô thân mật như "tớ", "cậu", "hihi", "nhé". Phản hồi ngắn gọn trong 5-6 câu.
+    `.trim();
+
+    const userPrompt = `
+Bài học: ${lesson.title}
+Mục tiêu bài học: ${lesson.objective}
+Mã nguồn hiện tại của học sinh:
+\`\`\`python
+${code}
+\`\`\`
+
+Hãy đưa ra nhận xét mã nguồn thân thiện và khích lệ cho tớ nhé!
+    `.trim();
+
+    const entitlement = getHintEntitlement(user);
+    const reviewResult = await generateHintWithFallback({
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+      modelOrder: entitlement.modelOrder,
+      maxCompletionTokens: 500,
+    });
+
+    const reviewText = reviewResult.hint || 'Chưa nhận được nhận xét từ Groq.';
+
+    const coinsEarned = alreadyRewarded ? 0 : COINS_CODE_REVIEW;
+    const xpEarned = alreadyRewarded ? 0 : XP_CODE_REVIEW;
+
+    await query(
+      `INSERT INTO user_lesson_reviews (user_id, lesson_id, code_snapshot, ai_review_text, coins_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [user.id, lesson.id, code, reviewText, coinsEarned, xpEarned]
+    );
+
+    let totalXp = 0;
+    let totalCoins = 0;
+    let leveledUp = false;
+    let oldLevelData = null;
+    let newLevelData = null;
+
+    if (!alreadyRewarded) {
+      await query(
+        `INSERT INTO user_xp_log (user_id, xp_amount, source, lesson_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, source, lesson_id) DO NOTHING`,
+        [user.id, xpEarned, XP_SOURCES.CODE_REVIEW, lesson.id]
+      );
+
+      const oldXpRows = await query(`SELECT COALESCE(total_xp, 0) AS total_xp FROM user_xp WHERE user_id = $1`, [user.id]);
+      const oldTotalXp = oldXpRows[0]?.total_xp || 0;
+      oldLevelData = getLevelFromXp(oldTotalXp);
+
+      const xpUpsertRows = await query(
+        `INSERT INTO user_xp (user_id, total_xp)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id)
+         DO UPDATE SET total_xp = user_xp.total_xp + EXCLUDED.total_xp
+         RETURNING total_xp`,
+        [user.id, xpEarned]
+      );
+      totalXp = xpUpsertRows[0]?.total_xp || 0;
+      newLevelData = getLevelFromXp(totalXp);
+      leveledUp = newLevelData.level > oldLevelData.level;
+
+      const coinsUpsertRows = await query(
+        `INSERT INTO user_coins (user_id, coins)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id)
+         DO UPDATE SET coins = user_coins.coins + EXCLUDED.coins
+         RETURNING coins`,
+        [user.id, coinsEarned]
+      );
+      totalCoins = coinsUpsertRows[0]?.coins || 0;
+    } else {
+      const xpRows = await query(`SELECT COALESCE(total_xp, 0) AS total_xp FROM user_xp WHERE user_id = $1`, [user.id]);
+      totalXp = xpRows[0]?.total_xp || 0;
+      newLevelData = getLevelFromXp(totalXp);
+
+      const coinsRows = await query(`SELECT COALESCE(coins, 0) AS coins FROM user_coins WHERE user_id = $1`, [user.id]);
+      totalCoins = coinsRows[0]?.coins || 0;
+    }
+
+    const xpData = {
+      totalXp,
+      ...newLevelData,
+      xpAdded: xpEarned,
+      leveledUp,
+      oldLevel: oldLevelData?.level || newLevelData.level,
+      newLevel: newLevelData.level,
+    };
+
+    response.json({
+      reviewText,
+      alreadyRewarded,
+      coinsEarned,
+      xpEarned,
+      totalCoins,
+      xpData,
+      model: reviewResult.model,
+    });
+  } catch (error) {
+    if (error instanceof GroqRequestError && (error.status === 429 || error.status >= 500)) {
+      response.status(429).json({
+        message: 'Hệ thống gợi ý AI đang bận hoặc tạm chạm giới hạn. Bạn thử lại sau ít phút nhé.',
+      });
+      return;
+    }
+
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to generate code review.',
+    });
+  }
+}
+
+export async function getChatHistoryHandler(request, response) {
+  const lessonIdStr = request.query.lessonId;
+  const lessonId = lessonIdStr ? Number(lessonIdStr) : null;
+
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const messages = await query(
+      `SELECT sender, message_text AS "messageText", created_at AS "createdAt"
+       FROM user_chat_messages
+       WHERE user_id = $1 AND (lesson_id = $2 OR (lesson_id IS NULL AND $2 IS NULL))
+       ORDER BY created_at ASC
+       LIMIT 15`,
+      [user.id, lessonId]
+    );
+
+    response.json({
+      messages,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to retrieve chat history.',
+    });
+  }
+}
+
+export async function chatHandler(request, response) {
+  const { lessonId, message, code } = getRequestBody(request);
+
+  if (!groqApiKey) {
+    response.status(500).json({
+      message: 'GROQ_API_KEY is not configured on the server.',
+    });
+    return;
+  }
+
+  if (!message || !message.trim()) {
+    response.status(400).json({
+      message: 'Missing message.',
+    });
+    return;
+  }
+
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    let lesson = null;
+    if (lessonId) {
+      lesson = await getLessonById(lessonId);
+    }
+
+    const history = await query(
+      `SELECT sender, message_text
+       FROM user_chat_messages
+       WHERE user_id = $1 AND (lesson_id = $2 OR (lesson_id IS NULL AND $2 IS NULL))
+       ORDER BY created_at ASC
+       LIMIT 10`,
+      [user.id, lessonId || null]
+    );
+
+    const systemPrompt = `
+Bạn là Mascot AI đáng yêu (một người bạn lập trình cùng lớp học sinh lớp 6) đồng hành học Python.
+Nhiệm vụ của bạn là trò chuyện, giải đáp thắc mắc của học sinh về lập trình Python, đặc biệt là bài học hiện tại nếu học sinh hỏi.
+
+BẮT BUỘC ĐÁP ỨNG CÁC NGUYÊN TẮC:
+1. PHONG CÁCH: Dùng xưng hô thân mật "tớ" và "cậu", dùng các từ cảm thán như "nhé", "hihi", "nha". Sử dụng các ví dụ thực tế gần gũi với trẻ em 11-12 tuổi (như trò chơi Minecraft, Roblox, vẽ tranh, lắp Lego).
+2. RÀNG BUỘC NGHIÊM NGẶT: Không viết sẵn code giải hoàn chỉnh hay đáp án sửa lỗi cho bất kỳ bài tập nào. Hãy đặt câu hỏi gợi mở để học sinh tự nghĩ và sửa code.
+3. TRẢ LỜI NGẮN GỌN: Phản hồi ngắn gọn, súc tích (khoảng 3-5 câu), tránh dài dòng gây nản lòng cho học sinh.
+    `.trim();
+
+    const lessonContext = lesson
+      ? `Bài học: ${lesson.title}\nMục tiêu bài học: ${lesson.objective}\nStarter code của bài:\n${lesson.starterCode || ''}`
+      : 'Không có thông tin bài học cụ thể.';
+
+    const editorCodeContext = code ? `Mã nguồn hiện tại trong editor của học sinh:\n\`\`\`python\n${code}\n\`\`\`` : 'Học sinh chưa viết code gì trong editor.';
+
+    const contextPrompt = `
+[Bối cảnh học tập]
+${lessonContext}
+${editorCodeContext}
+    `.trim();
+
+    const messagesToSend = [
+      { role: 'system', content: systemPrompt },
+      { role: 'system', content: contextPrompt },
+    ];
+
+    for (const msg of history) {
+      messagesToSend.push({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.message_text,
+      });
+    }
+
+    messagesToSend.push({
+      role: 'user',
+      content: message,
+    });
+
+    const entitlement = getHintEntitlement(user);
+    const result = await generateHintWithFallback({
+      messages: messagesToSend,
+      modelOrder: entitlement.modelOrder,
+      maxCompletionTokens: 500,
+    });
+
+    const aiResponse = result.hint || 'Tớ chưa nghĩ ra câu trả lời.';
+
+    await query(
+      `INSERT INTO user_chat_messages (user_id, lesson_id, sender, message_text)
+       VALUES ($1, $2, $3, $4)`,
+      [user.id, lessonId || null, 'user', message]
+    );
+
+    await query(
+      `INSERT INTO user_chat_messages (user_id, lesson_id, sender, message_text)
+       VALUES ($1, $2, $3, $4)`,
+      [user.id, lessonId || null, 'ai', aiResponse]
+    );
+
+    response.json({
+      message: aiResponse,
+    });
+  } catch (error) {
+    if (error instanceof GroqRequestError && (error.status === 429 || error.status >= 500)) {
+      response.status(429).json({
+        message: 'Tớ hơi bận một chút, cậu chờ tớ vài giây rồi hỏi lại nhé! Hihi.',
+      });
+      return;
+    }
+
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Failed to process chat message.',
+    });
+  }
+}
+
+
 

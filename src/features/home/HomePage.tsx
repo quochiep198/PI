@@ -9,6 +9,8 @@ import { useLessonProgress } from './useLessonProgress';
 import { usePyodideRunner } from './usePyodideRunner';
 import { useXP } from './useXP';
 import { playCelebrationChime } from '../shared/soundEffects';
+import { setCachedCoins } from '../shared/coinsCache';
+import { AIChatWidget } from './components/AIChatWidget';
 
 type OutputTone = 'idle' | 'success' | 'error';
 type RuntimeFeedback = {
@@ -67,6 +69,7 @@ export function HomePage({ user }: HomePageProps) {
     xpData,
     showLevelUpModal,
     recordFirstSuccess,
+    animateAndCacheXp,
     dismissLevelUpModal,
   } = useXP();
   const isProUser = Boolean(user.isPro);
@@ -78,8 +81,13 @@ export function HomePage({ user }: HomePageProps) {
   const [selectedTrack, setSelectedTrack] = useState<string>(VI_MESSAGES.tracks.basicGrade6);
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [isErrorFeedbackLoading, setIsErrorFeedbackLoading] = useState(false);
+  const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [lastRuntimeFeedback, setLastRuntimeFeedback] = useState<RuntimeFeedback>(null);
   const previousCompletedLessonCountRef = useRef<number | null>(null);
+
+  // Chatbot states
+  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; messageText: string }>>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'loading' || status === 'error') {
@@ -118,6 +126,39 @@ export function HomePage({ user }: HomePageProps) {
 
     previousCompletedLessonCountRef.current = completedLessonIds.length;
   }, [completedLessonIds.length, user.musicEnabled, user.soundVolume]);
+
+  // Load chat history when selected lesson changes
+  useEffect(() => {
+    if (!selectedLessonId) {
+      setChatMessages([]);
+      return;
+    }
+
+    let active = true;
+    async function loadChatHistory() {
+      try {
+        const response = await fetch(`/api/ai/chat/history?lessonId=${selectedLessonId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active) {
+          setChatMessages(
+            (data.messages || []).map((msg: any) => ({
+              sender: msg.sender,
+              messageText: msg.messageText,
+            }))
+          );
+        }
+      } catch {
+        // Fail silently
+      }
+    }
+
+    void loadChatHistory();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedLessonId]);
 
   const tracks = useMemo(() => {
     const uniqueTracks = Array.from(new Set(lessons.map((lesson) => lesson.track)));
@@ -323,6 +364,105 @@ export function HomePage({ user }: HomePageProps) {
     }
   }
 
+  async function handleShowCodeReview() {
+    if (!selectedLesson) {
+      setOutputTone('error');
+      setOutput(VI_MESSAGES.home.output.selectLessonForHint);
+      return;
+    }
+
+    setIsReviewLoading(true);
+    setOutputTone('idle');
+    setOutput(VI_MESSAGES.home.output.askingReview);
+
+    try {
+      const response = await fetch('/api/ai/review-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lessonId: selectedLesson.id,
+          code,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        reviewText?: string;
+        alreadyRewarded?: boolean;
+        coinsEarned?: number;
+        xpEarned?: number;
+        totalCoins?: number;
+        xpData?: any;
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.message || VI_MESSAGES.home.output.reviewFetchFailed);
+      }
+
+      setOutputTone('success');
+      
+      const rewardMessage = !payload.alreadyRewarded && payload.coinsEarned && payload.xpEarned
+        ? `\n\n${VI_MESSAGES.home.output.reviewReward(payload.coinsEarned, payload.xpEarned)}`
+        : '';
+
+      setOutput(`${VI_MESSAGES.home.output.reviewTitle}\n\n${payload.reviewText || ''}${rewardMessage}`);
+
+      if (!payload.alreadyRewarded) {
+        if (typeof payload.totalCoins === 'number') {
+          setCachedCoins(payload.totalCoins);
+        }
+        if (payload.xpData) {
+          animateAndCacheXp(payload.xpData);
+        }
+      }
+    } catch (error) {
+      setOutputTone('error');
+      setOutput(error instanceof Error ? error.message : VI_MESSAGES.home.output.reviewFetchFailed);
+    } finally {
+      setIsReviewLoading(false);
+    }
+  }
+
+  async function handleSendChatMessage(messageText: string) {
+    if (!selectedLesson) return;
+
+    const newUserMsg = { sender: 'user' as const, messageText };
+    setChatMessages((prev) => [...prev, newUserMsg]);
+    setIsChatLoading(true);
+
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lessonId: selectedLesson.id,
+          message: messageText,
+          code,
+        }),
+      });
+
+      const payload = (await response.json()) as { message?: string; messageText?: string };
+      if (!response.ok) {
+        throw new Error(payload.message || 'Không gửi được tin nhắn.');
+      }
+
+      const aiMsg = { sender: 'ai' as const, messageText: payload.message || '' };
+      setChatMessages((prev) => [...prev, aiMsg]);
+    } catch (error) {
+      const errorMsg = {
+        sender: 'ai' as const,
+        messageText: error instanceof Error ? error.message : 'Tớ gặp chút sự cố mạng rồi, cậu thử lại nhé!',
+      };
+      setChatMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }
+
   function handleLessonSelect(lesson: Lesson) {
     setSelectedLessonId(lesson.id);
     setCode(normalizeEditorCode(lesson.starterCode));
@@ -390,11 +530,13 @@ export function HomePage({ user }: HomePageProps) {
             selectedLesson={selectedLesson}
             isHintLoading={isHintLoading}
             isErrorFeedbackLoading={isErrorFeedbackLoading}
+            isReviewLoading={isReviewLoading}
             onCodeChange={setCode}
             onEditorKeyDown={handleEditorKeyDown}
             onRunCode={handleRunCode}
             onResetCode={handleResetCode}
             onShowHint={handleShowHint}
+            onShowCodeReview={handleShowCodeReview}
           />
         </section>
       </main>
@@ -403,6 +545,13 @@ export function HomePage({ user }: HomePageProps) {
         show={showLevelUpModal}
         newLevel={xpData}
         onDismiss={dismissLevelUpModal}
+      />
+
+      <AIChatWidget
+        chatMessages={chatMessages}
+        isChatLoading={isChatLoading}
+        selectedLesson={selectedLesson}
+        onSendChatMessage={handleSendChatMessage}
       />
     </>
   );

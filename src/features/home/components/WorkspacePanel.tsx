@@ -1,6 +1,7 @@
 import { type KeyboardEvent, type ChangeEvent, useMemo } from 'react';
 import type { Lesson } from '../useLessons';
 import type { RuntimeStatus } from '../usePyodideRunner';
+import { VI_MESSAGES } from '../../../content/messages';
 
 type OutputTone = 'idle' | 'success' | 'error';
 
@@ -12,11 +13,13 @@ type WorkspacePanelProps = {
   selectedLesson: Lesson | null;
   isHintLoading: boolean;
   isErrorFeedbackLoading: boolean;
+  isReviewLoading: boolean;
   onCodeChange: (code: string) => void;
   onEditorKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   onRunCode: () => void;
   onResetCode: () => void;
   onShowHint: () => void;
+  onShowCodeReview: () => void;
 };
 
 export function WorkspacePanel({
@@ -27,11 +30,13 @@ export function WorkspacePanel({
   selectedLesson,
   isHintLoading,
   isErrorFeedbackLoading,
+  isReviewLoading,
   onCodeChange,
   onEditorKeyDown,
   onRunCode,
   onResetCode,
   onShowHint,
+  onShowCodeReview,
 }: WorkspacePanelProps) {
   const lineNumbers = useMemo(() => code.split('\n'), [code]);
   const isRunning = status === 'loading' || status === 'running';
@@ -88,29 +93,41 @@ export function WorkspacePanel({
           <div className="editor-shell__buttons">
             <button
               className="pressable editor-button editor-button--secondary"
-              disabled={isHintLoading || !selectedLesson}
+              disabled={isHintLoading || isReviewLoading || !selectedLesson || isRunning}
               type="button"
               onClick={() => void onShowHint()}
             >
               <span aria-hidden="true" className="material-symbols-outlined">
                 lightbulb
               </span>
-              {isHintLoading ? 'Đang hỏi AI' : 'Gợi ý AI'}
+              {isHintLoading ? VI_MESSAGES.home.labels.askingAi : VI_MESSAGES.home.labels.askAi}
             </button>
             <button
               className="pressable editor-button editor-button--secondary"
+              disabled={isHintLoading || isReviewLoading || !selectedLesson || isRunning}
+              type="button"
+              onClick={() => void onShowCodeReview()}
+            >
+              <span aria-hidden="true" className="material-symbols-outlined">
+                rate_review
+              </span>
+              {isReviewLoading ? VI_MESSAGES.home.labels.askingReview : VI_MESSAGES.home.labels.askReview}
+            </button>
+            <button
+              className="pressable editor-button editor-button--secondary"
+              disabled={isHintLoading || isReviewLoading || isRunning}
               type="button"
               onClick={onResetCode}
             >
               <span aria-hidden="true" className="material-symbols-outlined">
                 refresh
               </span>
-              Đặt lại
+              {VI_MESSAGES.home.labels.reset}
             </button>
           </div>
           <button
             className="pressable editor-button editor-button--primary"
-            disabled={isRunning || isErrorFeedbackLoading}
+            disabled={isRunning || isErrorFeedbackLoading || isReviewLoading}
             type="button"
             onClick={() => void onRunCode()}
           >
@@ -118,12 +135,12 @@ export function WorkspacePanel({
               play_arrow
             </span>
             {status === 'loading'
-              ? 'Đang tải Python'
+              ? VI_MESSAGES.home.labels.loadingPython
               : status === 'running'
-                ? 'Đang chạy'
+                ? VI_MESSAGES.home.labels.running
                 : isErrorFeedbackLoading
-                  ? 'Đang giải thích lỗi'
-                  : 'Chạy mã'}
+                  ? VI_MESSAGES.home.labels.explainingError
+                  : VI_MESSAGES.home.labels.runCode}
           </button>
         </div>
       </section>
@@ -133,7 +150,7 @@ export function WorkspacePanel({
           <span aria-hidden="true" className="material-symbols-outlined">
             wysiwyg
           </span>
-          <span>Kết quả màn hình</span>
+          <span>{VI_MESSAGES.home.labels.outputTitle}</span>
         </div>
         <div className={`output-shell__body output-shell__body--${outputTone}`}>
           <pre className="output-shell__text">{output}</pre>

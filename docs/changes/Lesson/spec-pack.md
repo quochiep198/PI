@@ -389,6 +389,49 @@ POST /api/hint
 - BR-F02-3: Lỗi unlock badge không ảnh hưởng luồng học chính; fail silently với log.
 
 ---
+
+### 5.12 Thẩm định code bằng Mascot AI (Mascot AI Code Reviewer)
+
+**Luồng chính**
+1. Học sinh viết mã trong editor và có thể bấm nút `AI Nhận Xét` bất kỳ lúc nào để nhận đánh giá về phong cách lập trình sạch.
+2. Frontend set `isReviewLoading = true` và hiển thị thông báo chờ.
+3. Gửi `POST /api/ai/review-code` kèm `lessonId` và `code`.
+4. Backend nhận yêu cầu, kiểm tra quyền truy cập bài học và kiểm tra xem học sinh đã được nhận thưởng cho bài học này chưa.
+5. Gọi Groq AI với prompt đóng vai Mascot AI (giọng điệu trẻ trung, dễ mến) để nhận xét 3 phần: Khen ngợi cấu trúc -> Điểm cải tiến nhẹ nhàng -> Khích lệ tích cực (không chứa code giải hoặc lời giải trực tiếp).
+6. Nếu đây là lần đầu yêu cầu nhận xét bài học này:
+   - Cộng thưởng 15 Coins và 5 XP cho học sinh.
+   - Ghi nhận Coins & XP vào cơ sở dữ liệu (`user_coins`, `user_xp`, `user_xp_log`).
+   - Lưu kết quả nhận xét code vào `user_lesson_reviews` với số Coins/XP nhận được.
+7. Nếu đã từng yêu cầu nhận xét bài học này từ trước:
+   - Lưu kết quả vào `user_lesson_reviews` với giá trị thưởng Coins/XP bằng `0` (không cộng thêm).
+8. Backend trả kết quả đánh giá về cùng với thông số cập nhật Coins/XP của user.
+9. Frontend hiển thị đánh giá của AI trong Output panel và cập nhật cache coin/XP cùng hiệu ứng thăng cấp nếu có.
+
+**Business rules**
+- BR-CR-1: Nút nhận xét bị disable khi đang loading hoặc chưa chọn bài học.
+- BR-CR-2: Phần thưởng Coins (15) và XP (5) chỉ được trao một lần duy nhất cho mỗi bài học để tránh lạm dụng (spam).
+- BR-CR-3: AI không được cung cấp lời giải hoặc code hoàn chỉnh trực tiếp để học sinh tự suy nghĩ và sửa lỗi.
+
+---
+
+### 5.13 Trò chuyện trực tiếp cùng Bạn AI (Chatbot companion)
+
+**Luồng chính**
+1. Giao diện Output Shell được cải tiến thành giao diện Tab song song: Tab "Màn hình" hiển thị kết quả biên dịch và Tab "Trò chuyện AI" hiển thị chatbot.
+2. Khi chọn một bài học mới:
+   - Hệ thống gọi `GET /api/ai/chat/history?lessonId=...` để tải lịch sử 15 tin nhắn gần nhất.
+   - Nếu lịch sử trống, chatbot hiển thị một tin nhắn chào chào mừng thân thiện từ Mascot AI.
+3. Học sinh có thể gửi tin nhắn để hỏi bất kỳ câu hỏi nào về Python.
+4. Gửi `POST /api/ai/chat` kèm `{ lessonId, message, code }` (code hiện tại trong editor).
+5. Backend xác thực session, lấy 10 tin nhắn gần nhất làm ngữ cảnh hội thoại, ghép cùng System Prompt Mascot AI.
+6. Groq AI tạo phản hồi. Cả tin nhắn của học sinh và của AI được lưu vào bảng `user_chat_messages`.
+7. Trả phản hồi về frontend để hiển thị dạng bong bóng chat. AI phản hồi với phong cách xưng hô tớ-cậu thân mật, dùng ví dụ dễ hiểu cho lứa tuổi học sinh lớp 6, và nghiêm cấm đưa lời giải code hoàn chỉnh trực tiếp.
+
+**Business rules**
+- BR-CH-1: Chatbot hoạt động theo ngữ cảnh từng bài học riêng biệt. Khi chuyển bài học, lịch sử chat bài cũ được thay bằng bài mới.
+- BR-CH-2: AI phải từ chối khéo léo khi học sinh yêu cầu viết hộ code giải bài tập, thay vào đó dẫn dắt bằng các gợi ý nhỏ.
+
+---
 ## 6. API liên quan
 
 | Method | Path | Mục đích |
@@ -401,6 +444,9 @@ POST /api/hint
 | `POST` | `/api/progress/complete` | đánh dấu hoàn thành lesson |
 | `POST` | `/api/hint` | lấy gợi ý AI |
 | `GET` | `/api/presence/stream` | stream SSE số người học online |
+| `POST` | `/api/ai/review-code` | lấy nhận xét code từ Mascot AI và nhận phần thưởng một lần |
+| `GET` | `/api/ai/chat/history` | tải lịch sử chat của bài học |
+| `POST` | `/api/ai/chat` | gửi tin nhắn chat và nhận phản hồi từ Mascot AI |
 
 ---
 
@@ -432,6 +478,10 @@ POST /api/hint
 | AC-LESSON-HOME-10 | User Pro chọn được `Nâng cao lớp 6` | E2E |
 | AC-LESSON-HOME-11 | Khi có thêm user đăng nhập mở Homepage, số online tăng realtime | E2E |
 | AC-LESSON-HOME-12 | Khi user đóng tab hoặc logout, số online giảm realtime | E2E |
+| AC-LESSON-HOME-13 | Nhấn nút AI Nhận Xét hiển thị nhận xét từ Mascot AI trong khung Output | E2E |
+| AC-LESSON-HOME-14 | Nhận xét lần đầu ở mỗi bài học được cộng 15 Coins và 5 XP, các lần sau không được cộng | E2E |
+| AC-LESSON-HOME-15 | Bấm Tab "Trò chuyện AI" mở ra giao diện chat bong bóng và hiển thị tin nhắn chào của Mascot | E2E |
+| AC-LESSON-HOME-16 | Chat với AI nhận được phản hồi tớ-cậu thân thiện, không cho code giải trực tiếp, chuyển bài học sẽ đổi lịch sử chat tương ứng | E2E |
 
 ---
 

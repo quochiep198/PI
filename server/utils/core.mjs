@@ -1,4 +1,4 @@
-﻿import crypto from 'node:crypto';
+import crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { put } from '@vercel/blob';
 import { execute, query } from '../db.mjs';
@@ -42,6 +42,8 @@ export const XP_DAILY_CHALLENGE_BONUS = 30;
 export const COINS_LESSON_COMPLETE = 100;
 export const COINS_STREAK_BASE = 10;
 export const COINS_STREAK_STEP = 2;
+export const COINS_CODE_REVIEW = 15;
+export const XP_CODE_REVIEW = 5;
 export const STREAK_ACHIEVEMENTS = {
   7: 'Tuần lễ đầu tiên!',
   14: 'Hai tuần kiên trì!',
@@ -64,6 +66,7 @@ export const XP_SOURCES = {
   DAILY_CHALLENGE: 'daily_challenge',
   DAILY_CHALLENGE_BONUS: 'daily_challenge_bonus',
   CHALLENGE_COMPLETE: 'challenge_complete',
+  CODE_REVIEW: 'code_review',
 };
 
 export function getLevelFromXp(xp) {
