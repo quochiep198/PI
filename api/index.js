@@ -9,7 +9,7 @@ import { getXpHandler, postXpHandler, addXpHandler, getCoinsHandler, getLeaderbo
 import { getChallengesHandler, submitChallengeHandler } from '../server/controllers/challenges.mjs';
 import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler, setActiveAvatarHandler, getUserItemsHandler, setActiveUserItemHandler, addUserItemHandler } from '../server/controllers/admin.mjs';
 import { healthHandler, onlinePresenceStreamHandler } from '../server/controllers/system.mjs';
-import { errorFeedbackHandler, hintHandler } from '../server/controllers/ai.mjs';
+import { errorFeedbackHandler, hintHandler, codeReviewHandler, getChatHistoryHandler, chatHandler } from '../server/controllers/ai.mjs';
 
 const app = express();
 
