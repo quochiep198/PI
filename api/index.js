@@ -69,4 +69,9 @@ app.post('/api/user-items', addUserItemHandler);
 app.post('/api/user-items/list', getUserItemsHandler);
 app.post('/api/user-items/set-active', setActiveUserItemHandler);
 
+
+app.post('/api/ai/review-code', codeReviewHandler);
+app.get('/api/ai/chat/history', getChatHistoryHandler);
+app.post('/api/ai/chat', chatHandler);
+
 export default app;
