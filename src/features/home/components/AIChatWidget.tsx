@@ -1,12 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { VI_MESSAGES } from '../../../content/messages';
-import type { Lesson } from '../useLessons';
+
+type ChatItemContext = {
+  id: number;
+  title: string;
+  starterCode?: string;
+};
 
 type AIChatWidgetProps = {
   chatMessages: Array<{ sender: 'user' | 'ai'; messageText: string }>;
   isChatLoading: boolean;
-  selectedLesson: Lesson | null;
+  selectedLesson: ChatItemContext | null;
   onSendChatMessage: (message: string) => void;
+  welcomeMessage?: string;
+  isChallenge?: boolean;
 };
 
 export function AIChatWidget({
@@ -14,6 +21,8 @@ export function AIChatWidget({
   isChatLoading,
   selectedLesson,
   onSendChatMessage,
+  welcomeMessage,
+  isChallenge = false,
 }: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -68,7 +77,7 @@ export function AIChatWidget({
                 <div className="chat-message chat-message--ai">
                   <div className="chat-message__mascot">🐧</div>
                   <div className="chat-message__bubble">
-                    {VI_MESSAGES.home.labels.chatWelcome}
+                    {welcomeMessage || VI_MESSAGES.home.labels.chatWelcome}
                   </div>
                 </div>
               ) : (
@@ -98,9 +107,9 @@ export function AIChatWidget({
                 type="button"
                 className="chat-suggestion-btn"
                 disabled={isChatLoading}
-                onClick={() => onSendChatMessage('Giải thích mục tiêu bài học này giúp tớ với!')}
+                onClick={() => onSendChatMessage(isChallenge ? 'Giải thích mục tiêu thử thách này giúp tớ với!' : 'Giải thích mục tiêu bài học này giúp tớ với!')}
               >
-                Giải thích bài học
+                {isChallenge ? 'Giải thích thử thách' : 'Giải thích bài học'}
               </button>
               <button
                 type="button"
@@ -114,7 +123,7 @@ export function AIChatWidget({
                 type="button"
                 className="chat-suggestion-btn"
                 disabled={isChatLoading}
-                onClick={() => onSendChatMessage('Cho tớ một ví dụ thực tế dễ hiểu về nội dung bài này nhé!')}
+                onClick={() => onSendChatMessage(isChallenge ? 'Cho tớ một ví dụ thực tế dễ hiểu về nội dung thử thách này nhé!' : 'Cho tớ một ví dụ thực tế dễ hiểu về nội dung bài này nhé!')}
               >
                 Ví dụ thực tế
               </button>

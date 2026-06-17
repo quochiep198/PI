@@ -7,7 +7,7 @@ import { LevelUpModal } from './components/LevelUpModal';
 import { useLessons, type Lesson } from './useLessons';
 import { useLessonProgress } from './useLessonProgress';
 import { usePyodideRunner } from './usePyodideRunner';
-import { useXP } from './useXP';
+import { useXP, type XpResponse } from './useXP';
 import { playCelebrationChime } from '../shared/soundEffects';
 import { setCachedCoins } from '../shared/coinsCache';
 import { AIChatWidget } from './components/AIChatWidget';
@@ -142,7 +142,7 @@ export function HomePage({ user }: HomePageProps) {
         const data = await response.json();
         if (active) {
           setChatMessages(
-            (data.messages || []).map((msg: any) => ({
+            (data.messages || []).map((msg: { sender: 'user' | 'ai'; messageText: string }) => ({
               sender: msg.sender,
               messageText: msg.messageText,
             }))
@@ -393,7 +393,7 @@ export function HomePage({ user }: HomePageProps) {
         coinsEarned?: number;
         xpEarned?: number;
         totalCoins?: number;
-        xpData?: any;
+        xpData?: XpResponse;
         message?: string;
       };
 

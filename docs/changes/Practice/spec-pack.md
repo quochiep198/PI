@@ -225,6 +225,23 @@ type UseStreakReturn = {
 - Tạo bảng quan hệ giữa Streak à User
 - Nếu user đã Streak rồi thì phải cập nhật coin liền, không phải reload lại mới cập nhật
 - Hiển thị avatar ở danh sách list
+
+### 5.13 Trò chuyện trực tiếp cùng Bạn AI (Chatbot companion)
+
+**Luồng chính**
+1. Giao diện Workspace Panel / Output Shell trong Daily Practice (khi bắt đầu thử thách) được cải tiến thành giao diện Tab song song: Tab "Màn hình" hiển thị kết quả biên dịch và Tab "Trò chuyện AI" hiển thị chatbot.
+2. Khi bắt đầu hoặc chọn một thử thách mới:
+   - Hệ thống gọi `GET /api/ai/chat/history?challengeId=...` để tải lịch sử 15 tin nhắn gần nhất.
+   - Nếu lịch sử trống, chatbot hiển thị một tin nhắn chào mừng thân thiện từ Mascot AI.
+3. Học sinh có thể gửi tin nhắn để hỏi bất kỳ câu hỏi nào về thử thách hoặc Python.
+4. Gửi `POST /api/ai/chat` kèm `{ challengeId, message, code }` (code hiện tại trong editor).
+5. Backend xác thực session, lấy 10 tin nhắn gần nhất làm ngữ cảnh hội thoại, ghép cùng System Prompt Mascot AI.
+6. Groq AI tạo phản hồi. Cả tin nhắn của học sinh và của AI được lưu vào bảng `user_chat_messages`.
+7. Trả phản hồi về frontend để hiển thị dạng bong bóng chat. AI phản hồi với phong cách xưng hô tớ-cậu thân mật, dùng ví dụ dễ hiểu cho lứa tuổi học sinh lớp 6, và nghiêm cấm đưa lời giải code hoàn chỉnh trực tiếp.
+
+**Business rules**
+- BR-CH-1: Chatbot hoạt động theo ngữ cảnh từng thử thách riêng biệt. Khi chuyển thử thách hoặc đóng/mở workspace, lịch sử chat thử thách cũ được thay thế bằng thử thách mới.
+- BR-CH-2: AI phải từ chối khéo léo khi học sinh yêu cầu viết hộ code giải thử thách, thay vào đó dẫn dắt bằng các gợi ý nhỏ để học sinh tự hoàn thành.
 ---
 
 ## 6. Challenges Section

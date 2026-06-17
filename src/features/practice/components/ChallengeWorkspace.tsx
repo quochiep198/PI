@@ -3,6 +3,7 @@ import { Challenge, type ChallengeSubmitResult } from '../types/challenge';
 import { usePyodideRunner } from '../../home/usePyodideRunner';
 import { setCachedXp } from '../../shared/xpCache';
 import { setCachedCoins } from '../../shared/coinsCache';
+import { AIChatWidget } from '../../home/components/AIChatWidget';
 
 type ChallengeWorkspaceProps = {
   challenge: Challenge | null;
@@ -19,6 +20,82 @@ export function ChallengeWorkspace({ challenge, isOpen, onClose, onComplete }: C
   const [showRewardAnimation, setShowRewardAnimation] = useState(false);
   const [showRewardPopup, setShowRewardPopup] = useState(false);
   const { status, runCode, startupMessage } = usePyodideRunner();
+
+  // Chatbot states
+  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; messageText: string }>>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // Load chat history when challenge changes
+  useEffect(() => {
+    if (!challenge) {
+      setChatMessages([]);
+      return;
+    }
+
+    const challengeId = challenge.id;
+    let active = true;
+    async function loadChatHistory() {
+      try {
+        const response = await fetch(`/api/ai/chat/history?challengeId=${challengeId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active) {
+          setChatMessages(
+            (data.messages || []).map((msg: { sender: 'user' | 'ai'; messageText: string }) => ({
+              sender: msg.sender,
+              messageText: msg.messageText,
+            }))
+          );
+        }
+      } catch {
+        // Fail silently
+      }
+    }
+
+    void loadChatHistory();
+
+    return () => {
+      active = false;
+    };
+  }, [challenge]);
+
+  const handleSendChatMessage = useCallback(async (messageText: string) => {
+    if (!challenge) return;
+
+    const newUserMsg = { sender: 'user' as const, messageText };
+    setChatMessages((prev) => [...prev, newUserMsg]);
+    setIsChatLoading(true);
+
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          challengeId: challenge.id,
+          message: messageText,
+          code,
+        }),
+      });
+
+      const payload = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(payload.message || 'Không gửi được tin nhắn.');
+      }
+
+      const aiMsg = { sender: 'ai' as const, messageText: payload.message || '' };
+      setChatMessages((prev) => [...prev, aiMsg]);
+    } catch (error) {
+      const errorMsg = {
+        sender: 'ai' as const,
+        messageText: error instanceof Error ? error.message : 'Tớ gặp chút sự cố mạng rồi, cậu thử lại nhé!',
+      };
+      setChatMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [challenge, code]);
 
   // Reset code when challenge changes
   useEffect(() => {
@@ -127,7 +204,7 @@ export function ChallengeWorkspace({ challenge, isOpen, onClose, onComplete }: C
     } finally {
       setIsSubmitting(false);
     }
-  }, [challenge, code, isSubmitting, runCode]);
+  }, [challenge, code, isSubmitting, runCode, onComplete]);
 
   const handleClose = useCallback(() => {
     setCode('');
@@ -257,6 +334,15 @@ export function ChallengeWorkspace({ challenge, isOpen, onClose, onComplete }: C
         </footer>
       </div>
     </div>
+
+    <AIChatWidget
+      chatMessages={chatMessages}
+      isChatLoading={isChatLoading}
+      selectedLesson={challenge}
+      onSendChatMessage={handleSendChatMessage}
+      welcomeMessage="Chào cậu! Tớ là bạn Cánh Cụt học Python. Cậu cần tớ trợ giúp gì về thử thách này không? Hihi!"
+      isChallenge={true}
+    />
     </>
   );
 }
