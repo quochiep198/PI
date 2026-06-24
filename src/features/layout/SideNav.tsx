@@ -1,9 +1,14 @@
+import { PetStatusCard, PetWidget, type UserPet } from '../pet';
+
 export type SideNavProps = {
   activeLabel?: string;
   isAdmin?: boolean;
   onlineCount?: number;
   onlineLoading?: boolean;
   onlineError?: boolean;
+  activePet: UserPet | null;
+  isStreakExcited: boolean;
+  onFeedPet: () => Promise<void> | void;
   onNavigateLessons?: () => void;
   onNavigatePractice?: () => void;
   onNavigateInventory?: () => void;
@@ -11,7 +16,21 @@ export type SideNavProps = {
   onNavigateSettings?: () => void;
 };
 
-export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineLoading = false, onlineError = false, onNavigateLessons, onNavigatePractice, onNavigateInventory, onNavigateAccessories, onNavigateSettings }: SideNavProps) {
+export function SideNav({
+  activeLabel,
+  isAdmin = false,
+  onlineCount = 0,
+  onlineLoading = false,
+  onlineError = false,
+  activePet,
+  isStreakExcited,
+  onFeedPet,
+  onNavigateLessons,
+  onNavigatePractice,
+  onNavigateInventory,
+  onNavigateAccessories,
+  onNavigateSettings
+}: SideNavProps) {
   const handleNavigation = (label: string) => {
     switch (label) {
       case 'Lessons':
@@ -112,12 +131,16 @@ export function SideNav({ activeLabel, isAdmin = false, onlineCount = 0, onlineL
         </button>
       </nav>
 
-      {/* <div className="upgrade-card">
-        <p className="upgrade-card__title">Học không giới hạn!</p>
-        <button className="pressable upgrade-card__button" type="button">
-          Nâng cấp Pro
-        </button>
-      </div> */}
+      {activePet && (
+        <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <PetWidget pet={activePet} tone="idle" />
+          <PetStatusCard
+            pet={activePet}
+            isStreakExcited={isStreakExcited}
+            onFeed={onFeedPet}
+          />
+        </div>
+      )}
     </aside>
   );
 }

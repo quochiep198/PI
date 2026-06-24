@@ -63,8 +63,10 @@ Tài liệu này phản ánh hành vi thực tế của code hiện tại và th
 | AI hint | `HomePage` gọi `POST /api/hint` theo bài học đang chọn |
 | Runtime Python | chạy ở client bằng Pyodide |
 | Presence online | `useOnlineLearners` subscribe `/api/presence/stream`; server broadcast số user online theo `user.id` duy nhất |
+| Thú cưng đồng hành | [Mới] Cho phép người dùng nhận nuôi, tương tác và tiến hóa thú cưng thông qua điểm coins từ các bài tập |
 
 ---
+
 
 ## 5. Chi tiết đặc tả
 
@@ -432,6 +434,60 @@ POST /api/hint
 - BR-CH-2: AI phải từ chối khéo léo khi học sinh yêu cầu viết hộ code giải bài tập, thay vào đó dẫn dắt bằng các gợi ý nhỏ.
 
 ---
+
+### 5.14 Nhiệm vụ phụ tự động bằng AI (AI Side-quests)
+
+**Luồng chính**
+1. Khi học sinh chọn một bài học trên giao diện HomePage:
+   - Hệ thống tự động gửi yêu cầu `GET /api/ai/side-quests?lessonId=...` để tải danh sách các nhiệm vụ phụ của bài học đó.
+2. Tại backend, hệ thống kiểm tra cache trong bảng `lesson_side_quests`:
+   - Nếu đã có nhiệm vụ phụ cho bài học này, trả về ngay lập tức để tiết kiệm chi phí gọi AI.
+   - Nếu chưa có, backend sẽ gọi Groq AI (Llama 3) sinh ra 3 nhiệm vụ phụ phù hợp với mục tiêu học tập của bài học dưới dạng JSON có cấu trúc. Mỗi nhiệm vụ gồm: `title` (tiêu đề nhiệm vụ), `description` (hướng dẫn cụ thể), `rewardXp` (+10 XP), `rewardCoins` (+5 Coins), và một `verificationRule` (quy tắc xác thực, ví dụ: loại `code_contains` và giá trị cụ thể). Sau đó lưu vào bảng `lesson_side_quests`.
+3. Frontend hiển thị danh sách nhiệm vụ phụ bên dưới phần mục tiêu bài học dưới dạng các checkbox. Các nhiệm vụ đã hoàn thành trước đó (được check qua bảng `user_completed_side_quests`) sẽ hiển thị trạng thái hoàn tất (checked).
+4. Khi học sinh bấm nút "Chạy Code" và Pyodide chạy thành công:
+   - Frontend sẽ tự động kiểm tra code trong editor hoặc output hiển thị với các `verificationRule` của từng nhiệm vụ phụ chưa hoàn thành.
+   - Nếu một nhiệm vụ phụ thỏa mãn quy tắc, frontend tự động đánh dấu hoàn thành trên giao diện, hiển thị thông báo thăng tiến nhỏ, và gửi yêu cầu `POST /api/progress/side-quest/complete` lên backend.
+5. Backend xác thực người dùng, lưu vết hoàn thành vào bảng `user_completed_side_quests` để tránh nhận thưởng lặp lại, và cộng thưởng XP/Coins tương ứng vào tài khoản học sinh.
+
+**Quy tắc xác thực (Verification Rules) được hỗ trợ ở Frontend:**
+- `code_contains`: Mã nguồn phải chứa chuỗi con xác định (ví dụ: chứa hàm `input`, chứa từ khóa `#`, hoặc chứa ký tự cụ thể).
+- `code_excludes`: Mã nguồn KHÔNG ĐƯỢC chứa chuỗi con xác định.
+- `output_contains`: Kết quả hiển thị trên màn hình console (output) phải chứa chuỗi con xác định.
+- `output_excludes`: Kết quả hiển thị trên màn hình console (output) KHÔNG ĐƯỢC chứa chuỗi con xác định.
+
+**Business rules**
+- BR-SQ-1: Mỗi nhiệm vụ phụ chỉ được hoàn thành và nhận phần thưởng một lần duy nhất cho mỗi tài khoản học sinh.
+- BR-SQ-2: Phần thưởng mặc định cho mỗi nhiệm vụ phụ là +10 XP và +5 Coins.
+- BR-SQ-3: Các lỗi xảy ra trong quá trình kiểm tra hoặc lưu vết nhiệm vụ phụ không được ảnh hưởng đến luồng chạy code chính hoặc đánh dấu hoàn thành bài học chính.
+
+---
+
+### 5.15 Hệ thống Thú cưng đồng hành — Gamification Pet (F-03)
+
+**Luồng chính**
+1. Khi học sinh vào `HomePage` học bài:
+   - Hệ thống gọi `GET /api/user-pets/active` để kiểm tra thông tin thú cưng đang hoạt động của học sinh.
+   - Nếu học sinh chưa sở hữu thú cưng nào, hiển thị modal chọn thú cưng ban đầu (`PetSelectionModal`) bao gồm: Cyber Cat, PyDragon, Algorithm Owl.
+2. Thú cưng được render dưới dạng Widget đồng hành (Mini-Companion) trong `WorkspacePanel` (khu vực editor/console).
+3. Phản ứng thời gian thực (Real-time reactions):
+   - Khi Pyodide chạy thành công code và vượt qua kiểm tra bài học: Pet nhảy múa chúc mừng, thả tim.
+   - Khi chạy code gặp lỗi biên dịch/logic: Pet gãi đầu suy nghĩ, lo lắng và xuất hiện bóng thoại gợi ý bấm nút AI.
+   - Trạng thái rảnh (Idle): Pet tự chơi đùa, gõ phím mini, hoặc ngủ.
+4. Cơ chế chăm sóc và tiến hóa:
+   - Học sinh có thể click vào Pet để mở hộp thoại tương tác, cho Pet ăn bằng thức ăn mua từ Shop bằng Coins.
+   - Mỗi lần cho ăn sẽ tăng điểm No (`fullness`) và điểm Thân thiết / Kinh nghiệm Pet (`petXP`).
+   - Khi Pet đạt đủ `petXP` của cấp hiện tại, Pet sẽ tiến hóa (nâng cấp level và tự động đổi hình ảnh tương ứng với cấp độ mới).
+5. Ảnh hưởng của Daily Streak:
+   - Nếu học sinh có chuỗi streak học tập liên tiếp >= 3 ngày, Pet sẽ kích hoạt trạng thái "Hưng phấn" (Excited), nhận gấp 1.5 lần kinh nghiệm từ thức ăn.
+   - Nếu đứt chuỗi streak quá 36h, Pet sẽ buồn bã/đói, tạm dừng tiến hóa hoặc giảm nhẹ chỉ số vui vẻ.
+
+**Business rules**
+- BR-PET-1: Mỗi người học chỉ được kích hoạt hoạt động 1 Pet duy nhất tại một thời điểm.
+- BR-PET-2: Chỉ cho phép cho Pet ăn tối đa khi độ no (`fullness`) đạt 100%. Điểm no giảm dần theo thời gian (ví dụ: -5 điểm mỗi giờ).
+- BR-PET-3: Phụ kiện mua cho Pet trong `user_items` được lưu và đồng bộ trực quan ngay khi thay đổi.
+- BR-PET-4: Trạng thái tiến hóa gồm 4 giai đoạn: Trứng (Level 1) -> Sơ sinh (Level 2-4) -> Trưởng thành (Level 5-9) -> Siêu cấp (Level 10+).
+
+---
 ## 6. API liên quan
 
 | Method | Path | Mục đích |
@@ -447,6 +503,12 @@ POST /api/hint
 | `POST` | `/api/ai/review-code` | lấy nhận xét code từ Mascot AI và nhận phần thưởng một lần |
 | `GET` | `/api/ai/chat/history` | tải lịch sử chat của bài học |
 | `POST` | `/api/ai/chat` | gửi tin nhắn chat và nhận phản hồi từ Mascot AI |
+| `GET` | `/api/ai/side-quests` | Lấy danh sách nhiệm vụ phụ của bài học (hoặc tự động sinh bằng AI nếu chưa có cache) |
+| `POST` | `/api/progress/side-quest/complete` | Ghi nhận hoàn thành nhiệm vụ phụ và nhận phần thưởng Coins/XP |
+| `GET` | `/api/user-pets/active` | Lấy thông tin thú cưng đang hoạt động của người dùng |
+| `POST` | `/api/user-pets/adopt` | Nhận nuôi linh thú ban đầu (chọn loại pet) |
+| `POST` | `/api/user-pets/feed` | Cho thú cưng ăn bằng Coins / vật phẩm thức ăn |
+| `POST` | `/api/user-pets/accessories/equip` | Thay phụ kiện (mũ, kính...) cho thú cưng |
 
 ---
 
@@ -482,6 +544,13 @@ POST /api/hint
 | AC-LESSON-HOME-14 | Nhận xét lần đầu ở mỗi bài học được cộng 15 Coins và 5 XP, các lần sau không được cộng | E2E |
 | AC-LESSON-HOME-15 | Bấm Tab "Trò chuyện AI" mở ra giao diện chat bong bóng và hiển thị tin nhắn chào của Mascot | E2E |
 | AC-LESSON-HOME-16 | Chat với AI nhận được phản hồi tớ-cậu thân thiện, không cho code giải trực tiếp, chuyển bài học sẽ đổi lịch sử chat tương ứng | E2E |
+| AC-LESSON-HOME-17 | Khi chọn bài học, hiển thị danh sách 3 nhiệm vụ phụ tự động ở Lesson Panel | E2E |
+| AC-LESSON-HOME-18 | Chạy code thành công và thỏa mãn điều kiện nhiệm vụ phụ sẽ tự động tích xanh checkbox và nhận thưởng Coins/XP | E2E |
+| AC-LESSON-HOME-19 | Đã nhận thưởng nhiệm vụ phụ thì các lần chạy code sau không được cộng thêm thưởng nữa | E2E |
+| AC-LESSON-HOME-20 | Người dùng mới mở Homepage chưa có Pet sẽ kích hoạt modal chọn Pet ban đầu | E2E |
+| AC-LESSON-HOME-21 | Pet mini-widget trong WorkspacePanel làm các động tác vui mừng khi chạy code đúng và buồn bã khi chạy lỗi | E2E |
+| AC-LESSON-HOME-22 | Thực hiện cho Pet ăn thành công trừ tiền Coins, tăng độ no và XP của Pet, đồng thời đổi hình ảnh tiến hóa khi đủ cấp | E2E |
+| AC-LESSON-HOME-23 | Trạng thái Excited của Pet được hiển thị trực quan khi streak tích lũy từ 3 ngày trở lên | E2E |
 
 ---
 
@@ -502,3 +571,6 @@ POST /api/hint
 | 2 | Có cần fallback polling khi `EventSource` không khả dụng không? |
 | 3 | Có cần backend enforce Pro track ở API level nếu sau này lessons Pro được tách nội dung thật không? |
 | 4 | Có cần chuẩn hóa toàn bộ chuỗi tiếng Việt đang lỗi encoding trong `HomePage` và auth flow không? |
+| 5 | AI Side-quests sinh ra bằng AI có thể bị bypass nếu học sinh viết code lách luật (ví dụ: viết comment chứa chuỗi yêu cầu thay vì viết code thực tế); có cần nâng cấp cơ chế chấm điểm động bằng AI ở backend trong tương lai không? |
+| 6 | Có nên cho phép Pet "bỏ trốn" hoặc "bị ốm nặng" nếu người dùng đứt chuỗi streak quá lâu (ví dụ > 7 ngày) hay chỉ dừng lại ở đóng băng cấp độ tiến hóa? |
+

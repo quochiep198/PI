@@ -59,57 +59,57 @@ export function PracticePage({ user, onNavigateUpgrade }: PracticePageProps) {
   return (
     <>
       <main className="practice-main">
-      <div className="practice-content">
-        <div className="practice-center">
-          <StreakCalendar userId={user.id} />
+        <div className="practice-content">
+          <div className="practice-center">
+            <StreakCalendar userId={user.id} />
 
-          <section className="practice-challenges">
-            <h2 className="practice-challenges__title">Thử thách hôm nay</h2>
-            {loading && (
-              <div className="practice-challenges__loading">
-                <span className="material-symbols-outlined animated-spin">progress_activity</span>
-                <p>Đang tải thử thách...</p>
-              </div>
-            )}
-            {error && (
-              <div className="practice-challenges__error">
-                <span className="material-symbols-outlined">error</span>
-                <p>{error}</p>
-              </div>
-            )}
-            {!loading && !error && challenges.length === 0 && (
-              <div className="practice-challenges__empty">
-                <span className="material-symbols-outlined">school</span>
-                <p>Hoàn thành các bài học để mở khóa thử thách!</p>
-              </div>
-            )}
-            {!loading && !error && visibleChallenges.length > 0 && visibleChallenges.map((challenge) => (
-              <ChallengeCard
-                key={challenge.id}
-                challenge={challenge}
-                onStart={handleStartChallenge}
-              />
-            ))}
-            {!loading && !error && hasLockedChallenges ? (
-              <div className="practice-challenges__upgrade">
-                <div className="practice-challenges__upgrade-copy">
-                  <p className="practice-challenges__upgrade-title">Mở thêm thử thách Pro</p>
-                  <p className="practice-challenges__upgrade-text">
-                    Tài khoản thường chỉ xem được 3 thử thách mỗi ngày. Nâng cấp Pro để mở 5 thử thách và luyện tập nhiều hơn.
-                  </p>
+            <section className="practice-challenges">
+              <h2 className="practice-challenges__title">Thử thách hôm nay</h2>
+              {loading && (
+                <div className="practice-challenges__loading">
+                  <span className="material-symbols-outlined animated-spin">progress_activity</span>
+                  <p>Đang tải thử thách...</p>
                 </div>
-                <button
-                  type="button"
-                  className="pressable practice-challenges__upgrade-btn"
-                  onClick={onNavigateUpgrade}
-                >
-                  Nâng cấp Pro
-                </button>
-              </div>
-            ) : null}
-          </section>
+              )}
+              {error && (
+                <div className="practice-challenges__error">
+                  <span className="material-symbols-outlined">error</span>
+                  <p>{error}</p>
+                </div>
+              )}
+              {!loading && !error && challenges.length === 0 && (
+                <div className="practice-challenges__empty">
+                  <span className="material-symbols-outlined">school</span>
+                  <p>Hoàn thành các bài học để mở khóa thử thách!</p>
+                </div>
+              )}
+              {!loading && !error && visibleChallenges.length > 0 && visibleChallenges.map((challenge) => (
+                <ChallengeCard
+                  key={challenge.id}
+                  challenge={challenge}
+                  onStart={handleStartChallenge}
+                />
+              ))}
+              {!loading && !error && hasLockedChallenges ? (
+                <div className="practice-challenges__upgrade">
+                  <div className="practice-challenges__upgrade-copy">
+                    <p className="practice-challenges__upgrade-title">Mở thêm thử thách Pro</p>
+                    <p className="practice-challenges__upgrade-text">
+                      Tài khoản thường chỉ xem được 3 thử thách mỗi ngày. Nâng cấp Pro để mở 5 thử thách và luyện tập nhiều hơn.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="pressable practice-challenges__upgrade-btn"
+                    onClick={onNavigateUpgrade}
+                  >
+                    Nâng cấp Pro
+                  </button>
+                </div>
+              ) : null}
+            </section>
 
-          {/* <section className="practice-store">
+            {/* <section className="practice-store">
             <div className="practice-store__header">
               <h2 className="practice-store__title">Đổi qua bằng coin</h2>
               <button type="button" className="practice-store__view-all">
@@ -141,31 +141,31 @@ export function PracticePage({ user, onNavigateUpgrade }: PracticePageProps) {
               ))}
             </div>
           </section> */}
+          </div>
+
+          <aside className="practice-sidebar">
+            <Leaderboard />
+
+            <section className="practice-tip">
+              <div className="practice-tip__icon">
+                <span className="material-symbols-outlined">lightbulb</span>
+              </div>
+              <h2 className="practice-tip__title">Mẹo luyện tập</h2>
+              <p className="practice-tip__content">
+                Nếu bị mắc ở bài khó, hay tách bài toán thành các hàm nhỏ và kiểm tra từng phần
+                bằng output đơn giản trước khi tối ưu.
+              </p>
+            </section>
+          </aside>
         </div>
+      </main>
 
-        <aside className="practice-sidebar">
-          <Leaderboard />
-
-          <section className="practice-tip">
-            <div className="practice-tip__icon">
-              <span className="material-symbols-outlined">lightbulb</span>
-            </div>
-            <h2 className="practice-tip__title">Mẹo luyện tập</h2>
-            <p className="practice-tip__content">
-              Nếu bị mắc ở bài khó, hay tách bài toán thành các hàm nhỏ và kiểm tra từng phần
-              bằng output đơn giản trước khi tối ưu.
-            </p>
-          </section>
-        </aside>
-      </div>
-    </main>
-
-    <ChallengeWorkspace
-      challenge={activeChallenge}
-      isOpen={activeChallenge !== null}
-      onClose={handleCloseWorkspace}
-      onComplete={handleChallengeComplete}
-    />
+      <ChallengeWorkspace
+        challenge={activeChallenge}
+        isOpen={activeChallenge !== null}
+        onClose={handleCloseWorkspace}
+        onComplete={handleChallengeComplete}
+      />
     </>
   );
 }

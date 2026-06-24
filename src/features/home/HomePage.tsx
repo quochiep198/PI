@@ -11,6 +11,7 @@ import { useXP, type XpResponse } from './useXP';
 import { playCelebrationChime } from '../shared/soundEffects';
 import { setCachedCoins } from '../shared/coinsCache';
 import { AIChatWidget } from './components/AIChatWidget';
+import type { UserPet } from '../pet';
 
 type OutputTone = 'idle' | 'success' | 'error';
 type RuntimeFeedback = {
@@ -57,11 +58,12 @@ function stripPythonComments(source: string) {
 
 type HomePageProps = {
   user: AuthUser;
+  activePet: UserPet | null;
   onLogout?: () => Promise<void> | void;
   onNavigatePractice?: () => void;
 };
 
-export function HomePage({ user }: HomePageProps) {
+export function HomePage({ user, activePet }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
   const { runCode, startupMessage, status } = usePyodideRunner();
@@ -88,6 +90,7 @@ export function HomePage({ user }: HomePageProps) {
   // Chatbot states
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; messageText: string }>>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+
 
   useEffect(() => {
     if (status === 'loading' || status === 'error') {
@@ -552,7 +555,10 @@ export function HomePage({ user }: HomePageProps) {
         isChatLoading={isChatLoading}
         selectedLesson={selectedLesson}
         onSendChatMessage={handleSendChatMessage}
+        activePet={activePet}
       />
+
+
     </>
   );
 }

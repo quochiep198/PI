@@ -97,6 +97,7 @@ export function LessonPanel({
         </div>
       </article>
 
+
       <section className="lessons-card" aria-labelledby="lessons-heading">
         <div className="lessons-card__header">
           <h2 id="lessons-heading">Danh sách bài học</h2>

@@ -250,99 +250,99 @@ export function ChallengeWorkspace({ challenge, isOpen, onClose, onComplete }: C
       )}
 
       <div className="challenge-workspace-overlay" onClick={handleClose}>
-      <div className="challenge-workspace-modal" onClick={(e) => e.stopPropagation()}>
-        <header className="challenge-workspace__header">
-          <div className="challenge-workspace__title-row">
-            <h2 className="challenge-workspace__title">{challenge.title}</h2>
-            <span className={`challenge-workspace__difficulty challenge-workspace__difficulty--${challenge.difficulty}`}>
-              {challenge.difficulty === 'easy' ? 'Dễ' : challenge.difficulty === 'medium' ? 'Trung bình' : 'Khó'}
-            </span>
-          </div>
-          <p className="challenge-workspace__description" dangerouslySetInnerHTML={{ __html: challenge.description }} />
-          <div className="challenge-workspace__rewards">
-            <span className="challenge-workspace__reward">
-              <span className="material-symbols-outlined">star</span>
-              +{challenge.xpReward} XP
-            </span>
-            <span className="challenge-workspace__reward">
-              <span className="material-symbols-outlined">monetization_on</span>
-              +{challenge.coinsReward} Coins
-            </span>
-          </div>
-        </header>
-
-        <div className="challenge-workspace__editor">
-          <div className="workspace-panel">
-            <div className="workspace-panel__header">
-              <span className="material-symbols-outlined">code</span>
-              <span>Python</span>
+        <div className="challenge-workspace-modal" onClick={(e) => e.stopPropagation()}>
+          <header className="challenge-workspace__header">
+            <div className="challenge-workspace__title-row">
+              <h2 className="challenge-workspace__title">{challenge.title}</h2>
+              <span className={`challenge-workspace__difficulty challenge-workspace__difficulty--${challenge.difficulty}`}>
+                {challenge.difficulty === 'easy' ? 'Dễ' : challenge.difficulty === 'medium' ? 'Trung bình' : 'Khó'}
+              </span>
             </div>
-            <textarea
-              className="workspace-panel__code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Viết code Python ở đây..."
-              spellCheck={false}
-              autoCapitalize="off"
-              autoCorrect="off"
-              autoComplete="off"
-              data-gramm="false"
-              disabled={result?.success && !result.alreadyCompleted}
-            />
+            <p className="challenge-workspace__description" dangerouslySetInnerHTML={{ __html: challenge.description }} />
+            <div className="challenge-workspace__rewards">
+              <span className="challenge-workspace__reward">
+                <span className="material-symbols-outlined">star</span>
+                +{challenge.xpReward} XP
+              </span>
+              <span className="challenge-workspace__reward">
+                <span className="material-symbols-outlined">monetization_on</span>
+                +{challenge.coinsReward} Coins
+              </span>
+            </div>
+          </header>
+
+          <div className="challenge-workspace__editor">
+            <div className="workspace-panel">
+              <div className="workspace-panel__header">
+                <span className="material-symbols-outlined">code</span>
+                <span>Python</span>
+              </div>
+              <textarea
+                className="workspace-panel__code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Viết code Python ở đây..."
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                autoComplete="off"
+                data-gramm="false"
+                disabled={result?.success && !result.alreadyCompleted}
+              />
+            </div>
+
+            <div className={`workspace-panel workspace-panel--output ${showRewardAnimation ? 'workspace-panel--reward' : ''}`}>
+              <div className="workspace-panel__header">
+                <span className="material-symbols-outlined">terminal</span>
+                <span>Output</span>
+              </div>
+              <pre className="workspace-panel__output">{output || startupMessage}</pre>
+            </div>
           </div>
 
-          <div className={`workspace-panel workspace-panel--output ${showRewardAnimation ? 'workspace-panel--reward' : ''}`}>
-            <div className="workspace-panel__header">
-              <span className="material-symbols-outlined">terminal</span>
-              <span>Output</span>
-            </div>
-            <pre className="workspace-panel__output">{output || startupMessage}</pre>
-          </div>
+          <footer className="challenge-workspace__footer">
+            <button
+              type="button"
+              className="pressable challenge-workspace__btn challenge-workspace__btn--secondary"
+              onClick={handleRun}
+              disabled={status === 'loading' || status === 'running'}
+            >
+              <span className="material-symbols-outlined">play_arrow</span>
+              {status === 'running' ? 'Đang chạy...' : 'Chạy thử'}
+            </button>
+
+            {!result?.success || result.alreadyCompleted ? (
+              <button
+                type="button"
+                className="pressable challenge-workspace__btn challenge-workspace__btn--primary"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                <span className="material-symbols-outlined">check</span>
+                {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="pressable challenge-workspace__btn challenge-workspace__btn--success"
+                onClick={handleClose}
+              >
+                <span className="material-symbols-outlined">close</span>
+                Đóng
+              </button>
+            )}
+          </footer>
         </div>
-
-        <footer className="challenge-workspace__footer">
-          <button
-            type="button"
-            className="pressable challenge-workspace__btn challenge-workspace__btn--secondary"
-            onClick={handleRun}
-            disabled={status === 'loading' || status === 'running'}
-          >
-            <span className="material-symbols-outlined">play_arrow</span>
-            {status === 'running' ? 'Đang chạy...' : 'Chạy thử'}
-          </button>
-
-          {!result?.success || result.alreadyCompleted ? (
-            <button
-              type="button"
-              className="pressable challenge-workspace__btn challenge-workspace__btn--primary"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              <span className="material-symbols-outlined">check</span>
-              {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="pressable challenge-workspace__btn challenge-workspace__btn--success"
-              onClick={handleClose}
-            >
-              <span className="material-symbols-outlined">close</span>
-              Đóng
-            </button>
-          )}
-        </footer>
       </div>
-    </div>
 
-    <AIChatWidget
-      chatMessages={chatMessages}
-      isChatLoading={isChatLoading}
-      selectedLesson={challenge}
-      onSendChatMessage={handleSendChatMessage}
-      welcomeMessage="Chào cậu! Tớ là bạn Cánh Cụt học Python. Cậu cần tớ trợ giúp gì về thử thách này không? Hihi!"
-      isChallenge={true}
-    />
+      <AIChatWidget
+        chatMessages={chatMessages}
+        isChatLoading={isChatLoading}
+        selectedLesson={challenge}
+        onSendChatMessage={handleSendChatMessage}
+        welcomeMessage="Chào cậu! Tớ là bạn Cánh Cụt học Python. Cậu cần tớ trợ giúp gì về thử thách này không? Hihi!"
+        isChallenge={true}
+      />
     </>
   );
 }

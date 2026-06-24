@@ -13,8 +13,9 @@ import { useCoinsCached } from './features/home/useCoinsCached';
 import { useOnlineLearners } from './features/home/useOnlineLearners';
 import { MobileNavigation } from './features/navigate/NavigateNavigation';
 import { clearCachedXp } from './features/shared/xpCache';
-import { clearCachedCoins } from './features/shared/coinsCache';
+import { clearCachedCoins, setCachedCoins } from './features/shared/coinsCache';
 import { installAudioUnlock } from './features/shared/soundEffects';
+import { PetSelectionModal, fetchPetState, adoptPet, feedPet, type UserPet, type PetTemplate } from './features/pet';
 
 type View = 'home' | 'practice' | 'inventory' | 'accessories' | 'settings';
 
@@ -40,6 +41,61 @@ export default function App() {
   const { coins } = useCoinsCached();
   const { xpData } = useXPCached();
   const { onlineLearners, connected: onlineConnected, failed: onlineFailed } = useOnlineLearners(!!user);
+
+  // Pet states
+  const [activePet, setActivePet] = useState<UserPet | null>(null);
+  const [petTemplates, setPetTemplates] = useState<PetTemplate[]>([]);
+  const [showPetAdoptModal, setShowPetAdoptModal] = useState(false);
+  const [isStreakExcited, setIsStreakExcited] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setActivePet(null);
+      return;
+    }
+    let active = true;
+    async function loadPetData() {
+      try {
+        const data = await fetchPetState();
+        if (!active) return;
+        setActivePet(data.activePet);
+        setPetTemplates(data.templates);
+        setIsStreakExcited(data.isStreakExcited);
+        if (!data.activePet) {
+          setShowPetAdoptModal(true);
+        }
+      } catch {
+        // Fail silently
+      }
+    }
+    void loadPetData();
+    return () => { active = false; };
+  }, [user]);
+
+  const handleAdoptPet = async (templateId: number, nickname?: string) => {
+    const result = await adoptPet(templateId, nickname);
+    if (result.success) {
+      setActivePet(result.pet);
+      setShowPetAdoptModal(false);
+    }
+  };
+
+  const handleFeedPet = async () => {
+    const result = await feedPet();
+    if (result.success) {
+      setActivePet((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          level: result.pet.level,
+          currentXp: result.pet.currentXp,
+          nextLevelXp: result.pet.nextLevelXp,
+          fullness: result.pet.fullness,
+        };
+      });
+      setCachedCoins(result.newCoins);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -135,6 +191,9 @@ export default function App() {
           onlineCount={onlineLearners}
           onlineLoading={!onlineConnected && !onlineFailed}
           onlineError={onlineFailed}
+          activePet={activePet}
+          isStreakExcited={isStreakExcited}
+          onFeedPet={handleFeedPet}
           onNavigateLessons={() => setView('home')}
           onNavigatePractice={() => setView('practice')}
           onNavigateInventory={() => setView('inventory')}
@@ -143,7 +202,7 @@ export default function App() {
         />
 
         {view === 'home'
-          ? <HomePage user={user} />
+          ? <HomePage user={user} activePet={activePet} />
           : view === 'practice'
             ? <PracticePage user={user} onNavigateUpgrade={() => setView('settings')} />
             : view === 'inventory'
@@ -158,6 +217,12 @@ export default function App() {
         onNavigateLessons={() => setView('home')}
         onNavigatePractice={() => setView('practice')}
         onNavigateSettings={() => setView('settings')}
+      />
+
+      <PetSelectionModal
+        show={showPetAdoptModal}
+        templates={petTemplates}
+        onAdopt={handleAdoptPet}
       />
     </div>
   );

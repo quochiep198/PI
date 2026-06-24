@@ -3,6 +3,7 @@ import type { Lesson } from '../useLessons';
 import type { RuntimeStatus } from '../usePyodideRunner';
 import { VI_MESSAGES } from '../../../content/messages';
 
+
 type OutputTone = 'idle' | 'success' | 'error';
 
 type WorkspacePanelProps = {
@@ -156,6 +157,8 @@ export function WorkspacePanel({
           <pre className="output-shell__text">{output}</pre>
         </div>
       </section>
+
     </div>
   );
 }
+

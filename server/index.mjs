@@ -11,6 +11,7 @@ import { getChallengesHandler, submitChallengeHandler } from './controllers/chal
 import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler, setActiveAvatarHandler, getUserItemsHandler, setActiveUserItemHandler, addUserItemHandler } from './controllers/admin.mjs';
 import { healthHandler, onlinePresenceStreamHandler } from './controllers/system.mjs';
 import { errorFeedbackHandler, hintHandler, codeReviewHandler, getChatHistoryHandler, chatHandler } from './controllers/ai.mjs';
+import { getActivePetHandler, adoptPetHandler, feedPetHandler, equipAccessoryHandler } from './controllers/pets.mjs';
 
 dotenv.config();
 
@@ -58,6 +59,12 @@ app.post('/api/avatars/set-active', setActiveAvatarHandler);
 app.post('/api/user-items', addUserItemHandler);
 app.post('/api/user-items/list', getUserItemsHandler);
 app.post('/api/user-items/set-active', setActiveUserItemHandler);
+
+// Pet routes
+app.get('/api/user-pets/active', getActivePetHandler);
+app.post('/api/user-pets/adopt', adoptPetHandler);
+app.post('/api/user-pets/feed', feedPetHandler);
+app.post('/api/user-pets/accessories/equip', equipAccessoryHandler);
 
 // Item routes (admin only)
 app.get('/api/items', getItemsHandler);
