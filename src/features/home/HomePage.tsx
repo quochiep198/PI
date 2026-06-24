@@ -60,11 +60,21 @@ type HomePageProps = {
   user: AuthUser;
   activePet: UserPet | null;
   activeAccessories?: PetAccessory[];
+  isStreakExcited: boolean;
+  onFeedPet: () => Promise<void> | void;
+  onOpenShop?: () => void;
   onLogout?: () => Promise<void> | void;
   onNavigatePractice?: () => void;
 };
 
-export function HomePage({ user, activePet, activeAccessories = [] }: HomePageProps) {
+export function HomePage({
+  user,
+  activePet,
+  activeAccessories = [],
+  isStreakExcited,
+  onFeedPet,
+  onOpenShop,
+}: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
   const { runCode, startupMessage, status } = usePyodideRunner();
@@ -524,6 +534,11 @@ export function HomePage({ user, activePet, activeAccessories = [] }: HomePagePr
             isProUser={isProUser}
             onLessonSelect={handleLessonSelect}
             onTrackSelect={handleTrackSelect}
+            activePet={activePet}
+            activeAccessories={activeAccessories}
+            isStreakExcited={isStreakExcited}
+            onFeedPet={onFeedPet}
+            onOpenShop={onOpenShop}
           />
 
           <WorkspacePanel

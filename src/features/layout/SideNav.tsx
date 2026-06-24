@@ -1,4 +1,4 @@
-import { PetStatusCard, PetWidget, type UserPet, type PetAccessory } from '../pet';
+import { PetWidget, type UserPet, type PetAccessory } from '../pet';
 
 export type SideNavProps = {
   activeLabel?: string;
@@ -7,10 +7,7 @@ export type SideNavProps = {
   onlineLoading?: boolean;
   onlineError?: boolean;
   activePet: UserPet | null;
-  isStreakExcited: boolean;
-  onFeedPet: () => Promise<void> | void;
   activeAccessories?: PetAccessory[];
-  onOpenShop?: () => void;
   onNavigateLessons?: () => void;
   onNavigatePractice?: () => void;
   onNavigateShop?: () => void;
@@ -26,10 +23,7 @@ export function SideNav({
   onlineLoading = false,
   onlineError = false,
   activePet,
-  isStreakExcited,
-  onFeedPet,
   activeAccessories = [],
-  onOpenShop,
   onNavigateLessons,
   onNavigatePractice,
   onNavigateShop,
@@ -153,13 +147,6 @@ export function SideNav({
       {activePet && (
         <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <PetWidget pet={activePet} tone="idle" activeAccessories={activeAccessories} />
-          <PetStatusCard
-            pet={activePet}
-            isStreakExcited={isStreakExcited}
-            onFeed={onFeedPet}
-            activeAccessories={activeAccessories}
-            onOpenShop={onOpenShop}
-          />
         </div>
       )}
     </aside>

@@ -1,5 +1,6 @@
 import { VI_MESSAGES } from '../../../content/messages';
 import type { Lesson } from '../useLessons';
+import { PetStatusCard, type UserPet, type PetAccessory } from '../../pet';
 
 type LessonPanelProps = {
   lessons: Lesson[];
@@ -13,6 +14,11 @@ type LessonPanelProps = {
   isProUser: boolean;
   onLessonSelect: (lesson: Lesson) => void;
   onTrackSelect: (track: string) => void;
+  activePet: UserPet | null;
+  activeAccessories?: PetAccessory[];
+  isStreakExcited: boolean;
+  onFeedPet: () => Promise<void> | void;
+  onOpenShop?: () => void;
 };
 
 const PRO_TRACKS = [VI_MESSAGES.tracks.advancedGrade6] as const;
@@ -29,6 +35,11 @@ export function LessonPanel({
   isProUser,
   onLessonSelect,
   onTrackSelect,
+  activePet,
+  activeAccessories = [],
+  isStreakExcited,
+  onFeedPet,
+  onOpenShop,
 }: LessonPanelProps) {
   const filteredLessons = lessons.filter((lesson) => lesson.track === selectedTrack);
   const completedLessons = completedLessonIds.length;
@@ -48,22 +59,17 @@ export function LessonPanel({
         <div className="lesson-panel__divider" />
       </div>
 
-      <article className="story-card">
-        <div className="story-card__avatar">
-          <img
-            alt="Py-Bot"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKwBXvyV97-lLR8lVF7nzy5WHe3jt-eC5ad1WZ8IxImidpU-qnVuGGFaFyDVmygzdwSZq_JQz5bhngeyhh95G1W1idsmiwbf4ixlZQrBG_pYByPanjgfjXpI37jlQiy9KqYtOgtcwRbNURrIsS-ih82c_eTTX5qK-FlXB4ad2xhyq_tIw4GDJD14qPvL0cRZADu2b7-ekbVl_r7tH46P6tPYLkCTaZkAvmeIBEhdQD4BQ86ancZSfDqlYrX5rgwhecWorN9oxxNvNw"
+      {activePet && (
+        <div style={{ marginBottom: '16px', marginTop: '8px' }}>
+          <PetStatusCard
+            pet={activePet}
+            isStreakExcited={isStreakExcited}
+            onFeed={onFeedPet}
+            activeAccessories={activeAccessories}
+            onOpenShop={onOpenShop}
           />
         </div>
-        <div className="story-card__content">
-          <p className="story-card__name">Py-Bot</p>
-          <p className="story-card__quote">
-            {selectedLesson
-              ? `"${selectedLesson.description}"`
-              : '"Chọn một bài học từ danh sách để bắt đầu."'}
-          </p>
-        </div>
-      </article>
+      )}
 
       <article className="task-card">
         <div className="task-card__hint-icon">

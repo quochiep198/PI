@@ -195,10 +195,7 @@ export default function App() {
           onlineLoading={!onlineConnected && !onlineFailed}
           onlineError={onlineFailed}
           activePet={activePet}
-          isStreakExcited={isStreakExcited}
-          onFeedPet={handleFeedPet}
           activeAccessories={activeAccessories}
-          onOpenShop={() => setView('shop')}
           onNavigateLessons={() => setView('home')}
           onNavigatePractice={() => setView('practice')}
           onNavigateShop={() => setView('shop')}
@@ -208,7 +205,14 @@ export default function App() {
         />
 
         {view === 'home'
-          ? <HomePage user={user} activePet={activePet} activeAccessories={activeAccessories} />
+          ? <HomePage
+              user={user}
+              activePet={activePet}
+              activeAccessories={activeAccessories}
+              isStreakExcited={isStreakExcited}
+              onFeedPet={handleFeedPet}
+              onOpenShop={() => setView('shop')}
+            />
           : view === 'practice'
             ? <PracticePage
                 user={user}
