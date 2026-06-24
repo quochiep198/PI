@@ -11,7 +11,7 @@ import { useXP, type XpResponse } from './useXP';
 import { playCelebrationChime } from '../shared/soundEffects';
 import { setCachedCoins } from '../shared/coinsCache';
 import { AIChatWidget } from './components/AIChatWidget';
-import type { UserPet } from '../pet';
+import type { UserPet, PetAccessory } from '../pet';
 
 type OutputTone = 'idle' | 'success' | 'error';
 type RuntimeFeedback = {
@@ -59,11 +59,12 @@ function stripPythonComments(source: string) {
 type HomePageProps = {
   user: AuthUser;
   activePet: UserPet | null;
+  activeAccessories?: PetAccessory[];
   onLogout?: () => Promise<void> | void;
   onNavigatePractice?: () => void;
 };
 
-export function HomePage({ user, activePet }: HomePageProps) {
+export function HomePage({ user, activePet, activeAccessories = [] }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
   const { runCode, startupMessage, status } = usePyodideRunner();
@@ -556,6 +557,7 @@ export function HomePage({ user, activePet }: HomePageProps) {
         selectedLesson={selectedLesson}
         onSendChatMessage={handleSendChatMessage}
         activePet={activePet}
+        activeAccessories={activeAccessories}
       />
 
 

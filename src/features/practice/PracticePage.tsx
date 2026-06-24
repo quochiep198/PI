@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AuthUser } from '../auth/types';
+import type { UserPet, PetAccessory } from '../pet';
 import { Leaderboard } from './components/Leaderboard';
 import { StreakCalendar } from './components/StreakCalendar';
 import { ChallengeCard } from './components/ChallengeCard';
@@ -10,6 +11,8 @@ import { playCelebrationChime } from '../shared/soundEffects';
 
 type PracticePageProps = {
   user: AuthUser;
+  activePet: UserPet | null;
+  activeAccessories?: PetAccessory[];
   onNavigateUpgrade?: () => void;
 };
 
@@ -19,7 +22,7 @@ type PracticePageProps = {
 //   { name: 'XP Boost 2x', price: 90, image: 'BOOST' },
 // ];
 
-export function PracticePage({ user, onNavigateUpgrade }: PracticePageProps) {
+export function PracticePage({ user, activePet, activeAccessories = [], onNavigateUpgrade }: PracticePageProps) {
   const { challenges, loading, error, markCompleted } = useChallenges();
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
   const previousCompletedChallengeCountRef = useRef<number | null>(null);
@@ -165,6 +168,8 @@ export function PracticePage({ user, onNavigateUpgrade }: PracticePageProps) {
         isOpen={activeChallenge !== null}
         onClose={handleCloseWorkspace}
         onComplete={handleChallengeComplete}
+        activePet={activePet}
+        activeAccessories={activeAccessories}
       />
     </>
   );

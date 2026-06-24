@@ -4,15 +4,25 @@ import { usePyodideRunner } from '../../home/usePyodideRunner';
 import { setCachedXp } from '../../shared/xpCache';
 import { setCachedCoins } from '../../shared/coinsCache';
 import { AIChatWidget } from '../../home/components/AIChatWidget';
+import type { UserPet, PetAccessory } from '../../pet/types';
 
 type ChallengeWorkspaceProps = {
   challenge: Challenge | null;
   isOpen: boolean;
   onClose: () => void;
   onComplete?: (challengeId: number) => void;
+  activePet?: UserPet | null;
+  activeAccessories?: PetAccessory[];
 };
 
-export function ChallengeWorkspace({ challenge, isOpen, onClose, onComplete }: ChallengeWorkspaceProps) {
+export function ChallengeWorkspace({
+  challenge,
+  isOpen,
+  onClose,
+  onComplete,
+  activePet,
+  activeAccessories = [],
+}: ChallengeWorkspaceProps) {
   const [code, setCode] = useState('');
   const [output, setOutput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -342,6 +352,8 @@ export function ChallengeWorkspace({ challenge, isOpen, onClose, onComplete }: C
         onSendChatMessage={handleSendChatMessage}
         welcomeMessage="Chào cậu! Tớ là bạn Cánh Cụt học Python. Cậu cần tớ trợ giúp gì về thử thách này không? Hihi!"
         isChallenge={true}
+        activePet={activePet}
+        activeAccessories={activeAccessories}
       />
     </>
   );

@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { VI_MESSAGES } from '../../../content/messages';
-import type { UserPet } from '../../pet/types';
+import type { UserPet, PetAccessory } from '../../pet/types';
+
+function getAccessoryClass(imageData: string) {
+  if (imageData === '🎩' || imageData === '👑' || imageData === '🎧' || imageData === '🧣' || imageData === '💡' || imageData === '💎') return 'accessory-hat';
+  if (imageData === '🕶️' || imageData === '👓') return 'accessory-glasses';
+  if (imageData === '⌨️' || imageData === '📖' || imageData === '🎒' || imageData === '🧸' || imageData === '☕' || imageData === '🍔' || imageData === '👟') return 'accessory-keyboard';
+  if (imageData === '🪄' || imageData === '✨' || imageData === '🎈' || imageData === '🏆' || imageData === '🛡️' || imageData === '🔨' || imageData === '🍀' || imageData === '🥤' || imageData === '🕯️' || imageData === '🎐') return 'accessory-wand';
+  return 'accessory-fallback';
+}
 
 type ChatItemContext = {
   id: number;
@@ -16,6 +24,7 @@ type AIChatWidgetProps = {
   welcomeMessage?: string;
   isChallenge?: boolean;
   activePet?: UserPet | null;
+  activeAccessories?: PetAccessory[];
 };
 
 export function AIChatWidget({
@@ -26,6 +35,7 @@ export function AIChatWidget({
   welcomeMessage,
   isChallenge = false,
   activePet,
+  activeAccessories = [],
 }: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -73,7 +83,18 @@ export function AIChatWidget({
           onClick={() => setIsOpen(true)}
           title="Trò chuyện cùng Bạn AI"
         >
-          <span className="ai-chat-bubble-btn__icon">{getPetImage()}</span>
+          <span className="ai-chat-bubble-btn__icon">
+            {getPetImage()}
+            {activePet && activeAccessories.map((acc) => (
+              <span
+                key={acc.id}
+                className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+                title={acc.name}
+              >
+                {acc.imageData}
+              </span>
+            ))}
+          </span>
           <span className="ai-chat-bubble-btn__badge">1</span>
         </button>
       )}
@@ -83,7 +104,18 @@ export function AIChatWidget({
         <div className="chat-widget-card">
           <header className="chat-widget-card__header">
             <div className="chat-widget-card__header-info">
-              <span className="chat-widget-card__header-avatar">{getPetImage()}</span>
+              <span className="chat-widget-card__header-avatar">
+                {getPetImage()}
+                {activePet && activeAccessories.map((acc) => (
+                  <span
+                    key={acc.id}
+                    className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+                    title={acc.name}
+                  >
+                    {acc.imageData}
+                  </span>
+                ))}
+              </span>
               <div>
                 <h3 className="chat-widget-card__header-title">{getPetName()}</h3>
                 <span className="chat-widget-card__header-status">Đang online</span>
@@ -102,7 +134,20 @@ export function AIChatWidget({
             <div className="chat-messages-container">
               {chatMessages.length === 0 ? (
                 <div className="chat-message chat-message--ai">
-                  <div className="chat-message__mascot">{getPetImage()}</div>
+                  <div className="chat-message__mascot">
+                    <div className="chat-message__mascot-avatar">
+                      {getPetImage()}
+                      {activePet && activeAccessories.map((acc) => (
+                        <span
+                          key={acc.id}
+                          className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+                          title={acc.name}
+                        >
+                          {acc.imageData}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                   <div className="chat-message__bubble">
                     {getWelcomeMessage()}
                   </div>
@@ -110,7 +155,22 @@ export function AIChatWidget({
               ) : (
                 chatMessages.map((msg, index) => (
                   <div key={`msg-${index}`} className={`chat-message chat-message--${msg.sender}`}>
-                    {msg.sender === 'ai' && <div className="chat-message__mascot">{getPetImage()}</div>}
+                    {msg.sender === 'ai' && (
+                      <div className="chat-message__mascot">
+                        <div className="chat-message__mascot-avatar">
+                          {getPetImage()}
+                          {activePet && activeAccessories.map((acc) => (
+                            <span
+                              key={acc.id}
+                              className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+                              title={acc.name}
+                            >
+                              {acc.imageData}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="chat-message__bubble">
                       {msg.messageText}
                     </div>
@@ -119,7 +179,20 @@ export function AIChatWidget({
               )}
               {isChatLoading && (
                 <div className="chat-message chat-message--ai is-loading">
-                  <div className="chat-message__mascot">{getPetImage()}</div>
+                  <div className="chat-message__mascot">
+                    <div className="chat-message__mascot-avatar">
+                      {getPetImage()}
+                      {activePet && activeAccessories.map((acc) => (
+                        <span
+                          key={acc.id}
+                          className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+                          title={acc.name}
+                        >
+                          {acc.imageData}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                   <div className="chat-message__bubble">
                     <span className="material-symbols-outlined animated-spin">progress_activity</span>
                     <span style={{ marginLeft: '8px' }}>Tớ đang nghĩ...</span>

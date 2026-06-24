@@ -5361,6 +5361,45 @@ select {
   flex-shrink: 0;
 }
 
+.chat-message__mascot-avatar {
+  position: relative;
+  line-height: 1;
+  display: inline-block;
+}
+
+.chat-message__mascot-avatar .accessory-hat {
+  font-size: 1.1rem;
+  top: -0.65rem;
+  left: 50%;
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.chat-message__mascot-avatar .accessory-glasses {
+  font-size: 0.85rem;
+  top: 0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.chat-message__mascot-avatar .accessory-keyboard {
+  font-size: 0.85rem;
+  bottom: -0.15rem;
+  left: -0.2rem;
+}
+
+.chat-message__mascot-avatar .accessory-wand {
+  font-size: 0.85rem;
+  bottom: -0.1rem;
+  right: -0.2rem;
+  transform: rotate(15deg);
+}
+
+.chat-message__mascot-avatar .accessory-overlay.accessory-fallback {
+  font-size: 0.85rem;
+  bottom: -0.15rem;
+  right: -0.15rem;
+}
+
 .chat-message__bubble {
   padding: 8px 12px;
   border-radius: 12px;
@@ -5500,8 +5539,43 @@ select {
 }
 
 .ai-chat-bubble-btn__icon {
+  position: relative;
   font-size: 32px;
   line-height: 1;
+  display: inline-block;
+}
+
+.ai-chat-bubble-btn__icon .accessory-hat {
+  font-size: 1.8rem;
+  top: -1.1rem;
+  left: 50%;
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.ai-chat-bubble-btn__icon .accessory-glasses {
+  font-size: 1.35rem;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ai-chat-bubble-btn__icon .accessory-keyboard {
+  font-size: 1.35rem;
+  bottom: -0.25rem;
+  left: -0.35rem;
+}
+
+.ai-chat-bubble-btn__icon .accessory-wand {
+  font-size: 1.35rem;
+  bottom: -0.2rem;
+  right: -0.35rem;
+  transform: rotate(15deg);
+}
+
+.ai-chat-bubble-btn__icon .accessory-overlay.accessory-fallback {
+  font-size: 1.35rem;
+  bottom: -0.25rem;
+  right: -0.25rem;
 }
 
 .ai-chat-bubble-btn__badge {
@@ -5584,8 +5658,43 @@ select {
 }
 
 .chat-widget-card__header-avatar {
+  position: relative;
   font-size: 28px;
   line-height: 1;
+  display: inline-block;
+}
+
+.chat-widget-card__header-avatar .accessory-hat {
+  font-size: 1.6rem;
+  top: -1rem;
+  left: 50%;
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.chat-widget-card__header-avatar .accessory-glasses {
+  font-size: 1.2rem;
+  top: 0.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.chat-widget-card__header-avatar .accessory-keyboard {
+  font-size: 1.2rem;
+  bottom: -0.2rem;
+  left: -0.3rem;
+}
+
+.chat-widget-card__header-avatar .accessory-wand {
+  font-size: 1.2rem;
+  bottom: -0.15rem;
+  right: -0.3rem;
+  transform: rotate(15deg);
+}
+
+.chat-widget-card__header-avatar .accessory-overlay.accessory-fallback {
+  font-size: 1.2rem;
+  bottom: -0.2rem;
+  right: -0.2rem;
 }
 
 .chat-widget-card__header-title {
