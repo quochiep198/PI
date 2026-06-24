@@ -61,6 +61,22 @@ Triển khai gói nâng cấp Gamification Pet theo lộ trình từ thấp lên
 | 7   | Xây dựng `PetQuickQuizModal.tsx` hiển thị câu hỏi trắc nghiệm ngắn khi bấm nút 🎮 ở chân SideNav. | `src/features/pet/components/PetQuickQuizModal.tsx` | Nhấn nút chơi đùa, chọn đáp án đúng/sai, nhận thông báo thưởng và thay đổi biểu cảm của Pet. |
 | 8   | Kết nối các sự kiện bàn phím từ Editor (WorkspacePanel) đến component `PetWidget` thông qua callback hoặc state để đổi biểu cảm Pet sang dạng suy nghĩ `🤔` tạm thời khi trẻ đang gõ code. | `src/features/home/components/WorkspacePanel.tsx`, `src/features/pet/components/PetWidget.tsx` | Nhập code vào editor, xác nhận Pet đổi emoji thành suy nghĩ. Dừng gõ 2 giây, Pet trở lại trạng thái thường. |
 
+### 5.2 Kỷ niệm tiến hóa hoành tráng
+Chi tiết thiết kế và luồng xử lý kỹ thuật cho hoạt ảnh ăn mừng tiến hóa:
+- **Tập tin tạo mới**: `src/features/pet/components/EvolutionCelebrationModal.tsx`
+- **Kích hoạt (Trigger)**:
+  - Khi gọi hàm `feedPet()` tại `App.tsx` (hoặc nơi quản lý state Pet), kiểm tra phản hồi từ API.
+  - Nếu kết quả trả về `leveledUp = true` và cấp độ mới (`newLevel`) đạt các mốc tiến hóa quan trọng (2 - Teen, 5 - Adult, 10 - Master), kích hoạt state `showEvolutionCelebration = true`.
+- **Thành phần giao diện (UI Components)**:
+  - Thiết kế màn hình che phủ (overlay) mờ ảo với hiệu ứng glassmorphism sang trọng.
+  - Hiển thị thông tin chúc mừng hoành tráng: *"Thú cưng của bạn đã tiến hóa!"*.
+  - Hiển thị hình ảnh Pet trước và sau khi tiến hóa kèm danh hiệu tương ứng.
+- **Hiệu ứng Pháo Hoa Giấy (Confetti Effect)**:
+  - Tạo canvas động trên overlay để render hiệu ứng pháo hoa giấy bay màu sắc sặc sỡ.
+  - Sử dụng vanilla Javascript vẽ các hạt confetti hình chữ nhật/tròn rơi tự do và xoay góc trong 3 giây để tránh cài đặt thư viện bên thứ ba.
+- **Hiệu ứng âm thanh (Audio Chime)**:
+  - Sử dụng trình duyệt Web Audio API (thư viện `AudioContext`) để tổng hợp tiếng chuông reo mừng chiến thắng (victory chime) bằng cách tạo chuỗi các nốt nhạc tần số cao (ví dụ: C5 -> E5 -> G5 -> C6) tự động phát khi mở modal, tăng tính tương tác và tạo sự phấn khích cho học sinh.
+
 ---
 
 ## 5. Rủi ro & Biện pháp giảm thiểu
