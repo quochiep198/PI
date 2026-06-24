@@ -10,6 +10,7 @@ import { getChallengesHandler, submitChallengeHandler } from '../server/controll
 import { getAvatarsHandler, createAvatarHandler, getItemsHandler, createItemHandler, setActiveAvatarHandler, getUserItemsHandler, setActiveUserItemHandler, addUserItemHandler } from '../server/controllers/admin.mjs';
 import { healthHandler, onlinePresenceStreamHandler } from '../server/controllers/system.mjs';
 import { errorFeedbackHandler, hintHandler, codeReviewHandler, getChatHistoryHandler, chatHandler } from '../server/controllers/ai.mjs';
+import { getActivePetHandler, adoptPetHandler, feedPetHandler, equipAccessoryHandler } from '../server/controllers/pets.mjs';
 
 const app = express();
 
@@ -70,6 +71,12 @@ app.post('/api/items', createItemHandler);
 app.post('/api/user-items', addUserItemHandler);
 app.post('/api/user-items/list', getUserItemsHandler);
 app.post('/api/user-items/set-active', setActiveUserItemHandler);
+
+// Pet routes
+app.get('/api/user-pets/active', getActivePetHandler);
+app.post('/api/user-pets/adopt', adoptPetHandler);
+app.post('/api/user-pets/feed', feedPetHandler);
+app.post('/api/user-pets/accessories/equip', equipAccessoryHandler);
 
 
 app.post('/api/ai/review-code', codeReviewHandler);
