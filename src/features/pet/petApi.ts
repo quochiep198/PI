@@ -37,3 +37,42 @@ export async function feedPet(): Promise<FeedResponse> {
   }
   return response.json() as Promise<FeedResponse>;
 }
+
+export async function fetchPetShop(): Promise<import('./types').PetShopResponse> {
+  const response = await fetch('/api/user-pets/shop');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Không thể tải cửa hàng phụ kiện.');
+  }
+  return response.json() as Promise<import('./types').PetShopResponse>;
+}
+
+export async function buyPetAccessory(itemId: number): Promise<{ success: boolean; newCoins: number; itemId: number }> {
+  const response = await fetch('/api/user-pets/shop/buy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ itemId }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Không thể mua phụ kiện.');
+  }
+  return response.json() as Promise<{ success: boolean; newCoins: number; itemId: number }>;
+}
+
+export async function equipPetAccessory(itemId: number | null, active?: boolean): Promise<{ success: boolean }> {
+  const response = await fetch('/api/user-pets/accessories/equip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ itemId, active }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Không thể thay đổi phụ kiện.');
+  }
+  return response.json() as Promise<{ success: boolean }>;
+}

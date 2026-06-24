@@ -15,9 +15,9 @@ import { MobileNavigation } from './features/navigate/NavigateNavigation';
 import { clearCachedXp } from './features/shared/xpCache';
 import { clearCachedCoins, setCachedCoins } from './features/shared/coinsCache';
 import { installAudioUnlock } from './features/shared/soundEffects';
-import { PetSelectionModal, fetchPetState, adoptPet, feedPet, type UserPet, type PetTemplate } from './features/pet';
+import { PetSelectionModal, PetShopPage, fetchPetState, adoptPet, feedPet, type UserPet, type PetTemplate, type PetAccessory } from './features/pet';
 
-type View = 'home' | 'practice' | 'inventory' | 'accessories' | 'settings';
+type View = 'home' | 'practice' | 'inventory' | 'accessories' | 'settings' | 'shop';
 
 type AuthMeResponse = {
   authenticated: boolean;
@@ -47,29 +47,31 @@ export default function App() {
   const [petTemplates, setPetTemplates] = useState<PetTemplate[]>([]);
   const [showPetAdoptModal, setShowPetAdoptModal] = useState(false);
   const [isStreakExcited, setIsStreakExcited] = useState(false);
+  const [activeAccessories, setActiveAccessories] = useState<PetAccessory[]>([]);
+
+  const refreshPetState = async () => {
+    if (!user) return;
+    try {
+      const data = await fetchPetState();
+      setActivePet(data.activePet);
+      setPetTemplates(data.templates);
+      setIsStreakExcited(data.isStreakExcited);
+      setActiveAccessories(data.activeAccessories || []);
+      if (!data.activePet) {
+        setShowPetAdoptModal(true);
+      }
+    } catch {
+      // Fail silently
+    }
+  };
 
   useEffect(() => {
     if (!user) {
       setActivePet(null);
+      setActiveAccessories([]);
       return;
     }
-    let active = true;
-    async function loadPetData() {
-      try {
-        const data = await fetchPetState();
-        if (!active) return;
-        setActivePet(data.activePet);
-        setPetTemplates(data.templates);
-        setIsStreakExcited(data.isStreakExcited);
-        if (!data.activePet) {
-          setShowPetAdoptModal(true);
-        }
-      } catch {
-        // Fail silently
-      }
-    }
-    void loadPetData();
-    return () => { active = false; };
+    void refreshPetState();
   }, [user]);
 
   const handleAdoptPet = async (templateId: number, nickname?: string) => {
@@ -77,6 +79,7 @@ export default function App() {
     if (result.success) {
       setActivePet(result.pet);
       setShowPetAdoptModal(false);
+      void refreshPetState();
     }
   };
 
@@ -186,7 +189,7 @@ export default function App() {
 
       <div className="quest-layout">
         <SideNav
-          activeLabel={view === 'home' ? 'Lessons' : view === 'practice' ? 'Daily Practice' : view === 'inventory' ? 'Inventory' : view === 'accessories' ? 'Achievements' : 'Settings'}
+          activeLabel={view === 'home' ? 'Lessons' : view === 'practice' ? 'Daily Practice' : view === 'shop' ? 'Shop' : view === 'inventory' ? 'Inventory' : view === 'accessories' ? 'Achievements' : 'Settings'}
           isAdmin={Boolean(user.isAdmin)}
           onlineCount={onlineLearners}
           onlineLoading={!onlineConnected && !onlineFailed}
@@ -194,8 +197,11 @@ export default function App() {
           activePet={activePet}
           isStreakExcited={isStreakExcited}
           onFeedPet={handleFeedPet}
+          activeAccessories={activeAccessories}
+          onOpenShop={() => setView('shop')}
           onNavigateLessons={() => setView('home')}
           onNavigatePractice={() => setView('practice')}
+          onNavigateShop={() => setView('shop')}
           onNavigateInventory={() => setView('inventory')}
           onNavigateAccessories={() => setView('accessories')}
           onNavigateSettings={() => setView('settings')}
@@ -209,7 +215,14 @@ export default function App() {
               ? <InventoryPage />
               : view === 'accessories' && user.isAdmin
                 ? <AccessoriesPage />
-                : <SettingsPage user={user} onUserUpdated={handleUserUpdated} onLogout={handleLogout} />}
+                : view === 'shop'
+                  ? <PetShopPage
+                      activeAccessories={activeAccessories}
+                      currentCoins={coins}
+                      onCoinsUpdated={(newCoins) => setCachedCoins(newCoins)}
+                      onRefreshPetState={refreshPetState}
+                    />
+                  : <SettingsPage user={user} onUserUpdated={handleUserUpdated} onLogout={handleLogout} />}
       </div>
 
       <MobileNavigation
@@ -224,6 +237,7 @@ export default function App() {
         templates={petTemplates}
         onAdopt={handleAdoptPet}
       />
+
     </div>
   );
 }

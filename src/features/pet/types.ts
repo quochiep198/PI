@@ -36,6 +36,20 @@ export interface PetAccessory {
   imageData: string;
 }
 
+export interface PetShopItem {
+  id: number;
+  name: string;
+  description: string;
+  imageData: string;
+  price: number;
+  isOwned: boolean;
+}
+
+export interface PetShopResponse {
+  shopItems: PetShopItem[];
+  coins: number;
+}
+
 export interface PetStateResponse {
   activePet: UserPet | null;
   templates: PetTemplate[];

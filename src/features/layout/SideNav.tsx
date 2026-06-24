@@ -1,4 +1,4 @@
-import { PetStatusCard, PetWidget, type UserPet } from '../pet';
+import { PetStatusCard, PetWidget, type UserPet, type PetAccessory } from '../pet';
 
 export type SideNavProps = {
   activeLabel?: string;
@@ -9,8 +9,11 @@ export type SideNavProps = {
   activePet: UserPet | null;
   isStreakExcited: boolean;
   onFeedPet: () => Promise<void> | void;
+  activeAccessories?: PetAccessory[];
+  onOpenShop?: () => void;
   onNavigateLessons?: () => void;
   onNavigatePractice?: () => void;
+  onNavigateShop?: () => void;
   onNavigateInventory?: () => void;
   onNavigateAccessories?: () => void;
   onNavigateSettings?: () => void;
@@ -25,8 +28,11 @@ export function SideNav({
   activePet,
   isStreakExcited,
   onFeedPet,
+  activeAccessories = [],
+  onOpenShop,
   onNavigateLessons,
   onNavigatePractice,
+  onNavigateShop,
   onNavigateInventory,
   onNavigateAccessories,
   onNavigateSettings
@@ -39,9 +45,12 @@ export function SideNav({
       case 'Daily Practice':
         onNavigatePractice?.();
         break;
-      case 'Inventory':
-        onNavigateInventory?.();
+      case 'Shop':
+        onNavigateShop?.();
         break;
+      // case 'Inventory':
+      //   onNavigateInventory?.();
+      //   break;
       case 'Achievements':
         onNavigateAccessories?.();
         break;
@@ -54,6 +63,7 @@ export function SideNav({
   const itemClickHandlers: Record<string, () => void> = {};
   if (onNavigateLessons) itemClickHandlers['Lessons'] = onNavigateLessons;
   if (onNavigatePractice) itemClickHandlers['Daily Practice'] = onNavigatePractice;
+  if (onNavigateShop) itemClickHandlers['Shop'] = onNavigateShop;
   if (onNavigateInventory) itemClickHandlers['Inventory'] = onNavigateInventory;
   if (onNavigateAccessories) itemClickHandlers['Achievements'] = onNavigateAccessories;
   if (onNavigateSettings) itemClickHandlers['Settings'] = onNavigateSettings;
@@ -93,6 +103,15 @@ export function SideNav({
           <span>Luyện Tập</span>
         </button>
 
+        <button
+          className={`pressable sidenav__item${activeLabel === 'Shop' ? ' is-active' : ''}`}
+          type="button"
+          onClick={() => handleNavigation('Shop')}
+        >
+          <span aria-hidden="true" className="material-symbols-outlined">storefront</span>
+          <span>Cửa Hàng</span>
+        </button>
+
         {/* <button
           className={`pressable sidenav__item${activeLabel === 'Playground' ? ' is-active' : ''}`}
           type="button"
@@ -101,14 +120,14 @@ export function SideNav({
           <span>Playground</span>
         </button> */}
 
-        <button
+        {/* <button
           className={`pressable sidenav__item${activeLabel === 'Inventory' ? ' is-active' : ''}`}
           type="button"
           onClick={() => handleNavigation('Inventory')}
         >
           <span aria-hidden="true" className="material-symbols-outlined">inventory_2</span>
           <span>Thành Tựu</span>
-        </button>
+        </button> */}
 
         {isAdmin ? (
           <button
@@ -133,11 +152,13 @@ export function SideNav({
 
       {activePet && (
         <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <PetWidget pet={activePet} tone="idle" />
+          <PetWidget pet={activePet} tone="idle" activeAccessories={activeAccessories} />
           <PetStatusCard
             pet={activePet}
             isStreakExcited={isStreakExcited}
             onFeed={onFeedPet}
+            activeAccessories={activeAccessories}
+            onOpenShop={onOpenShop}
           />
         </div>
       )}

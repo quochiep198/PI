@@ -1,14 +1,30 @@
 import { useState } from 'react';
-import type { UserPet } from '../types';
+import type { UserPet, PetAccessory } from '../types';
 import '../pet.css';
 
 interface PetStatusCardProps {
   pet: UserPet;
   isStreakExcited: boolean;
   onFeed: () => Promise<void> | void;
+  activeAccessories?: PetAccessory[];
+  onOpenShop?: () => void;
 }
 
-export function PetStatusCard({ pet, isStreakExcited, onFeed }: PetStatusCardProps) {
+function getAccessoryClass(imageData: string) {
+  if (imageData === '🎩' || imageData === '👑' || imageData === '🎧' || imageData === '🧣' || imageData === '💡' || imageData === '💎') return 'accessory-hat';
+  if (imageData === '🕶️' || imageData === '👓') return 'accessory-glasses';
+  if (imageData === '⌨️' || imageData === '📖' || imageData === '🎒' || imageData === '🧸' || imageData === '☕' || imageData === '🍔' || imageData === '👟') return 'accessory-keyboard';
+  if (imageData === '🪄' || imageData === '✨' || imageData === '🎈' || imageData === '🏆' || imageData === '🛡️' || imageData === '🔨' || imageData === '🍀' || imageData === '🥤' || imageData === '🕯️' || imageData === '🎐') return 'accessory-wand';
+  return 'accessory-fallback';
+}
+
+export function PetStatusCard({
+  pet,
+  isStreakExcited,
+  onFeed,
+  activeAccessories = [],
+  onOpenShop,
+}: PetStatusCardProps) {
   const [isFeeding, setIsFeeding] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
 
@@ -37,7 +53,22 @@ export function PetStatusCard({ pet, isStreakExcited, onFeed }: PetStatusCardPro
   return (
     <div className="pet-status-card-compact" title={`${pet.nickname} (${pet.name}) - Cấp ${pet.level}`}>
       <div className="pet-status-avatar-wrapper-compact">
-        <div className="pet-status-avatar-compact">{getPetImage()}</div>
+        <div
+          className="pet-status-avatar-compact"
+          onClick={onOpenShop}
+          style={{ cursor: onOpenShop ? 'pointer' : 'default' }}
+        >
+          {getPetImage()}
+        </div>
+        {activeAccessories.map((acc) => (
+          <span
+            key={acc.id}
+            className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+            title={acc.name}
+          >
+            {acc.imageData}
+          </span>
+        ))}
         <div className="pet-status-level-badge-compact">L.{pet.level}</div>
       </div>
 
@@ -77,15 +108,17 @@ export function PetStatusCard({ pet, isStreakExcited, onFeed }: PetStatusCardPro
         )}
       </div>
 
-      <button
-        type="button"
-        className="pet-feed-action-btn-compact pressable"
-        onClick={handleFeed}
-        disabled={pet.fullness >= 100 || isFeeding}
-        title={pet.fullness >= 100 ? 'Pet đã no căng bụng rồi!' : 'Cho ăn (20 Coins)'}
-      >
-        {isFeeding ? '...' : 'Cho ăn'}
-      </button>
+      <div className="pet-status-actions-compact" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
+        <button
+          type="button"
+          className="pet-feed-action-btn-compact pressable"
+          onClick={handleFeed}
+          disabled={pet.fullness >= 100 || isFeeding}
+          title={pet.fullness >= 100 ? 'Pet đã no căng bụng rồi!' : 'Cho ăn (20 Coins)'}
+        >
+          {isFeeding ? '...' : 'Cho ăn'}
+        </button>
+      </div>
     </div>
   );
 }

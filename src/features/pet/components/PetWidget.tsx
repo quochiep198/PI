@@ -1,12 +1,21 @@
-import type { UserPet } from '../types';
+import type { UserPet, PetAccessory } from '../types';
 import '../pet.css';
 
 interface PetWidgetProps {
   pet: UserPet | null;
   tone: 'idle' | 'success' | 'error';
+  activeAccessories?: PetAccessory[];
 }
 
-export function PetWidget({ pet, tone }: PetWidgetProps) {
+function getAccessoryClass(imageData: string) {
+  if (imageData === '🎩' || imageData === '👑' || imageData === '🎧' || imageData === '🧣' || imageData === '💡' || imageData === '💎') return 'accessory-hat';
+  if (imageData === '🕶️' || imageData === '👓') return 'accessory-glasses';
+  if (imageData === '⌨️' || imageData === '📖' || imageData === '🎒' || imageData === '🧸' || imageData === '☕' || imageData === '🍔' || imageData === '👟') return 'accessory-keyboard';
+  if (imageData === '🪄' || imageData === '✨' || imageData === '🎈' || imageData === '🏆' || imageData === '🛡️' || imageData === '🔨' || imageData === '🍀' || imageData === '🥤' || imageData === '🕯️' || imageData === '🎐') return 'accessory-wand';
+  return 'accessory-fallback';
+}
+
+export function PetWidget({ pet, tone, activeAccessories = [] }: PetWidgetProps) {
   if (!pet) return null;
 
   // Determine current image based on level
@@ -45,6 +54,15 @@ export function PetWidget({ pet, tone }: PetWidgetProps) {
     <div className="pet-editor-widget" style={{ marginTop: '16px' }}>
       <div className="pet-widget-avatar" title={`Cấp độ ${pet.level}`}>
         {getPetImage()}
+        {activeAccessories.map((acc) => (
+          <span
+            key={acc.id}
+            className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+            title={acc.name}
+          >
+            {acc.imageData}
+          </span>
+        ))}
       </div>
       <div className="pet-bubble-container">
         <strong>{pet.nickname}:</strong>

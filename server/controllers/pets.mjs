@@ -243,25 +243,40 @@ export async function equipAccessoryHandler(request, response) {
       return;
     }
 
-    const { userItemId } = getRequestBody(request);
-    if (!userItemId) {
-      response.status(400).json({ message: 'User Item ID không hợp lệ.' });
+    const { itemId, active } = getRequestBody(request);
+    
+    // If itemId is null or undefined, deactivate all pet accessories (unequip)
+    if (itemId === null || itemId === undefined) {
+      await execute(
+        `
+          UPDATE user_items
+          SET is_active = FALSE
+          WHERE user_id = $1 AND item_id IN (
+            SELECT id FROM items WHERE asset_type = 'pet_accessory'
+          )
+        `,
+        [user.id]
+      );
+      response.json({
+        success: true,
+        message: 'Đã tháo tất cả phụ kiện thú cưng.',
+      });
       return;
     }
 
     // Verify item ownership and type
     const userItemRows = await query(
       `
-        SELECT ui.id, i.asset_type
+        SELECT ui.id, ui.is_active, i.asset_type
         FROM user_items ui
         INNER JOIN items i ON i.id = ui.item_id
-        WHERE ui.id = $1 AND ui.user_id = $2
+        WHERE ui.item_id = $1 AND ui.user_id = $2
       `,
-      [userItemId, user.id]
+      [itemId, user.id]
     );
 
     if (userItemRows.length === 0) {
-      response.status(404).json({ message: 'Trang bị không tìm thấy trong kho đồ.' });
+      response.status(404).json({ message: 'Bạn chưa sở hữu phụ kiện này.' });
       return;
     }
 
@@ -271,31 +286,163 @@ export async function equipAccessoryHandler(request, response) {
       return;
     }
 
-    // Deactivate other pet accessories
-    await execute(
-      `
-        UPDATE user_items
-        SET is_active = FALSE
-        WHERE user_id = $1 AND item_id IN (
-          SELECT id FROM items WHERE asset_type = 'pet_accessory'
-        )
-      `,
-      [user.id]
-    );
+    // Determine target active state: use 'active' parameter if provided, otherwise toggle
+    const targetActive = active !== undefined ? Boolean(active) : !item.is_active;
 
-    // Equip selected accessory
+    // Update selected accessory state
     await execute(
-      `UPDATE user_items SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
-      [userItemId]
+      `UPDATE user_items SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [targetActive, item.id]
     );
 
     response.json({
       success: true,
-      message: 'Đã trang bị phụ kiện cho thú cưng.',
+      message: targetActive ? 'Đã trang bị phụ kiện cho thú cưng.' : 'Đã tháo phụ kiện thú cưng.',
     });
   } catch (error) {
     response.status(500).json({
       message: error instanceof Error ? error.message : 'Không thể thay trang bị.',
+    });
+  }
+}
+
+// Get pet accessories available in shop
+export async function getPetShopHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    // Fetch all items of asset_type 'pet_accessory'
+    const shopItems = await query(
+      `
+        SELECT id, name, description, image_data AS "imageData", price
+        FROM items
+        WHERE asset_type = 'pet_accessory'
+        ORDER BY price ASC, id ASC
+      `
+    );
+
+    // Fetch user items (to know what accessories the user already owns)
+    const ownedItemRows = await query(
+      `
+        SELECT item_id AS "itemId"
+        FROM user_items
+        WHERE user_id = $1
+      `,
+      [user.id]
+    );
+
+    const ownedItemIds = new Set(ownedItemRows.map((row) => row.itemId));
+
+    // Mark items as purchased if the user already owns them
+    const itemsWithStatus = shopItems.map((item) => ({
+      ...item,
+      isOwned: ownedItemIds.has(item.id),
+    }));
+
+    // Fetch user coins balance
+    const coins = await getUserCoins(user.id);
+
+    response.json({
+      shopItems: itemsWithStatus,
+      coins,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Không thể tải danh sách cửa hàng.',
+    });
+  }
+}
+
+// Buy pet accessory
+export async function buyPetAccessoryHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const { itemId } = getRequestBody(request);
+    if (!itemId) {
+      response.status(400).json({ message: 'Vật phẩm không hợp lệ.' });
+      return;
+    }
+
+    // Fetch item details
+    const itemRows = await query(
+      `
+        SELECT id, name, price, asset_type AS "assetType"
+        FROM items
+        WHERE id = $1 AND asset_type = 'pet_accessory'
+        LIMIT 1
+      `,
+      [itemId]
+    );
+
+    if (itemRows.length === 0) {
+      response.status(404).json({ message: 'Vật phẩm không tồn tại.' });
+      return;
+    }
+
+    const item = itemRows[0];
+
+    // Check if user already owns this item
+    const ownedRows = await query(
+      `
+        SELECT id FROM user_items
+        WHERE user_id = $1 AND item_id = $2
+        LIMIT 1
+      `,
+      [user.id, itemId]
+    );
+
+    if (ownedRows.length > 0) {
+      response.status(400).json({ message: 'Bạn đã sở hữu phụ kiện này rồi.' });
+      return;
+    }
+
+    // Check user coins balance
+    const coins = await getUserCoins(user.id);
+    if (coins < item.price) {
+      response.status(400).json({
+        message: `Bạn không đủ Coins. Phụ kiện này cần ${item.price} Coins, bạn hiện chỉ có ${coins} Coins.`,
+      });
+      return;
+    }
+
+    // Deduct coins and insert into user_items
+    const newCoins = coins - item.price;
+    
+    await execute(
+      `
+        INSERT INTO user_items (user_id, item_id, is_active)
+        VALUES ($1, $2, FALSE)
+      `,
+      [user.id, itemId]
+    );
+
+    // Update user coins
+    await execute(
+      `
+        INSERT INTO user_coins (user_id, coins)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id)
+        DO UPDATE SET coins = EXCLUDED.coins
+      `,
+      [user.id, newCoins]
+    );
+
+    response.json({
+      success: true,
+      message: `Đã mua thành công ${item.name}!`,
+      newCoins,
+      itemId,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Không thể thực hiện giao dịch.',
     });
   }
 }
