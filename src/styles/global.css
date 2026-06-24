@@ -1061,12 +1061,12 @@ select {
 .pet-status-card-compact {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(241, 245, 249, 0.55) 100%);
   border: 1px solid rgba(48, 69, 227, 0.15);
-  border-radius: 12px;
-  padding: 8px 10px;
+  border-radius: 16px;
+  padding: 12px 16px;
   margin: 8px 0 0 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1098,7 +1098,7 @@ select {
 }
 
 .pet-status-avatar-compact {
-  font-size: 1.8rem;
+  font-size: 2.8rem;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1114,10 +1114,10 @@ select {
   right: -4px;
   background: #38bdf8;
   color: #0f172a;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 850;
-  padding: 0px 4px;
-  border-radius: 4px;
+  padding: 1px 5px;
+  border-radius: 5px;
   border: 1.5px solid #1e293b;
   line-height: 1.2;
 }
@@ -1127,7 +1127,7 @@ select {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .pet-status-header-compact {
@@ -1136,8 +1136,8 @@ select {
 }
 
 .pet-status-name-compact {
-  font-weight: 700;
-  font-size: 0.8rem;
+  font-weight: 750;
+  font-size: 1.05rem;
   color: var(--color-on-surface);
   white-space: nowrap;
   overflow: hidden;
@@ -1146,7 +1146,7 @@ select {
 
 .pet-feed-error-compact {
   color: #f87171;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1156,24 +1156,24 @@ select {
 .pet-stats-bars-compact {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
 }
 
 .pet-stat-row-compact {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .pet-stat-icon-compact {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .pet-stat-progress-bg-compact {
   flex-grow: 1;
-  height: 4px;
+  height: 6px;
   background: rgba(15, 23, 42, 0.12);
   border-radius: 99px;
   overflow: hidden;
@@ -1202,9 +1202,9 @@ select {
   color: white;
   border: none;
   font-weight: 750;
-  font-size: 0.7rem;
-  padding: 4px 8px;
-  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;

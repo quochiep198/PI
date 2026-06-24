@@ -482,29 +482,29 @@
 
 /* Compact avatar overlay sizes (SideNav bottom) */
 .pet-status-avatar-wrapper-compact .accessory-hat {
-  font-size: 1.1rem;
-  top: -0.65rem;
+  font-size: 1.6rem;
+  top: -1rem;
   left: 50%;
   transform: translateX(-50%) rotate(-5deg);
 }
 
 .pet-status-avatar-wrapper-compact .accessory-glasses {
-  font-size: 0.85rem;
-  top: 0.55rem;
+  font-size: 1.2rem;
+  top: 0.9rem;
   left: 50%;
   transform: translateX(-50%);
 }
 
 .pet-status-avatar-wrapper-compact .accessory-keyboard {
-  font-size: 0.85rem;
-  bottom: -0.15rem;
-  left: -0.2rem;
+  font-size: 1.2rem;
+  bottom: -0.2rem;
+  left: -0.3rem;
 }
 
 .pet-status-avatar-wrapper-compact .accessory-wand {
-  font-size: 0.85rem;
+  font-size: 1.2rem;
   bottom: -0.1rem;
-  right: -0.2rem;
+  right: -0.3rem;
   transform: rotate(15deg);
 }
 
@@ -515,9 +515,9 @@
 }
 
 .pet-status-avatar-wrapper-compact .accessory-overlay.accessory-fallback {
-  font-size: 0.85rem;
-  bottom: -0.15rem;
-  right: -0.15rem;
+  font-size: 1.2rem;
+  bottom: -0.2rem;
+  right: -0.2rem;
 }
 
 /* Pet Shop Modal & UI Styling */
