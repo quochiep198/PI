@@ -42,6 +42,12 @@ export function PetStatusCard({
   };
 
   const getPetImage = () => {
+    if (pet.fullness === 0) {
+      return '💤';
+    }
+    if (pet.fullness < 30) {
+      return pet.codeName === 'cyber_cat' ? '😿' : '🥺';
+    }
     if (pet.level === 1) return pet.imageBaby;
     if (pet.level >= 2 && pet.level <= 4) return pet.imageTeen;
     if (pet.level >= 5 && pet.level <= 9) return pet.imageAdult;

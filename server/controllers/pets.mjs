@@ -8,6 +8,53 @@ import {
   ensureUserCoins,
 } from '../utils/core.mjs';
 
+// Helper to fetch active pet and apply hunger decay logic
+export async function getAndUpdateActivePet(userId) {
+  const activePetRows = await query(
+    `
+      SELECT up.id, up.nickname, up.level, up.current_xp AS "currentXp", up.next_level_xp AS "nextLevelXp", up.fullness, up.is_active AS "isActive", up.last_fed_at AS "lastFedAt",
+             pt.id AS "templateId", pt.name, pt.code_name AS "codeName", pt.description, 
+             pt.image_baby AS "imageBaby", pt.image_teen AS "imageTeen", pt.image_adult AS "imageAdult", pt.image_master AS "imageMaster"
+      FROM user_pets up
+      INNER JOIN pet_templates pt ON pt.id = up.pet_template_id
+      WHERE up.user_id = $1 AND up.is_active = TRUE
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (activePetRows.length === 0) {
+    return null;
+  }
+
+  const pet = activePetRows[0];
+  const lastFed = new Date(pet.lastFedAt);
+  const now = new Date();
+  const hoursPassed = (now.getTime() - lastFed.getTime()) / (1000 * 60 * 60);
+  const daysPassed = Math.floor(hoursPassed / 24);
+
+  if (daysPassed > 0) {
+    const DECAY_RATE = 15;
+    const decay = daysPassed * DECAY_RATE;
+    const newFullness = Math.max(0, pet.fullness - decay);
+    const newLastFedAt = new Date(lastFed.getTime() + daysPassed * 24 * 60 * 60 * 1000);
+
+    await execute(
+      `
+        UPDATE user_pets
+        SET fullness = $1, last_fed_at = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `,
+      [newFullness, newLastFedAt, pet.id]
+    );
+
+    pet.fullness = newFullness;
+    pet.lastFedAt = newLastFedAt;
+  }
+
+  return pet;
+}
+
 // Get active pet and all pet templates
 export async function getActivePetHandler(request, response) {
   try {
@@ -16,19 +63,8 @@ export async function getActivePetHandler(request, response) {
       return;
     }
 
-    // Get active pet for user
-    const activePetRows = await query(
-      `
-        SELECT up.id, up.nickname, up.level, up.current_xp AS "currentXp", up.next_level_xp AS "nextLevelXp", up.fullness, up.is_active AS "isActive",
-               pt.id AS "templateId", pt.name, pt.code_name AS "codeName", pt.description, 
-               pt.image_baby AS "imageBaby", pt.image_teen AS "imageTeen", pt.image_adult AS "imageAdult", pt.image_master AS "imageMaster"
-        FROM user_pets up
-        INNER JOIN pet_templates pt ON pt.id = up.pet_template_id
-        WHERE up.user_id = $1 AND up.is_active = TRUE
-        LIMIT 1
-      `,
-      [user.id]
-    );
+    // Get active pet for user using helper to apply decay logic
+    const activePet = await getAndUpdateActivePet(user.id);
 
     // Fetch all available templates
     const templates = await query(
@@ -56,7 +92,7 @@ export async function getActivePetHandler(request, response) {
     const isStreakExcited = streakData.currentStreak >= 3;
 
     response.json({
-      activePet: activePetRows[0] || null,
+      activePet,
       templates,
       activeAccessories,
       isStreakExcited
@@ -138,23 +174,13 @@ export async function feedPetHandler(request, response) {
       return;
     }
 
-    // Get active pet
-    const activePetRows = await query(
-      `
-        SELECT up.id, up.nickname, up.level, up.current_xp AS "currentXp", up.next_level_xp AS "nextLevelXp", up.fullness
-        FROM user_pets up
-        WHERE up.user_id = $1 AND up.is_active = TRUE
-        LIMIT 1
-      `,
-      [user.id]
-    );
+    // Get active pet and apply decay if needed
+    const pet = await getAndUpdateActivePet(user.id);
 
-    if (activePetRows.length === 0) {
+    if (!pet) {
       response.status(404).json({ message: 'Bạn chưa có thú cưng nào đang hoạt động.' });
       return;
     }
-
-    const pet = activePetRows[0];
 
     // Check fullness limit
     if (pet.fullness >= 100) {

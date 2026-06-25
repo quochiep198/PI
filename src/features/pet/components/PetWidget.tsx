@@ -18,8 +18,14 @@ function getAccessoryClass(imageData: string) {
 export function PetWidget({ pet, tone, activeAccessories = [] }: PetWidgetProps) {
   if (!pet) return null;
 
-  // Determine current image based on level
+  // Determine current image based on level and fullness
   const getPetImage = () => {
+    if (pet.fullness === 0) {
+      return '💤';
+    }
+    if (pet.fullness < 30) {
+      return pet.codeName === 'cyber_cat' ? '😿' : '🥺';
+    }
     if (pet.level === 1) return pet.imageBaby;
     if (pet.level >= 2 && pet.level <= 4) return pet.imageTeen;
     if (pet.level >= 5 && pet.level <= 9) return pet.imageAdult;
@@ -28,6 +34,9 @@ export function PetWidget({ pet, tone, activeAccessories = [] }: PetWidgetProps)
 
   // Determine message deterministically based on exact state
   const getBubbleText = () => {
+    if (pet.fullness === 0) {
+      return '... (Pet đã ngủ thiếp đi vì quá đói, hãy cho Pet ăn để đánh thức nhé) 💤';
+    }
     if (tone === 'success') {
       return 'Tuyệt vời! Code chạy mượt mà không lỗi! 🎉';
     }

@@ -166,7 +166,7 @@ export function PetShopPage({
               <select
                 value={priceFilter}
                 onChange={(e) => {
-                  setPriceFilter(e.target.value as any);
+                  setPriceFilter(e.target.value as 'all' | 'under50' | '50to100' | 'over100');
                   setCurrentPage(1);
                 }}
                 className="pet-filter-select"
