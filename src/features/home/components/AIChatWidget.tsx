@@ -39,10 +39,12 @@ export function AIChatWidget({
 }: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const isPetSleeping = activePet?.fullness === 0;
 
   // Determine avatar icon based on active pet
   const getPetImage = () => {
     if (!activePet) return '🐧';
+    if (activePet.fullness === 0) return '💤';
     if (activePet.level === 1) return activePet.imageBaby;
     if (activePet.level >= 2 && activePet.level <= 4) return activePet.imageTeen;
     if (activePet.level >= 5 && activePet.level <= 9) return activePet.imageAdult;
@@ -206,7 +208,7 @@ export function AIChatWidget({
               <button
                 type="button"
                 className="chat-suggestion-btn"
-                disabled={isChatLoading}
+                disabled={isChatLoading || isPetSleeping}
                 onClick={() => onSendChatMessage(isChallenge ? 'Giải thích mục tiêu thử thách này giúp tớ với!' : 'Giải thích mục tiêu bài học này giúp tớ với!')}
               >
                 {isChallenge ? 'Giải thích thử thách' : 'Giải thích bài học'}
@@ -214,7 +216,7 @@ export function AIChatWidget({
               <button
                 type="button"
                 className="chat-suggestion-btn"
-                disabled={isChatLoading}
+                disabled={isChatLoading || isPetSleeping}
                 onClick={() => onSendChatMessage('Tớ viết code này đúng chuẩn sạch chưa? Nhận xét giúp tớ.')}
               >
                 Nhận xét code
@@ -222,7 +224,7 @@ export function AIChatWidget({
               <button
                 type="button"
                 className="chat-suggestion-btn"
-                disabled={isChatLoading}
+                disabled={isChatLoading || isPetSleeping}
                 onClick={() => onSendChatMessage(isChallenge ? 'Cho tớ một ví dụ thực tế dễ hiểu về nội dung thử thách này nhé!' : 'Cho tớ một ví dụ thực tế dễ hiểu về nội dung bài này nhé!')}
               >
                 Ví dụ thực tế
@@ -245,11 +247,11 @@ export function AIChatWidget({
                 type="text"
                 name="chatInput"
                 className="chat-input-field"
-                placeholder={VI_MESSAGES.home.labels.chatPlaceholder}
+                placeholder={isPetSleeping ? 'Pet đang ngủ thiếp đi vì quá đói, hãy cho ăn để trò chuyện nhé... 💤' : VI_MESSAGES.home.labels.chatPlaceholder}
                 autoComplete="off"
-                disabled={isChatLoading}
+                disabled={isChatLoading || isPetSleeping}
               />
-              <button type="submit" className="chat-send-btn" disabled={isChatLoading}>
+              <button type="submit" className="chat-send-btn" disabled={isChatLoading || isPetSleeping}>
                 <span className="material-symbols-outlined">send</span>
               </button>
             </form>

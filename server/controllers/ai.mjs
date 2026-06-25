@@ -1,6 +1,7 @@
 import { promisify } from 'node:util';
 import { put } from '@vercel/blob';
 import { execute, query } from '../db.mjs';
+import { getAndUpdateActivePet } from './pets.mjs';
 
 import {
   getLevelFromXp,
@@ -647,6 +648,15 @@ export async function chatHandler(request, response) {
   try {
     const user = await requireAuthenticatedUser(request, response);
     if (!user) {
+      return;
+    }
+
+    // Check if pet is sleeping (fullness === 0)
+    const pet = await getAndUpdateActivePet(user.id);
+    if (pet && pet.fullness === 0) {
+      response.status(400).json({
+        message: 'Thú cưng của bạn đã ngủ thiếp đi vì quá đói! Hãy cho ăn để đánh thức thú cưng dậy trước khi trò chuyện nhé. 💤'
+      });
       return;
     }
 
