@@ -34,7 +34,7 @@ export async function getAndUpdateActivePet(userId) {
   const daysPassed = Math.floor(hoursPassed / 24);
 
   if (daysPassed > 0) {
-    const DECAY_RATE = 15;
+    const DECAY_RATE = 100;
     const decay = daysPassed * DECAY_RATE;
     const newFullness = Math.max(0, pet.fullness - decay);
     const newLastFedAt = new Date(lastFed.getTime() + daysPassed * 24 * 60 * 60 * 1000);
