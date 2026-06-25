@@ -212,6 +212,7 @@ export default function App() {
               isStreakExcited={isStreakExcited}
               onFeedPet={handleFeedPet}
               onOpenShop={() => setView('shop')}
+              onUpdateActivePet={setActivePet}
             />
           : view === 'practice'
             ? <PracticePage
@@ -219,6 +220,7 @@ export default function App() {
                 activePet={activePet}
                 activeAccessories={activeAccessories}
                 onNavigateUpgrade={() => setView('settings')}
+                onUpdateActivePet={setActivePet}
               />
             : view === 'inventory'
               ? <InventoryPage />

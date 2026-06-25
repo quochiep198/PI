@@ -755,8 +755,19 @@ ${editorCodeContext}
       [user.id, lessonId || null, challengeId || null, 'ai', aiResponse]
     );
 
+    // Reduce fullness by 10 points per chat message (as requested by user)
+    if (pet) {
+      const newFullness = Math.max(0, pet.fullness - 10);
+      await execute(
+        `UPDATE user_pets SET fullness = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [newFullness, pet.id]
+      );
+      pet.fullness = newFullness;
+    }
+
     response.json({
       message: aiResponse,
+      pet,
     });
   } catch (error) {
     if (error instanceof GroqRequestError && (error.status === 429 || error.status >= 500)) {

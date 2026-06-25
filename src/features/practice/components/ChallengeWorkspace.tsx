@@ -13,6 +13,7 @@ type ChallengeWorkspaceProps = {
   onComplete?: (challengeId: number) => void;
   activePet?: UserPet | null;
   activeAccessories?: PetAccessory[];
+  onUpdateActivePet?: (pet: UserPet) => void;
 };
 
 export function ChallengeWorkspace({
@@ -22,6 +23,7 @@ export function ChallengeWorkspace({
   onComplete,
   activePet,
   activeAccessories = [],
+  onUpdateActivePet,
 }: ChallengeWorkspaceProps) {
   const [code, setCode] = useState('');
   const [output, setOutput] = useState('');
@@ -89,9 +91,13 @@ export function ChallengeWorkspace({
         }),
       });
 
-      const payload = (await response.json()) as { message?: string };
+      const payload = (await response.json()) as { message?: string; pet?: UserPet };
       if (!response.ok) {
         throw new Error(payload.message || 'Không gửi được tin nhắn.');
+      }
+
+      if (payload.pet && onUpdateActivePet) {
+        onUpdateActivePet(payload.pet);
       }
 
       const aiMsg = { sender: 'ai' as const, messageText: payload.message || '' };
@@ -105,7 +111,7 @@ export function ChallengeWorkspace({
     } finally {
       setIsChatLoading(false);
     }
-  }, [challenge, code]);
+  }, [challenge, code, onUpdateActivePet]);
 
   // Reset code when challenge changes
   useEffect(() => {

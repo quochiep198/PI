@@ -65,6 +65,7 @@ type HomePageProps = {
   onOpenShop?: () => void;
   onLogout?: () => Promise<void> | void;
   onNavigatePractice?: () => void;
+  onUpdateActivePet?: (pet: UserPet) => void;
 };
 
 export function HomePage({
@@ -74,6 +75,7 @@ export function HomePage({
   isStreakExcited,
   onFeedPet,
   onOpenShop,
+  onUpdateActivePet,
 }: HomePageProps) {
   const { lessons, loading: lessonsLoading, error: lessonsError } = useLessons();
   const { completedLessonIds, loading: progressLoading, markLessonCompleted } = useLessonProgress();
@@ -459,9 +461,13 @@ export function HomePage({
         }),
       });
 
-      const payload = (await response.json()) as { message?: string; messageText?: string };
+      const payload = (await response.json()) as { message?: string; pet?: UserPet };
       if (!response.ok) {
         throw new Error(payload.message || 'Không gửi được tin nhắn.');
+      }
+
+      if (payload.pet && onUpdateActivePet) {
+        onUpdateActivePet(payload.pet);
       }
 
       const aiMsg = { sender: 'ai' as const, messageText: payload.message || '' };

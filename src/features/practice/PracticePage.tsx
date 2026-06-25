@@ -14,6 +14,7 @@ type PracticePageProps = {
   activePet: UserPet | null;
   activeAccessories?: PetAccessory[];
   onNavigateUpgrade?: () => void;
+  onUpdateActivePet?: (pet: UserPet) => void;
 };
 
 // const storeItems = [
@@ -22,7 +23,7 @@ type PracticePageProps = {
 //   { name: 'XP Boost 2x', price: 90, image: 'BOOST' },
 // ];
 
-export function PracticePage({ user, activePet, activeAccessories = [], onNavigateUpgrade }: PracticePageProps) {
+export function PracticePage({ user, activePet, activeAccessories = [], onNavigateUpgrade, onUpdateActivePet }: PracticePageProps) {
   const { challenges, loading, error, markCompleted } = useChallenges();
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
   const previousCompletedChallengeCountRef = useRef<number | null>(null);
@@ -170,6 +171,7 @@ export function PracticePage({ user, activePet, activeAccessories = [], onNaviga
         onComplete={handleChallengeComplete}
         activePet={activePet}
         activeAccessories={activeAccessories}
+        onUpdateActivePet={onUpdateActivePet}
       />
     </>
   );
