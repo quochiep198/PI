@@ -194,8 +194,6 @@ export default function App() {
           onlineCount={onlineLearners}
           onlineLoading={!onlineConnected && !onlineFailed}
           onlineError={onlineFailed}
-          activePet={activePet}
-          activeAccessories={activeAccessories}
           onNavigateLessons={() => setView('home')}
           onNavigatePractice={() => setView('practice')}
           onNavigateShop={() => setView('shop')}

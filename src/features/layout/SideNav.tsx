@@ -1,4 +1,3 @@
-import { PetWidget, type UserPet, type PetAccessory } from '../pet';
 
 export type SideNavProps = {
   activeLabel?: string;
@@ -6,8 +5,6 @@ export type SideNavProps = {
   onlineCount?: number;
   onlineLoading?: boolean;
   onlineError?: boolean;
-  activePet: UserPet | null;
-  activeAccessories?: PetAccessory[];
   onNavigateLessons?: () => void;
   onNavigatePractice?: () => void;
   onNavigateShop?: () => void;
@@ -22,8 +19,6 @@ export function SideNav({
   onlineCount = 0,
   onlineLoading = false,
   onlineError = false,
-  activePet,
-  activeAccessories = [],
   onNavigateLessons,
   onNavigatePractice,
   onNavigateShop,
@@ -143,12 +138,6 @@ export function SideNav({
           <span>Cài Đặt</span>
         </button>
       </nav>
-
-      {activePet && (
-        <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <PetWidget pet={activePet} tone="idle" activeAccessories={activeAccessories} />
-        </div>
-      )}
     </aside>
   );
 }

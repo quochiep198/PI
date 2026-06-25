@@ -1065,5 +1065,33 @@
   }
 }
 
+/* Chat AI companion bubble styling */
+.chat-btn-bubble {
+  position: absolute;
+  right: 80px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 200px;
+  white-space: normal;
+  z-index: 1002;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-btn-bubble::before {
+  content: '';
+  position: absolute;
+  right: -8px;
+  left: auto !important;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 0 6px 8px !important;
+  border-style: solid;
+  border-color: transparent transparent transparent #ffffff !important;
+}
+
+:root[data-theme='dark'] .chat-btn-bubble::before {
+  border-color: transparent transparent transparent #1e293b !important;
+}
+
 
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { VI_MESSAGES } from '../../../content/messages';
 import type { UserPet, PetAccessory } from '../../pet/types';
+import '../../pet/pet.css';
 
 function getAccessoryClass(imageData: string) {
   if (imageData === '🎩' || imageData === '👑' || imageData === '🎧' || imageData === '🧣' || imageData === '💡' || imageData === '💎') return 'accessory-hat';
@@ -66,6 +67,23 @@ export function AIChatWidget({
     return welcomeMessage || VI_MESSAGES.home.labels.chatWelcome;
   };
 
+  const getBubbleText = () => {
+    if (!activePet) return '';
+    if (activePet.fullness === 0) {
+      return '... (Tớ đã ngủ thiếp đi vì quá đói...) 💤';
+    }
+    if (activePet.fullness < 30) {
+      return 'Tớ đói quá rồi... Cho tớ ăn với! 🥺';
+    }
+    if (activePet.fullness < 80) {
+      return 'Tớ hơi đói rồi, cho tớ ăn nhé! 🍖';
+    }
+    if (activePet.fullness >= 100) {
+      return 'Tớ no căng bụng rồi! 🥰';
+    }
+    return 'Tớ đã ăn no rồi, sẵn sàng học cùng cậu! 🚀';
+  };
+
   // Auto scroll to bottom of chat when new messages arrive or when chat is opened
   useEffect(() => {
     if (isOpen && chatEndRef.current) {
@@ -79,26 +97,36 @@ export function AIChatWidget({
     <div className="ai-chat-widget">
       {/* Floating Chat Bubble Button */}
       {!isOpen && (
-        <button
-          type="button"
-          className="ai-chat-bubble-btn pulse-animation"
-          onClick={() => setIsOpen(true)}
-          title="Trò chuyện cùng Bạn AI"
-        >
-          <span className="ai-chat-bubble-btn__icon">
-            {getPetImage()}
-            {activePet && activeAccessories.map((acc) => (
-              <span
-                key={acc.id}
-                className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
-                title={acc.name}
-              >
-                {acc.imageData}
-              </span>
-            ))}
-          </span>
-          <span className="ai-chat-bubble-btn__badge">1</span>
-        </button>
+        <>
+          {activePet && (
+            <div className="pet-bubble-container chat-btn-bubble">
+              <strong>{activePet.nickname}:</strong>
+              <p style={{ margin: '4px 0 0 0', color: 'inherit', opacity: 0.85, fontSize: '13px' }}>
+                {getBubbleText()}
+              </p>
+            </div>
+          )}
+          <button
+            type="button"
+            className="ai-chat-bubble-btn pulse-animation"
+            onClick={() => setIsOpen(true)}
+            title="Trò chuyện cùng Bạn AI"
+          >
+            <span className="ai-chat-bubble-btn__icon">
+              {getPetImage()}
+              {activePet && activeAccessories.map((acc) => (
+                <span
+                  key={acc.id}
+                  className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+                  title={acc.name}
+                >
+                  {acc.imageData}
+                </span>
+              ))}
+            </span>
+            <span className="ai-chat-bubble-btn__badge">1</span>
+          </button>
+        </>
       )}
 
       {/* Floating Chat Widget Overlay Card */}
