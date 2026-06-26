@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { fetchPetShop, buyPetAccessory, equipPetAccessory } from '../petApi';
-import type { PetShopItem, PetAccessory, UserPet } from '../types';
+import type { PetShopItem, PetAccessory, UserPet, PetTemplate } from '../types';
 import '../pet.css';
 
 interface PetShopPageProps {
   activePet: UserPet | null;
+  petTemplates: PetTemplate[];
   activeAccessories: PetAccessory[];
   currentCoins: number;
   onCoinsUpdated: (coins: number) => void;
@@ -13,6 +14,7 @@ interface PetShopPageProps {
 
 export function PetShopPage({
   activePet,
+  petTemplates,
   activeAccessories,
   currentCoins,
   onCoinsUpdated,
@@ -27,6 +29,31 @@ export function PetShopPage({
   const ITEMS_PER_PAGE = 10;
   const [searchQuery, setSearchQuery] = useState('');
   const [priceFilter, setPriceFilter] = useState<'all' | 'under50' | '50to100' | 'over100'>('all');
+
+  // Pet template preview index state
+  const [previewTemplateIndex, setPreviewTemplateIndex] = useState(0);
+
+  // Synchronize initial preview template with the user's active pet template
+  useEffect(() => {
+    if (activePet && petTemplates.length > 0) {
+      const idx = petTemplates.findIndex((t) => t.id === activePet.templateId);
+      if (idx !== -1) {
+        setPreviewTemplateIndex(idx);
+      }
+    } else if (petTemplates.length > 0) {
+      setPreviewTemplateIndex(0);
+    }
+  }, [activePet, petTemplates]);
+
+  const handlePrevTemplate = () => {
+    if (petTemplates.length === 0) return;
+    setPreviewTemplateIndex((prev) => (prev === 0 ? petTemplates.length - 1 : prev - 1));
+  };
+
+  const handleNextTemplate = () => {
+    if (petTemplates.length === 0) return;
+    setPreviewTemplateIndex((prev) => (prev === petTemplates.length - 1 ? 0 : prev + 1));
+  };
 
   const loadShopData = async () => {
     setLoading(true);
@@ -101,12 +128,18 @@ export function PetShopPage({
     return pet.imageMaster;
   };
 
-  const getAccessoryClass = (imageData: string) => {
-    if (imageData === '🎩' || imageData === '👑' || imageData === '🎧' || imageData === '🧣' || imageData === '💡' || imageData === '💎') return 'accessory-hat';
-    if (imageData === '🕶️' || imageData === '👓') return 'accessory-glasses';
-    if (imageData === '⌨️' || imageData === '📖' || imageData === '🎒' || imageData === '🧸' || imageData === '☕' || imageData === '🍔' || imageData === '👟') return 'accessory-keyboard';
-    if (imageData === '🪄' || imageData === '✨' || imageData === '🎈' || imageData === '🏆' || imageData === '🛡️' || imageData === '🔨' || imageData === '🍀' || imageData === '🥤' || imageData === '🕯️' || imageData === '🎐') return 'accessory-wand';
-    return 'accessory-fallback';
+  // Determine avatar icon based on selected template
+  const getPreviewImage = (template: PetTemplate) => {
+    // If it matches the user's active pet, use the dynamic level/fullness image
+    if (activePet && template.id === activePet.templateId) {
+      return getPetImage(activePet);
+    }
+    // Otherwise show the Adult stage as a default preview
+    return template.imageAdult;
+  };
+
+  const getAccessoryClass = (acc: PetAccessory | PetShopItem | undefined) => {
+    return acc?.accessoryClass || 'accessory-fallback';
   };
 
   const ownedItems = shopItems.filter((item) => item.isOwned);
@@ -115,7 +148,7 @@ export function PetShopPage({
   const filteredItems = displayedItems.filter((item) => {
     // Search by name (case-insensitive)
     const matchesName = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     // Filter by price range
     let matchesPrice = true;
     if (priceFilter === 'under50') {
@@ -125,7 +158,7 @@ export function PetShopPage({
     } else if (priceFilter === 'over100') {
       matchesPrice = item.price > 100;
     }
-    
+
     return matchesName && matchesPrice;
   });
 
@@ -134,61 +167,107 @@ export function PetShopPage({
   const startIndex = (activePage - 1) * ITEMS_PER_PAGE;
   const paginatedItems = filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+  // Selected preview pet template
+  const currentTemplate = petTemplates[previewTemplateIndex] || null;
+  const isCurrentlyActivePet = activePet && currentTemplate && activePet.templateId === currentTemplate.id;
+
   return (
     <main className="settings-main pet-shop-container">
       <div className="pet-shop-new-layout">
-        
+
         {/* PANEL 1: Left Showcase Panel */}
-        {activePet ? (
+        {currentTemplate ? (
           <article className="pet-shop-side-card pet-shop-preview-card">
             <h3>🐾 Thú cưng</h3>
-            
-            <div className="pet-shop-avatar-large" title={`${activePet.nickname} - Cấp ${activePet.level}`}>
-              {getPetImage(activePet)}
-              {activeAccessories.map((acc) => (
-                <span
-                  key={acc.id}
-                  className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
-                  title={acc.name}
-                >
-                  {acc.imageData}
-                </span>
-              ))}
+
+            <div className="pet-shop-avatar-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', margin: '8px 0' }}>
+              <button 
+                type="button" 
+                className="pet-stage-slide-btn prev pressable"
+                onClick={handlePrevTemplate}
+                title="Xem thú cưng trước"
+                disabled={petTemplates.length <= 1}
+              >
+                <span className="material-symbols-outlined">chevron_left</span>
+              </button>
+
+              <div className="pet-shop-avatar-large" title={currentTemplate.name}>
+                {getPreviewImage(currentTemplate)}
+                {activeAccessories.map((acc) => (
+                  <span
+                    key={acc.id}
+                    className={`accessory-overlay ${getAccessoryClass(acc)}`}
+                    title={acc.name}
+                  >
+                    {acc.imageData}
+                  </span>
+                ))}
+              </div>
+
+              <button 
+                type="button" 
+                className="pet-stage-slide-btn next pressable"
+                onClick={handleNextTemplate}
+                title="Xem thú cưng tiếp theo"
+                disabled={petTemplates.length <= 1}
+              >
+                <span className="material-symbols-outlined">chevron_right</span>
+              </button>
             </div>
 
-            <div className="pet-shop-preview-nickname">{activePet.nickname}</div>
-            <div className="pet-shop-preview-codename">@{activePet.codeName}</div>
-
-            {/* Stats: Fullness & XP */}
-            <div className="pet-shop-preview-stat-row">
-              <div className="pet-shop-preview-stat-label">
-                <span>🍖 Độ no</span>
-                <span>{activePet.fullness}/100</span>
-              </div>
-              <div className="pet-shop-preview-progress-bg">
-                <div 
-                  className="pet-shop-preview-progress-fill fullness" 
-                  style={{ width: `${activePet.fullness}%` }}
-                />
-              </div>
+            <div className="pet-shop-preview-stage-label" style={{ textAlign: 'center', display: 'block', margin: '0 auto 12px auto' }}>
+              {isCurrentlyActivePet ? 'Thú cưng của bạn' : 'Xem trước (Chưa nuôi)'}
             </div>
 
-            <div className="pet-shop-preview-stat-row">
-              <div className="pet-shop-preview-stat-label">
-                <span>⭐ Cấp độ {activePet.level}</span>
-                <span>{activePet.currentXp}/{activePet.nextLevelXp} XP</span>
-              </div>
-              <div className="pet-shop-preview-progress-bg">
-                <div 
-                  className="pet-shop-preview-progress-fill xp" 
-                  style={{ width: `${Math.min(100, (activePet.currentXp / activePet.nextLevelXp) * 100)}%` }}
-                />
-              </div>
-            </div>
+            {isCurrentlyActivePet && activePet ? (
+              <>
+                <div className="pet-shop-preview-nickname">{activePet.nickname}</div>
+                <div className="pet-shop-preview-codename">@{activePet.codeName}</div>
+
+                {/* Stats: Fullness & XP */}
+                <div className="pet-shop-preview-stat-row">
+                  <div className="pet-shop-preview-stat-label">
+                    <span>🍖 Độ no</span>
+                    <span>{activePet.fullness}/100</span>
+                  </div>
+                  <div className="pet-shop-preview-progress-bg">
+                    <div
+                      className="pet-shop-preview-progress-fill fullness"
+                      style={{ width: `${activePet.fullness}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="pet-shop-preview-stat-row">
+                  <div className="pet-shop-preview-stat-label">
+                    <span>⭐ Cấp độ {activePet.level}</span>
+                    <span>{activePet.currentXp}/{activePet.nextLevelXp} XP</span>
+                  </div>
+                  <div className="pet-shop-preview-progress-bg">
+                    <div
+                      className="pet-shop-preview-progress-fill xp"
+                      style={{ width: `${Math.min(100, (activePet.currentXp / activePet.nextLevelXp) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="pet-shop-preview-nickname">{currentTemplate.name}</div>
+                <div className="pet-shop-preview-codename">@{currentTemplate.codeName}</div>
+                
+                <div style={{ textAlign: 'center', padding: '10px 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  <p style={{ margin: '0 0 10px 0', lineHeight: '1.4' }}>{currentTemplate.description}</p>
+                  <span className="pet-shop-equipped-tag" style={{ background: 'rgba(234, 179, 8, 0.1)', borderColor: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', cursor: 'default' }}>
+                    Nhận nuôi: 🪙 {currentTemplate.priceCoins} Coins tại trang chủ
+                  </span>
+                </div>
+              </>
+            )}
 
             {/* Currently Equipped Accessories */}
             <div className="pet-shop-equipped-section">
-              <div className="pet-shop-equipped-title">Đang mặc trên Pet</div>
+              <div className="pet-shop-equipped-title">Đang mặc thử</div>
               {activeAccessories.length === 0 ? (
                 <div className="pet-shop-no-equipped">Chưa trang bị phụ kiện nào.</div>
               ) : (
@@ -196,8 +275,8 @@ export function PetShopPage({
                   {activeAccessories.map((acc) => {
                     const itemMatch = shopItems.find((item) => item.id === acc.itemId);
                     return (
-                      <span 
-                        key={acc.id} 
+                      <span
+                        key={acc.id}
                         className="pet-shop-equipped-tag"
                         onClick={() => itemMatch && handleEquipToggle(itemMatch)}
                         title="Nhấn để tháo nhanh"
@@ -430,8 +509,8 @@ export function PetShopPage({
               <strong>{ownedItems.length} / {shopItems.length}</strong>
             </div>
             <div className="pet-shop-progress-bar-bg">
-              <div 
-                className="pet-shop-progress-bar-fill" 
+              <div
+                className="pet-shop-progress-bar-fill"
                 style={{ width: `${shopItems.length > 0 ? (ownedItems.length / shopItems.length) * 100 : 0}%` }}
               />
             </div>

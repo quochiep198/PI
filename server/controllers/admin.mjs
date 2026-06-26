@@ -286,7 +286,7 @@ export async function getItemsHandler(request, response) {
     // Get items for user's avatar
     const rows = await query(
       `
-        SELECT i.id, i.avatar_id AS "avatarId", i.name, i.asset_type AS "assetType", i.description, i.image_data AS "imageData", i.price, i.created_at AS "createdAt", i.updated_at AS "updatedAt"
+        SELECT i.id, i.avatar_id AS "avatarId", i.name, i.asset_type AS "assetType", i.description, i.image_data AS "imageData", i.price, i.accessory_class AS "accessoryClass", i.created_at AS "createdAt", i.updated_at AS "updatedAt"
         FROM items i
         INNER JOIN avatars a ON a.id = i.avatar_id
         WHERE a.user_id = $1
@@ -316,7 +316,7 @@ export async function createItemHandler(request, response) {
       return;
     }
 
-    const { name, assetType, description, price, imageData } = getRequestBody(request);
+    const { name, assetType, description, price, imageData, accessoryClass } = getRequestBody(request);
 
     if (!name?.trim()) {
       response.status(400).json({ message: 'Tên item không được để trống.' });
@@ -360,11 +360,11 @@ export async function createItemHandler(request, response) {
     // Save the item
     const rows = await query(
       `
-        INSERT INTO items (avatar_id, name, asset_type, description, image_data, price)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, avatar_id AS "avatarId", name, asset_type AS "assetType", description, image_data AS "imageData", price, created_at AS "createdAt", updated_at AS "updatedAt"
+        INSERT INTO items (avatar_id, name, asset_type, description, image_data, price, accessory_class)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, avatar_id AS "avatarId", name, asset_type AS "assetType", description, image_data AS "imageData", price, accessory_class AS "accessoryClass", created_at AS "createdAt", updated_at AS "updatedAt"
       `,
-      [avatarId, name.trim(), assetType, description?.trim() || null, imageData, itemPrice],
+      [avatarId, name.trim(), assetType, description?.trim() || null, imageData, itemPrice, accessoryClass || null],
     );
 
     response.status(201).json({
@@ -392,7 +392,7 @@ export async function getUserItemsHandler(request, response) {
     let queryText = `
       SELECT ui.id, ui.is_active AS "isActive", ui.created_at AS "createdAt",
              i.id AS "itemId", i.name, i.asset_type AS "assetType", i.description,
-             i.image_data AS "imageData", i.price
+             i.image_data AS "imageData", i.price, i.accessory_class AS "accessoryClass"
       FROM user_items ui
       INNER JOIN items i ON i.id = ui.item_id
       WHERE ui.user_id = $1

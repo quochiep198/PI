@@ -34,6 +34,7 @@ export interface PetAccessory {
   name: string;
   assetType: string;
   imageData: string;
+  accessoryClass?: string;
 }
 
 export interface PetShopItem {
@@ -43,6 +44,7 @@ export interface PetShopItem {
   imageData: string;
   price: number;
   isOwned: boolean;
+  accessoryClass?: string;
 }
 
 export interface PetShopResponse {

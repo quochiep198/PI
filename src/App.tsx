@@ -227,6 +227,7 @@ export default function App() {
                 : view === 'shop'
                   ? <PetShopPage
                       activePet={activePet}
+                      petTemplates={petTemplates}
                       activeAccessories={activeAccessories}
                       currentCoins={coins}
                       onCoinsUpdated={(newCoins) => setCachedCoins(newCoins)}

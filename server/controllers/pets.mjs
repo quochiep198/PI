@@ -80,7 +80,7 @@ export async function getActivePetHandler(request, response) {
     // Fetch active pet accessories (equipped items of type 'pet_accessory')
     const activeAccessories = await query(
       `
-        SELECT ui.id, i.id AS "itemId", i.name, i.asset_type AS "assetType", i.image_data AS "imageData"
+        SELECT ui.id, i.id AS "itemId", i.name, i.asset_type AS "assetType", i.image_data AS "imageData", i.accessory_class AS "accessoryClass"
         FROM user_items ui
         INNER JOIN items i ON i.id = ui.item_id
         WHERE ui.user_id = $1 AND ui.is_active = TRUE AND i.asset_type = 'pet_accessory'
@@ -344,7 +344,7 @@ export async function getPetShopHandler(request, response) {
     // Fetch all items of asset_type 'pet_accessory'
     const shopItems = await query(
       `
-        SELECT id, name, description, image_data AS "imageData", price
+        SELECT id, name, description, image_data AS "imageData", price, accessory_class AS "accessoryClass"
         FROM items
         WHERE asset_type = 'pet_accessory'
         ORDER BY price ASC, id ASC

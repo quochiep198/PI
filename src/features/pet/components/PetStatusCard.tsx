@@ -10,12 +10,8 @@ interface PetStatusCardProps {
   onOpenShop?: () => void;
 }
 
-function getAccessoryClass(imageData: string) {
-  if (imageData === '🎩' || imageData === '👑' || imageData === '🎧' || imageData === '🧣' || imageData === '💡' || imageData === '💎') return 'accessory-hat';
-  if (imageData === '🕶️' || imageData === '👓') return 'accessory-glasses';
-  if (imageData === '⌨️' || imageData === '📖' || imageData === '🎒' || imageData === '🧸' || imageData === '☕' || imageData === '🍔' || imageData === '👟') return 'accessory-keyboard';
-  if (imageData === '🪄' || imageData === '✨' || imageData === '🎈' || imageData === '🏆' || imageData === '🛡️' || imageData === '🔨' || imageData === '🍀' || imageData === '🥤' || imageData === '🕯️' || imageData === '🎐') return 'accessory-wand';
-  return 'accessory-fallback';
+function getAccessoryClass(acc: PetAccessory | undefined) {
+  return acc?.accessoryClass || 'accessory-fallback';
 }
 
 export function PetStatusCard({
@@ -69,7 +65,7 @@ export function PetStatusCard({
         {activeAccessories.map((acc) => (
           <span
             key={acc.id}
-            className={`accessory-overlay ${getAccessoryClass(acc.imageData)}`}
+            className={`accessory-overlay ${getAccessoryClass(acc)}`}
             title={acc.name}
           >
             {acc.imageData}
