@@ -1093,5 +1093,479 @@
   border-color: transparent transparent transparent #1e293b !important;
 }
 
+/* ==========================================================================
+   New 3-Panel Pet Shop Page Layout (Live Showcase + Catalog + Control Center)
+   ========================================================================== */
+
+.pet-shop-new-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr 300px;
+  gap: 20px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* Base card layout */
+.pet-shop-side-card {
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  position: sticky;
+  top: 20px;
+}
+
+/* Light Theme overrides */
+:root[data-theme='light'] .pet-shop-side-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(241, 245, 249, 0.7) 100%);
+  border: 1px solid rgba(48, 69, 227, 0.12);
+  box-shadow: 0 10px 25px rgba(48, 69, 227, 0.05), inset 0 1px 1px #fff;
+  color: #1e293b;
+}
+
+/* Dark Theme overrides */
+:root[data-theme='dark'] .pet-shop-side-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.55) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  color: #f1f5f9;
+}
+
+/* Card titles */
+.pet-shop-side-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* --- Left Column: Pet Showcase Card --- */
+.pet-shop-avatar-large {
+  position: relative;
+  font-size: 5.5rem;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto 16px auto;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
+  animation: float 4s ease-in-out infinite;
+}
+
+.pet-shop-avatar-large .accessory-overlay {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
+
+.pet-shop-avatar-large .accessory-hat {
+  font-size: 3rem;
+  top: -1.6rem;
+  left: 50%;
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.pet-shop-avatar-large .accessory-glasses {
+  font-size: 2.3rem;
+  top: 1.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pet-shop-avatar-large .accessory-keyboard {
+  font-size: 2.3rem;
+  bottom: -0.3rem;
+  left: -0.5rem;
+}
+
+.pet-shop-avatar-large .accessory-wand {
+  font-size: 2.3rem;
+  bottom: -0.2rem;
+  right: -0.5rem;
+  transform: rotate(15deg);
+}
+
+.pet-shop-avatar-large .accessory-fallback {
+  font-size: 2rem;
+  bottom: -0.3rem;
+  right: -0.3rem;
+}
+
+/* Pet Details & Level */
+.pet-shop-preview-nickname {
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.pet-shop-preview-codename {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-align: center;
+  margin-bottom: 20px;
+  font-family: monospace;
+}
+
+:root[data-theme='light'] .pet-shop-preview-codename {
+  color: #64748b;
+}
+
+/* Progress bars in preview card */
+.pet-shop-preview-stat-row {
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.pet-shop-preview-stat-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pet-shop-preview-progress-bg {
+  height: 8px;
+  background: rgba(15, 23, 42, 0.15);
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme='dark'] .pet-shop-preview-progress-bg {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.pet-shop-preview-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease-out;
+}
+
+.pet-shop-preview-progress-fill.xp {
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+}
+
+.pet-shop-preview-progress-fill.fullness {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+/* Equipped Items Area */
+.pet-shop-equipped-section {
+  margin-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+  width: 100%;
+}
+
+:root[data-theme='light'] .pet-shop-equipped-section {
+  border-top-color: rgba(48, 69, 227, 0.08);
+}
+
+.pet-shop-equipped-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+:root[data-theme='light'] .pet-shop-equipped-title {
+  color: #64748b;
+}
+
+.pet-shop-equipped-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pet-shop-equipped-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+:root[data-theme='dark'] .pet-shop-equipped-tag {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+:root[data-theme='light'] .pet-shop-equipped-tag {
+  background: rgba(48, 69, 227, 0.05);
+  border-color: rgba(48, 69, 227, 0.1);
+  color: #3b82f6;
+}
+
+.pet-shop-equipped-tag:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  transform: translateY(-1px);
+}
+
+.pet-shop-equipped-tag .close-icon {
+  font-size: 0.75rem;
+  opacity: 0.65;
+  transition: opacity 0.2s;
+}
+
+.pet-shop-equipped-tag:hover .close-icon {
+  opacity: 1;
+}
+
+.pet-shop-no-equipped {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+:root[data-theme='light'] .pet-shop-no-equipped {
+  color: #64748b;
+}
+
+
+/* --- Right Column: Shop Control Card --- */
+.pet-shop-premium-coins {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.12);
+  transition: all 0.2s ease;
+}
+
+:root[data-theme='dark'] .pet-shop-premium-coins {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(217, 119, 6, 0.15));
+  border: 1px solid rgba(234, 179, 8, 0.25);
+  color: #fcd34d;
+}
+
+:root[data-theme='light'] .pet-shop-premium-coins {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.08), rgba(217, 119, 6, 0.08));
+  border: 1px solid rgba(234, 179, 8, 0.18);
+  color: #d97706;
+}
+
+.pet-shop-premium-coins:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 16px rgba(234, 179, 8, 0.2);
+}
+
+.pet-shop-premium-coins .coin-icon {
+  font-size: 1.4rem;
+  animation: pulse 2s infinite;
+}
+
+/* Vertical tab navigation */
+.pet-shop-control-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.pet-shop-control-tabs button {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  justify-content: flex-start;
+}
+
+/* Dark mode vertical tabs */
+:root[data-theme='dark'] .pet-shop-control-tabs button {
+  background: rgba(15, 23, 42, 0.3);
+  border-color: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+}
+
+:root[data-theme='dark'] .pet-shop-control-tabs button:hover {
+  background: rgba(15, 23, 42, 0.55);
+  color: #f1f5f9;
+}
+
+:root[data-theme='dark'] .pet-shop-control-tabs button.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  box-shadow: 0 4px 10px rgba(56, 189, 248, 0.08);
+}
+
+/* Light mode vertical tabs */
+:root[data-theme='light'] .pet-shop-control-tabs button {
+  background: rgba(241, 245, 249, 0.6);
+  border-color: rgba(48, 69, 227, 0.05);
+  color: #64748b;
+}
+
+:root[data-theme='light'] .pet-shop-control-tabs button:hover {
+  background: rgba(241, 245, 249, 0.95);
+  color: #1e293b;
+}
+
+:root[data-theme='light'] .pet-shop-control-tabs button.active {
+  background: rgba(48, 69, 227, 0.06);
+  border-color: #3b82f6;
+  color: #3b82f6;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.05);
+}
+
+/* Vertical layout filters spacing */
+.pet-shop-control-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.pet-shop-control-filters .search-input-wrapper,
+.pet-shop-control-filters .filter-select-wrapper {
+  width: 100%;
+}
+
+/* Progress bar inside controls */
+.pet-shop-progress-stats {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+:root[data-theme='light'] .pet-shop-progress-stats {
+  border-top-color: rgba(48, 69, 227, 0.08);
+  color: #64748b;
+}
+
+.pet-shop-progress-bar-bg {
+  height: 6px;
+  background: rgba(15, 23, 42, 0.15);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+:root[data-theme='dark'] .pet-shop-progress-bar-bg {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.pet-shop-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  border-radius: 99px;
+  transition: width 0.5s ease-out;
+}
+
+
+/* --- Center Column: Catalog Grid --- */
+.pet-shop-catalog-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+.pet-shop-catalog-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:root[data-theme='dark'] .pet-shop-catalog-title {
+  color: #f1f5f9;
+}
+
+:root[data-theme='light'] .pet-shop-catalog-title {
+  color: #1e293b;
+}
+
+.pet-shop-catalog-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+:root[data-theme='dark'] .pet-shop-catalog-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+:root[data-theme='light'] .pet-shop-catalog-badge {
+  background: rgba(48, 69, 227, 0.06);
+  color: #64748b;
+}
+
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 1100px) {
+  .pet-shop-new-layout {
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+  }
+  .pet-shop-control-side-col {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .pet-shop-side-card {
+    position: relative;
+    top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .pet-shop-new-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .pet-shop-control-side-col {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .pet-shop-side-card {
+    position: relative;
+    top: 0;
+  }
+}
+
 
 
