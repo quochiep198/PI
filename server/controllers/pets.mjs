@@ -30,14 +30,15 @@ export async function getAndUpdateActivePet(userId) {
   const pet = activePetRows[0];
   const lastFed = new Date(pet.lastFedAt);
   const now = new Date();
-  const hoursPassed = (now.getTime() - lastFed.getTime()) / (1000 * 60 * 60);
-  const daysPassed = Math.floor(hoursPassed / 24);
+  const msPassed = now.getTime() - lastFed.getTime();
+  const hoursPassed = Math.floor(msPassed / (1000 * 60 * 60));
 
-  if (daysPassed > 0) {
-    const DECAY_RATE = 100;
-    const decay = daysPassed * DECAY_RATE;
+  if (hoursPassed > 0) {
+    // Decay 3 points of fullness per hour (takes ~33 hours to go from 100 to 0)
+    const DECAY_RATE_PER_HOUR = 3;
+    const decay = hoursPassed * DECAY_RATE_PER_HOUR;
     const newFullness = Math.max(0, pet.fullness - decay);
-    const newLastFedAt = new Date(lastFed.getTime() + daysPassed * 24 * 60 * 60 * 1000);
+    const newLastFedAt = new Date(lastFed.getTime() + hoursPassed * 60 * 60 * 1000);
 
     await execute(
       `
