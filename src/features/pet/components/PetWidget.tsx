@@ -1,4 +1,5 @@
 import type { UserPet, PetAccessory } from '../types';
+import { PetAvatar } from './PetAvatar';
 import '../pet.css';
 
 interface PetWidgetProps {
@@ -7,26 +8,8 @@ interface PetWidgetProps {
   activeAccessories?: PetAccessory[];
 }
 
-function getAccessoryClass(acc: PetAccessory | undefined) {
-  return acc?.accessoryClass || 'accessory-fallback';
-}
-
 export function PetWidget({ pet, tone, activeAccessories = [] }: PetWidgetProps) {
   if (!pet) return null;
-
-  // Determine current image based on level and fullness
-  const getPetImage = () => {
-    if (pet.fullness === 0) {
-      return '💤';
-    }
-    if (pet.fullness < 30) {
-      return pet.codeName === 'cyber_cat' ? '😿' : '🥺';
-    }
-    if (pet.level === 1) return pet.imageBaby;
-    if (pet.level >= 2 && pet.level <= 4) return pet.imageTeen;
-    if (pet.level >= 5 && pet.level <= 9) return pet.imageAdult;
-    return pet.imageMaster;
-  };
 
   // Determine message deterministically based on exact state
   const getBubbleText = () => {
@@ -57,18 +40,13 @@ export function PetWidget({ pet, tone, activeAccessories = [] }: PetWidgetProps)
 
   return (
     <div className="pet-editor-widget" style={{ marginTop: '16px' }}>
-      <div className="pet-widget-avatar" title={`Cấp độ ${pet.level}`}>
-        {getPetImage()}
-        {activeAccessories.map((acc) => (
-          <span
-            key={acc.id}
-            className={`accessory-overlay ${getAccessoryClass(acc)}`}
-            title={acc.name}
-          >
-            {acc.imageData}
-          </span>
-        ))}
-      </div>
+      <PetAvatar
+        pet={pet}
+        size="medium"
+        activeAccessories={activeAccessories}
+        className="pet-widget-avatar"
+        style={{ cursor: 'default' }}
+      />
       <div className="pet-bubble-container">
         <strong>{pet.nickname}:</strong>
         <p style={{ margin: '4px 0 0 0', color: 'inherit', opacity: 0.85 }}>{bubbleText}</p>

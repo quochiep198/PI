@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchPetShop, buyPetAccessory, equipPetAccessory, switchPetTemplate } from '../petApi';
 import type { PetShopItem, PetAccessory, UserPet, PetTemplate } from '../types';
+import { PetAvatar } from './PetAvatar';
 import '../pet.css';
 
 interface PetShopPageProps {
@@ -129,33 +130,7 @@ export function PetShopPage({
     }
   };
 
-  // Helper functions for large avatar preview rendering
-  const getPetImage = (pet: UserPet) => {
-    if (pet.fullness === 0) {
-      return '💤';
-    }
-    if (pet.fullness < 30) {
-      return pet.codeName === 'cyber_cat' ? '😿' : '🥺';
-    }
-    if (pet.level === 1) return pet.imageBaby;
-    if (pet.level >= 2 && pet.level <= 4) return pet.imageTeen;
-    if (pet.level >= 5 && pet.level <= 9) return pet.imageAdult;
-    return pet.imageMaster;
-  };
 
-  // Determine avatar icon based on selected template
-  const getPreviewImage = (template: PetTemplate) => {
-    // If it matches the user's active pet, use the dynamic level/fullness image
-    if (activePet && template.id === activePet.templateId) {
-      return getPetImage(activePet);
-    }
-    // Otherwise show the Adult stage as a default preview
-    return template.imageAdult;
-  };
-
-  const getAccessoryClass = (acc: PetAccessory | PetShopItem | undefined) => {
-    return acc?.accessoryClass || 'accessory-fallback';
-  };
 
   const ownedItems = shopItems.filter((item) => item.isOwned);
   const displayedItems = activeTab === 'shop' ? shopItems : ownedItems;
@@ -206,18 +181,14 @@ export function PetShopPage({
                 <span className="material-symbols-outlined">chevron_left</span>
               </button>
 
-              <div className="pet-shop-avatar-large" title={currentTemplate.name}>
-                {getPreviewImage(currentTemplate)}
-                {activeAccessories.map((acc) => (
-                  <span
-                    key={acc.id}
-                    className={`accessory-overlay ${getAccessoryClass(acc)}`}
-                    title={acc.name}
-                  >
-                    {acc.imageData}
-                  </span>
-                ))}
-              </div>
+              <PetAvatar
+                pet={isCurrentlyActivePet ? activePet : null}
+                template={currentTemplate}
+                size="large"
+                activeAccessories={isCurrentlyActivePet ? activeAccessories : []}
+                className="pet-shop-avatar-large"
+                style={{ animation: 'float 4s ease-in-out infinite' }}
+              />
 
               <button 
                 type="button" 

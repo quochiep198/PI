@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { PetTemplate } from '../types';
+import type { PetTemplate, UserPet } from '../types';
+import { PetAvatar } from './PetAvatar';
 import '../pet.css';
 
 interface PetSelectionModalProps {
@@ -30,8 +31,32 @@ export function PetSelectionModal({ show, templates, onAdopt, onDismiss }: PetSe
     }
   };
 
-  const getEvolutionStages = (template: PetTemplate) => {
-    return [template.imageBaby, template.imageTeen, template.imageAdult, template.imageMaster];
+  const getEvolutionStageAvatars = (template: PetTemplate) => {
+    const stages: Array<{ level: number; key: string }> = [
+      { level: 1, key: 'baby' },
+      { level: 3, key: 'teen' },
+      { level: 6, key: 'adult' },
+      { level: 10, key: 'master' },
+    ];
+    return (
+      <div className="pet-evolution-line" title="Các giai đoạn tiến hóa" style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+        {stages.map((stage) => {
+          const mockPet = {
+            codeName: template.codeName,
+            level: stage.level,
+            fullness: 100,
+          } as UserPet;
+          return (
+            <PetAvatar
+              key={stage.key}
+              pet={mockPet}
+              size="small"
+              style={{ width: '28px', height: '28px', margin: 0 }}
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -49,14 +74,15 @@ export function PetSelectionModal({ show, templates, onAdopt, onDismiss }: PetSe
               className={`pet-option-card ${selectedTemplateId === template.id ? 'selected' : ''}`}
               onClick={() => setSelectedTemplateId(template.id)}
             >
-              <div className="pet-option-avatar">{template.imageBaby}</div>
+              <PetAvatar
+                pet={null}
+                template={template}
+                size="small"
+                style={{ width: '40px', height: '40px', margin: '0 auto 8px' }}
+              />
               <div className="pet-option-name">{template.name}</div>
               <p className="pet-option-desc">{template.description}</p>
-              <div className="pet-evolution-line" title="Các giai đoạn tiến hóa">
-                {getEvolutionStages(template).map((emoji, idx) => (
-                  <span key={idx}>{emoji}</span>
-                ))}
-              </div>
+              {getEvolutionStageAvatars(template)}
             </div>
           ))}
         </div>

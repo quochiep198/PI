@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { UserPet, PetAccessory } from '../types';
+import { PetAvatar } from './PetAvatar';
 import '../pet.css';
 
 interface PetStatusCardProps {
@@ -8,10 +9,6 @@ interface PetStatusCardProps {
   onFeed: () => Promise<void> | void;
   activeAccessories?: PetAccessory[];
   onOpenShop?: () => void;
-}
-
-function getAccessoryClass(acc: PetAccessory | undefined) {
-  return acc?.accessoryClass || 'accessory-fallback';
 }
 
 export function PetStatusCard({
@@ -37,40 +34,17 @@ export function PetStatusCard({
     }
   };
 
-  const getPetImage = () => {
-    if (pet.fullness === 0) {
-      return '💤';
-    }
-    if (pet.fullness < 30) {
-      return pet.codeName === 'cyber_cat' ? '😿' : '🥺';
-    }
-    if (pet.level === 1) return pet.imageBaby;
-    if (pet.level >= 2 && pet.level <= 4) return pet.imageTeen;
-    if (pet.level >= 5 && pet.level <= 9) return pet.imageAdult;
-    return pet.imageMaster;
-  };
-
   const xpPercent = Math.min(100, Math.max(0, (pet.currentXp / pet.nextLevelXp) * 100));
 
   return (
     <div className="pet-status-card-compact" title={`${pet.nickname} (${pet.name}) - Cấp ${pet.level}`}>
-      <div className="pet-status-avatar-wrapper-compact">
-        <div
+      <div className="pet-status-avatar-wrapper-compact" onClick={onOpenShop} style={{ cursor: onOpenShop ? 'pointer' : 'default' }}>
+        <PetAvatar
+          pet={pet}
+          size="small"
+          activeAccessories={activeAccessories}
           className="pet-status-avatar-compact"
-          onClick={onOpenShop}
-          style={{ cursor: onOpenShop ? 'pointer' : 'default' }}
-        >
-          {getPetImage()}
-        </div>
-        {activeAccessories.map((acc) => (
-          <span
-            key={acc.id}
-            className={`accessory-overlay ${getAccessoryClass(acc)}`}
-            title={acc.name}
-          >
-            {acc.imageData}
-          </span>
-        ))}
+        />
         <div className="pet-status-level-badge-compact">L.{pet.level}</div>
       </div>
 
