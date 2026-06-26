@@ -76,3 +76,18 @@ export async function equipPetAccessory(itemId: number | null, active?: boolean)
   }
   return response.json() as Promise<{ success: boolean }>;
 }
+
+export async function switchPetTemplate(templateId: number): Promise<{ success: boolean }> {
+  const response = await fetch('/api/user-pets/switch-template', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ templateId }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Không thể đổi mẫu thú cưng.');
+  }
+  return response.json() as Promise<{ success: boolean }>;
+}

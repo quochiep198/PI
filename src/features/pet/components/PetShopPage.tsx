@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchPetShop, buyPetAccessory, equipPetAccessory } from '../petApi';
+import { fetchPetShop, buyPetAccessory, equipPetAccessory, switchPetTemplate } from '../petApi';
 import type { PetShopItem, PetAccessory, UserPet, PetTemplate } from '../types';
 import '../pet.css';
 
@@ -109,6 +109,21 @@ export function PetShopPage({
       onRefreshPetState();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Thao tác thất bại.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSwitchTemplate = async (templateId: number) => {
+    setActionLoading(-1);
+    setError(null);
+    try {
+      const res = await switchPetTemplate(templateId);
+      if (res.success) {
+        onRefreshPetState();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể đổi mẫu thú cưng.');
     } finally {
       setActionLoading(null);
     }
@@ -250,6 +265,15 @@ export function PetShopPage({
                     />
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  className="pet-adopt-btn"
+                  style={{ width: '100%', marginTop: '12px', background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.2)', cursor: 'default' }}
+                  disabled
+                >
+                  🟢 Đang đồng hành
+                </button>
               </>
             ) : (
               <>
@@ -258,10 +282,17 @@ export function PetShopPage({
                 
                 <div style={{ textAlign: 'center', padding: '10px 0', fontSize: '0.8rem', color: '#94a3b8' }}>
                   <p style={{ margin: '0 0 10px 0', lineHeight: '1.4' }}>{currentTemplate.description}</p>
-                  <span className="pet-shop-equipped-tag" style={{ background: 'rgba(234, 179, 8, 0.1)', borderColor: 'rgba(234, 179, 8, 0.2)', color: '#fbbf24', cursor: 'default' }}>
-                    Nhận nuôi: 🪙 {currentTemplate.priceCoins} Coins tại trang chủ
-                  </span>
                 </div>
+
+                <button
+                  type="button"
+                  className="pet-adopt-btn pressable"
+                  style={{ width: '100%', marginTop: '4px' }}
+                  onClick={() => handleSwitchTemplate(currentTemplate.id)}
+                  disabled={actionLoading === -1}
+                >
+                  {actionLoading === -1 ? 'Đang đổi...' : `🔄 Đổi sang ${currentTemplate.name}`}
+                </button>
               </>
             )}
 

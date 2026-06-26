@@ -167,6 +167,61 @@ export async function adoptPetHandler(request, response) {
   }
 }
 
+// Switch pet template for user's active pet
+export async function switchPetTemplateHandler(request, response) {
+  try {
+    const user = await requireAuthenticatedUser(request, response);
+    if (!user) {
+      return;
+    }
+
+    const { templateId } = getRequestBody(request);
+    if (!templateId) {
+      response.status(400).json({ message: 'Template ID không hợp lệ.' });
+      return;
+    }
+
+    // Check if template exists
+    const templateRows = await query(
+      `SELECT id, name FROM pet_templates WHERE id = $1`,
+      [templateId]
+    );
+    if (templateRows.length === 0) {
+      response.status(404).json({ message: 'Không tìm thấy mẫu thú cưng này.' });
+      return;
+    }
+
+    // Verify user has an active pet
+    const activePetRows = await query(
+      `SELECT id FROM user_pets WHERE user_id = $1 AND is_active = TRUE`,
+      [user.id]
+    );
+    if (activePetRows.length === 0) {
+      response.status(400).json({ message: 'Bạn chưa nhận nuôi thú cưng nào.' });
+      return;
+    }
+
+    // Update active pet's template
+    await execute(
+      `
+        UPDATE user_pets
+        SET pet_template_id = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = $2 AND is_active = TRUE
+      `,
+      [templateId, user.id]
+    );
+
+    response.json({
+      success: true,
+      message: `Đã đổi thành công sang thú cưng ${templateRows[0].name}!`
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: error instanceof Error ? error.message : 'Không thể đổi mẫu thú cưng.',
+    });
+  }
+}
+
 // Feed active pet
 export async function feedPetHandler(request, response) {
   try {
