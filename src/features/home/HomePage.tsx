@@ -528,6 +528,23 @@ export function HomePage({
         {/* TopBar and SideNav are already rendered in App.tsx */}
 
         <section className="lesson-layout">
+          <WorkspacePanel
+            code={code}
+            output={output}
+            outputTone={outputTone}
+            status={status}
+            selectedLesson={selectedLesson}
+            isHintLoading={isHintLoading}
+            isErrorFeedbackLoading={isErrorFeedbackLoading}
+            isReviewLoading={isReviewLoading}
+            onCodeChange={setCode}
+            onEditorKeyDown={handleEditorKeyDown}
+            onRunCode={handleRunCode}
+            onResetCode={handleResetCode}
+            onShowHint={handleShowHint}
+            onShowCodeReview={handleShowCodeReview}
+          />
+
           <LessonPanel
             lessons={lessons}
             completedLessonIds={completedLessonIds}
@@ -545,23 +562,6 @@ export function HomePage({
             isStreakExcited={isStreakExcited}
             onFeedPet={onFeedPet}
             onOpenShop={onOpenShop}
-          />
-
-          <WorkspacePanel
-            code={code}
-            output={output}
-            outputTone={outputTone}
-            status={status}
-            selectedLesson={selectedLesson}
-            isHintLoading={isHintLoading}
-            isErrorFeedbackLoading={isErrorFeedbackLoading}
-            isReviewLoading={isReviewLoading}
-            onCodeChange={setCode}
-            onEditorKeyDown={handleEditorKeyDown}
-            onRunCode={handleRunCode}
-            onResetCode={handleResetCode}
-            onShowHint={handleShowHint}
-            onShowCodeReview={handleShowCodeReview}
           />
         </section>
       </main>

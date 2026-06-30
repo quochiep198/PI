@@ -94,10 +94,21 @@ Mục tiêu của gói nâng cấp này là:
 - Mỗi ngày Pet sẽ đưa ra 1 ước nguyện ngẫu nhiên từ danh sách (ví dụ: *"Cậu hãy đạt 100 XP hôm nay nhé"*, *"Hãy làm đúng 1 bài luyện tập"*).
 - Hoàn thành ước nguyện giúp trẻ nhận thưởng thêm Coins và tăng 10 điểm thân thiết (`affection`).
 
-### 5.4 Cơ chế đói bụng kiệt sức (Streak Penalty)
+### 5.4 Cơ chế độ no & biểu cảm động (Fullness SVG States)
 - Mỗi 24 giờ kể từ `last_fed_at`, độ no (`fullness`) giảm 15 điểm.
-- Nếu `fullness` dưới 30, Pet chuyển sang biểu cảm mệt mỏi (`😿`, `🥺`).
-- Nếu bỏ học/không cho ăn quá 48 giờ (`fullness` chạm 0), Pet sẽ ngủ thiếp đi (`💤`, `🥀`) và không trò chuyện nữa cho đến khi được cho ăn.
+- Trạng thái biểu cảm của Pet sẽ thay đổi trực quan theo 4 cấp độ chỉ số độ no trong SVG:
+  1. **Ăn no nê (`fullness >= 80`)**:
+     - *Cyber Cat*: Mắt hiển thị hình trái tim (`♥ ♥`) nhấp nháy hoặc hình bán nguyệt cười (`^ ^`), đèn visor đổi sang màu xanh lục neon sáng rực (`#10b981`) thể hiện pin sạc đầy.
+     - *Py Dragon*: Đốm lửa đuôi bùng to hơn (`scale(1.35)`), mắt hình bán nguyệt híp cười. Giai đoạn lớn có thêm ngọn lửa khè nhẹ bập bùng trước miệng.
+     - *Algorithm Owl*: Đầu lắc lư nhẹ nhàng vui sướng, mắt kính sáng bóng, có các ký tự nhị phân `0 1` bay lơ lửng quanh đầu.
+  2. **Bình thường (`30 <= fullness < 80`)**:
+     - Hiển thị biểu cảm bình thường (mắt tròn nhấp nháy, thở đều đặn).
+  3. **Đói bụng (`0 < fullness < 30`)**:
+     - *Cyber Cat*: Mắt visor đổi sang màu đỏ cảnh báo (`#f43f5e`), hoạt ảnh thở dốc và nhấp nháy pin yếu.
+     - *Py Dragon*: Mắt rủ xuống buồn bã (`\ /`), đốm lửa đuôi yếu ớt thu nhỏ lại. Giai đoạn baby có thêm giọt nước mắt lăn dài.
+     - *Algorithm Owl*: Kính cận trễ xuống lệch góc, mỏ rủ xuống mệt mỏi.
+  4. **Kiệt sức/Ngủ thiếp (`fullness === 0`)**:
+     - Pet nhắm nghiền mắt (nét ngang nhắm mắt), có các chữ `Z z z` bay ra. Chatbot Companion từ chối trò chuyện và hiện thông báo yêu cầu cho ăn để đánh thức.
 
 ### 5.5 Mini-game trắc nghiệm vui (Pet Quick Quiz)
 - Ngay tại `PetStatusCard`, thêm nút 🎮 (Chơi đùa). Bấm vào sẽ mở Popup trắc nghiệm nhanh 1 câu hỏi vui về Python (ví dụ: *"Đâu là cú pháp đúng của hàm print?"*).

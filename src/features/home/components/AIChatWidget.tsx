@@ -208,9 +208,9 @@ export function AIChatWidget({
                 type="button"
                 className="chat-suggestion-btn"
                 disabled={isChatLoading || isPetSleeping}
-                onClick={() => onSendChatMessage(isChallenge ? 'Cho tớ một ví dụ thực tế dễ hiểu về nội dung thử thách này nhé!' : 'Cho tớ một ví dụ thực tế dễ hiểu về nội dung bài này nhé!')}
+                onClick={() => onSendChatMessage(isChallenge ? 'Cho tớ một ví dụ code mẫu tương tự thử thách này để tớ tham khảo và bắt chước nhé!' : 'Cho tớ một ví dụ code mẫu tương tự bài học này để tớ tham khảo và bắt chước nhé!')}
               >
-                Ví dụ thực tế
+                Ví dụ code mẫu
               </button>
             </div>
 

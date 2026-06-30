@@ -26,6 +26,7 @@ Spec-pack này xác định hành vi mục tiêu của khu vực `Login`, đồn
 - Gắn tiến trình học với user đã đăng nhập
 - Nạp lại tiến trình học đúng user ở Homepage
 - Đăng nhập mạng xã hội bằng Google OAuth 2.0 thực tế
+- Xóa biểu tượng login bằng github, chỉ còn login theo gmail, chỉnh lại giao diện thật hợp lý nếu chỉ còn 1 logo gmail
 
 ### Ngoài phạm vi
 - Đăng nhập mạng xã hội GitHub thực tế
@@ -417,8 +418,7 @@ Login Again
 
 1. **Đổi user trên cùng trình duyệt:** Logout user A rồi login user B, progress phải chuyển sang dữ liệu của B.
 2. **Mở lại tab sau vài ngày:** Nếu còn trong 30 ngày và session hợp lệ, user vẫn được giữ đăng nhập.
-3. **Thiếu backend social login:** Nút GitHub vẫn hiển thị đúng UI theo raw design nhưng không được gây lỗi JS nếu chưa tích hợp (Google OAuth đã được triển khai).
-4. **Yêu cầu gửi lại OTP:** Khi user yêu cầu OTP mới, OTP cũ phải bị vô hiệu để tránh tồn tại nhiều mã hợp lệ cùng lúc.
+3. **Yêu cầu gửi lại OTP:** Khi user yêu cầu OTP mới, OTP cũ phải bị vô hiệu để tránh tồn tại nhiều mã hợp lệ cùng lúc.
 
 ---
 
@@ -436,7 +436,7 @@ Login Again
 | Decorative circles / print() backdrop  | Password input + forgot password link   |
 |                                        | Primary login CTA                       |
 |                                        | Divider                                 |
-|                                        | Google / GitHub buttons                 |
+|                                        | Google button                           |
 |                                        | Footer CTA: create new account          |
 +----------------------------------------------------------------------------------+
 ```

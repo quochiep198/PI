@@ -36,8 +36,8 @@ export function WorkspacePanel({
   onEditorKeyDown,
   onRunCode,
   onResetCode,
-  onShowHint,
-  onShowCodeReview,
+  // onShowHint,
+  // onShowCodeReview,
 }: WorkspacePanelProps) {
   const lineNumbers = useMemo(() => code.split('\n'), [code]);
   const isRunning = status === 'loading' || status === 'running';
@@ -92,7 +92,7 @@ export function WorkspacePanel({
 
         <div className="editor-shell__actions">
           <div className="editor-shell__buttons">
-            <button
+            {/* <button
               className="pressable editor-button editor-button--secondary"
               disabled={isHintLoading || isReviewLoading || !selectedLesson || isRunning}
               type="button"
@@ -113,7 +113,7 @@ export function WorkspacePanel({
                 rate_review
               </span>
               {isReviewLoading ? VI_MESSAGES.home.labels.askingReview : VI_MESSAGES.home.labels.askReview}
-            </button>
+            </button> */}
             <button
               className="pressable editor-button editor-button--secondary"
               disabled={isHintLoading || isReviewLoading || isRunning}

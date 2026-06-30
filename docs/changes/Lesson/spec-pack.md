@@ -428,6 +428,7 @@ POST /api/hint
 5. Backend xác thực session, lấy 10 tin nhắn gần nhất làm ngữ cảnh hội thoại, ghép cùng System Prompt Mascot AI.
 6. Groq AI tạo phản hồi. Cả tin nhắn của học sinh và của AI được lưu vào bảng `user_chat_messages`.
 7. Trả phản hồi về frontend để hiển thị dạng bong bóng chat. AI phản hồi với phong cách xưng hô tớ-cậu thân mật, dùng ví dụ dễ hiểu cho lứa tuổi học sinh lớp 6, và nghiêm cấm đưa lời giải code hoàn chỉnh trực tiếp.
+8. Di chuyển chatbot về phía bên trái màn hình 
 
 **Business rules**
 - BR-CH-1: Chatbot hoạt động theo ngữ cảnh từng bài học riêng biệt. Khi chuyển bài học, lịch sử chat bài cũ được thay bằng bài mới.

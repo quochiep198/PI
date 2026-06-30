@@ -33,6 +33,7 @@ export function PetAvatar({
   const stage = getStage();
   const isSleeping = fullness === 0;
   const isSad = fullness < 30 && fullness > 0;
+  const isFull = fullness >= 80;
 
   // Render SVG based on pet code name and growth stage
   const renderPetSvg = () => {
@@ -75,7 +76,7 @@ export function PetAvatar({
             }
             @keyframes cyber-breath {
               0%, 100% { transform: scale(1); }
-              50% { transform: scale(1.03); }
+              50% { transform: scale(${isSad ? 1.015 : isFull ? 1.05 : 1.03}); }
             }
             @keyframes zzz-float {
               0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
@@ -96,10 +97,17 @@ export function PetAvatar({
               <rect x="30" y="40" width="40" height="20" rx="8" fill="#1e1e2f" stroke={strokeColor} strokeWidth={strokeWidth} />
               {/* Eyes */}
               {!isSleeping ? (
-                <>
-                  <circle cx="40" cy="50" r="3.5" fill={visorColor} className="eye" />
-                  <circle cx="60" cy="50" r="3.5" fill={visorColor} className="eye" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M37,52 Q40,48 43,52" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M57,52 Q60,48 63,52" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="40" cy="50" r="3.5" fill={visorColor} className="eye" />
+                    <circle cx="60" cy="50" r="3.5" fill={visorColor} className="eye" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M37,50 Q40,53 43,50" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" />
@@ -128,10 +136,17 @@ export function PetAvatar({
               {/* Visor */}
               <rect x="34" y="37" width="32" height="16" rx="6" fill="#1e1e2f" stroke={strokeColor} strokeWidth={strokeWidth} />
               {!isSleeping ? (
-                <>
-                  <circle cx="42" cy="45" r="3" fill={visorColor} className="eye" />
-                  <circle cx="58" cy="45" r="3" fill={visorColor} className="eye" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M39,47 Q42,43 45,47" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M55,47 Q58,43 61,47" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="42" cy="45" r="3" fill={visorColor} className="eye" />
+                    <circle cx="58" cy="45" r="3" fill={visorColor} className="eye" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M39,45 Q42,47 45,45" fill="none" stroke={visorColor} strokeWidth="2" strokeLinecap="round" />
@@ -140,7 +155,7 @@ export function PetAvatar({
                 </>
               )}
               {/* Small glowing power button/heart on body */}
-              <circle cx="50" cy="70" r="4" fill="#fbbf24" style={{ animation: 'cyber-breath 1.5s infinite alternate' }} />
+              <circle cx="50" cy="70" r="4" fill={isFull ? '#f43f5e' : '#fbbf24'} style={{ animation: `cyber-breath ${isFull ? '0.7s' : '1.5s'} infinite alternate` }} />
             </g>
           )}
 
@@ -154,7 +169,7 @@ export function PetAvatar({
               {/* Main Body */}
               <rect x="30" y="50" width="40" height="32" rx="12" fill="url(#cyberGrad)" stroke={strokeColor} strokeWidth={strokeWidth} />
               {/* Chest core */}
-              <polygon points="50,58 56,64 50,70 44,64" fill="#f43f5e" style={{ animation: 'cyber-breath 1s infinite alternate' }} />
+              <polygon points="50,58 56,64 50,70 44,64" fill={isFull ? '#fbbf24' : '#f43f5e'} style={{ animation: `cyber-breath ${isFull ? '0.6s' : '1s'} infinite alternate` }} />
               {/* Head */}
               <circle cx="50" cy="35" r="22" fill="url(#cyberGrad)" stroke={strokeColor} strokeWidth={strokeWidth} />
               {/* Ears */}
@@ -163,10 +178,17 @@ export function PetAvatar({
               {/* Neon Headband Visor */}
               <rect x="32" y="27" width="36" height="15" rx="5" fill="#1e1e2f" stroke={strokeColor} strokeWidth={strokeWidth} />
               {!isSleeping ? (
-                <>
-                  <rect x="38" y="32" width="8" height="5" rx="2" fill={visorColor} className="eye" />
-                  <rect x="54" y="32" width="8" height="5" rx="2" fill={visorColor} className="eye" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M37,36 Q42,32 47,36" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M53,36 Q58,32 63,36" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <rect x="38" y="32" width="8" height="5" rx="2" fill={visorColor} className="eye" />
+                    <rect x="54" y="32" width="8" height="5" rx="2" fill={visorColor} className="eye" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M37,34 Q42,37 47,34" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" />
@@ -194,12 +216,19 @@ export function PetAvatar({
               <polygon points="74,22 66,14 70,30" fill={secondaryColor} stroke={strokeColor} strokeWidth="1.5" />
               <polygon points="50,6 56,16 44,16" fill={secondaryColor} stroke={strokeColor} strokeWidth="1.5" />
               {/* Head visor */}
-              <rect x="32" y="22" width="36" height="15" rx="5" fill="#1e1e2f" stroke={strokeColor} strokeWidth={strokeWidth} />
+              <rect x="32" y="22" width="36" height="15" rx="5" fill="#1e293b" stroke={strokeColor} strokeWidth={strokeWidth} />
               {!isSleeping ? (
-                <>
-                  <polygon points="38,27 46,27 42,32" fill={visorColor} className="eye" />
-                  <polygon points="54,27 62,27 58,32" fill={visorColor} className="eye" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M37,31 Q42,27 47,31" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M53,31 Q58,27 63,31" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <polygon points="38,27 46,27 42,32" fill={visorColor} className="eye" />
+                    <polygon points="54,27 62,27 58,32" fill={visorColor} className="eye" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M37,29 Q42,32 47,29" fill="none" stroke={visorColor} strokeWidth="2.5" strokeLinecap="round" />
@@ -235,7 +264,7 @@ export function PetAvatar({
             .py-dragon-svg .eye { animation: dragon-blink 3.5s infinite ease-in-out; transform-origin: 50% 50%; }
             .py-dragon-svg .wing { animation: dragon-wing-flap 0.6s infinite ease-in-out alternate; }
             .py-dragon-svg .body { animation: dragon-breath 2.5s infinite ease-in-out; transform-origin: 50% 85%; }
-            .py-dragon-svg .egg { animation: egg-wiggle 3s infinite ease-in-out; transform-origin: 50% 80%; }
+            .py-dragon-svg .egg { animation: ${isFull ? 'egg-wiggle-happy 1.5s infinite ease-in-out' : 'egg-wiggle 3s infinite ease-in-out'}; transform-origin: 50% 80%; }
             .py-dragon-svg .flame { animation: fire-flicker 0.4s infinite alternate ease-in-out; transform-origin: 50% 50%; }
             .py-dragon-svg .zzz { animation: zzz-float 3s infinite linear; opacity: 0; }
             @keyframes dragon-blink {
@@ -248,7 +277,7 @@ export function PetAvatar({
             }
             @keyframes dragon-breath {
               0%, 100% { transform: scale(1); }
-              50% { transform: scale(1.02) translateY(-1px); }
+              50% { transform: scale(${isSad ? 1.01 : isFull ? 1.045 : 1.025}) translateY(${isSad ? '0px' : '-1px'}); }
             }
             @keyframes egg-wiggle {
               0%, 100% { transform: rotate(0deg); }
@@ -257,9 +286,14 @@ export function PetAvatar({
               55% { transform: rotate(-2deg); }
               60% { transform: rotate(0deg); }
             }
+            @keyframes egg-wiggle-happy {
+              0%, 100% { transform: rotate(0deg) scale(1); }
+              25% { transform: rotate(-10deg) scale(1.05); }
+              75% { transform: rotate(10deg) scale(1.05); }
+            }
             @keyframes fire-flicker {
-              0% { transform: scale(0.9) rotate(-2deg); opacity: 0.9; }
-              100% { transform: scale(1.1) rotate(2deg); opacity: 1; }
+              0% { transform: scale(${isFull ? 1.25 : isSad ? 0.65 : 0.9}) rotate(-2deg); opacity: 0.9; }
+              100% { transform: scale(${isFull ? 1.55 : isSad ? 0.85 : 1.1}) rotate(2deg); opacity: 1; }
             }
           `}</style>
 
@@ -274,12 +308,25 @@ export function PetAvatar({
               <path d="M32,45 L42,50 L48,42 L56,52 L62,40 L68,48" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
               {/* Little cute eyes peeking from the crack */}
               {!isSleeping ? (
-                <>
-                  <circle cx="45" cy="46" r="3" fill="#1e293b" className="eye" />
-                  <circle cx="55" cy="46" r="3" fill="#1e293b" className="eye" />
-                  <circle cx="44" cy="45" r="1" fill="#fff" />
-                  <circle cx="54" cy="45" r="1" fill="#fff" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M41,48 Q44,44 47,48" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M53,48 Q56,44 59,48" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <circle cx="45" cy="46" r="2" fill="#1e293b" className="eye" />
+                    <circle cx="55" cy="46" r="2" fill="#1e293b" className="eye" />
+                    <path d="M39,49 C39,52 37,52 37,49 C37,47 39,46 39,49" fill="#38bdf8" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="45" cy="46" r="3" fill="#1e293b" className="eye" />
+                    <circle cx="55" cy="46" r="3" fill="#1e293b" className="eye" />
+                    <circle cx="44" cy="45" r="1" fill="#fff" />
+                    <circle cx="54" cy="45" r="1" fill="#fff" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M42,46 Q45,48 48,46" fill="none" stroke={strokeColor} strokeWidth="1.5" />
@@ -304,11 +351,23 @@ export function PetAvatar({
               {/* Horn */}
               <path d="M52,33 Q58,26 55,24" fill="none" stroke={secondaryColor} strokeWidth="3.5" strokeLinecap="round" />
               {!isSleeping ? (
-                <>
-                  <circle cx="42" cy="44" r="2.5" fill="#1e293b" className="eye" />
-                  <circle cx="52" cy="44" r="2.5" fill="#1e293b" className="eye" />
-                  <circle cx="41.5" cy="43" r="0.8" fill="#fff" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M39,46 Q42,42 45,46" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M49,46 Q52,42 55,46" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <path d="M39,43 L44,46" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M55,43 L50,46" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="42" cy="44" r="2.5" fill="#1e293b" className="eye" />
+                    <circle cx="52" cy="44" r="2.5" fill="#1e293b" className="eye" />
+                    <circle cx="41.5" cy="43" r="0.8" fill="#fff" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M39,44 Q42,46 45,44" fill="none" stroke={strokeColor} strokeWidth="1.5" />
@@ -322,6 +381,8 @@ export function PetAvatar({
               {!isSleeping && (
                 <path d="M46,55 Q50,48 54,55 Z" fill="url(#fireGrad)" className="flame" style={{ transformOrigin: '50px 52px' }} />
               )}
+              {/* Glowing heart/power button on body */}
+              <circle cx="50" cy="70" r="4" fill={isFull ? '#f43f5e' : '#fbbf24'} style={{ animation: `cyber-breath ${isFull ? '0.8s' : '1.5s'} infinite alternate` }} />
             </g>
           )}
 
@@ -337,7 +398,7 @@ export function PetAvatar({
               {/* Feet */}
               <ellipse cx="38" cy="84" rx="6" ry="4" fill="#047857" stroke={strokeColor} strokeWidth={strokeWidth} />
               <ellipse cx="58" cy="84" rx="6" ry="4" fill="#047857" stroke={strokeColor} strokeWidth={strokeWidth} />
-              {/* Body */}
+              {/* Main Body */}
               <rect x="32" y="52" width="32" height="30" rx="12" fill="url(#dragonGrad)" stroke={strokeColor} strokeWidth={strokeWidth} />
               <rect x="38" y="58" width="20" height="20" rx="6" fill={secondaryColor} />
               {/* Head */}
@@ -346,12 +407,24 @@ export function PetAvatar({
               <path d="M54,20 Q64,10 58,8" fill="none" stroke={secondaryColor} strokeWidth="4.5" strokeLinecap="round" />
               <path d="M42,20 Q32,10 38,8" fill="none" stroke={secondaryColor} strokeWidth="4.5" strokeLinecap="round" />
               {!isSleeping ? (
-                <>
-                  <circle cx="40" cy="32" r="3" fill="#1e293b" className="eye" />
-                  <circle cx="56" cy="32" r="3" fill="#1e293b" className="eye" />
-                  <circle cx="39" cy="31" r="1" fill="#fff" />
-                  <circle cx="55" cy="31" r="1" fill="#fff" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M37,34 Q40,30 43,34" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M53,34 Q56,30 59,34" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <path d="M37,30 L42,33" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M59,30 L54,33" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="40" cy="32" r="3" fill="#1e293b" className="eye" />
+                    <circle cx="56" cy="32" r="3" fill="#1e293b" className="eye" />
+                    <circle cx="39" cy="31" r="1" fill="#fff" />
+                    <circle cx="55" cy="31" r="1" fill="#fff" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M37,33 Q40,35 43,33" fill="none" stroke={strokeColor} strokeWidth="2" />
@@ -363,6 +436,10 @@ export function PetAvatar({
               <ellipse cx="48" cy="40" rx="7" ry="5" fill="#047857" stroke={strokeColor} strokeWidth="1" />
               <circle cx="45" cy="39" r="1" fill="#1e293b" />
               <circle cx="51" cy="39" r="1" fill="#1e293b" />
+              {/* Extra fire puff for full dragon */}
+              {isFull && !isSleeping && (
+                <path d="M44,43 Q48,50 52,43 Z" fill="url(#fireGrad)" className="flame" style={{ transformOrigin: '48px 43px' }} />
+              )}
             </g>
           )}
 
@@ -388,18 +465,34 @@ export function PetAvatar({
               <path d="M40,12 Q24,0 32,-2" fill="none" stroke={secondaryColor} strokeWidth="5" strokeLinecap="round" />
               <path d="M48,12 L48,2" fill="none" stroke={secondaryColor} strokeWidth="3" strokeLinecap="round" />
               {!isSleeping ? (
-                <>
-                  <polygon points="34,26 42,22 42,28" fill="#1e293b" className="eye" />
-                  <polygon points="62,26 54,22 54,28" fill="#1e293b" className="eye" />
-                  <circle cx="40" cy="24" r="1" fill="#fff" />
-                  <circle cx="56" cy="24" r="1" fill="#fff" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M34,28 Q38,24 42,28" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M62,28 Q58,24 54,28" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <path d="M34,24 L41,28" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M62,24 L55,28" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <polygon points="34,26 42,22 42,28" fill="#1e293b" className="eye" />
+                    <polygon points="62,26 54,22 54,28" fill="#1e293b" className="eye" />
+                    <circle cx="40" cy="24" r="1" fill="#fff" />
+                    <circle cx="56" cy="24" r="1" fill="#fff" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M36,26 Q40,29 44,26" fill="none" stroke={strokeColor} strokeWidth="2.5" />
                   <path d="M52,26 Q56,29 60,26" fill="none" stroke={strokeColor} strokeWidth="2.5" />
                   <text x="72" y="14" className="zzz" fill="#10b981" fontSize="12" fontWeight="bold">Z</text>
                 </>
+              )}
+              {/* Extra fire puff for full master dragon */}
+              {isFull && !isSleeping && (
+                <path d="M46,34 Q50,41 54,34 Z" fill="url(#fireGrad)" className="flame" style={{ transformOrigin: '50px 34px' }} />
               )}
             </g>
           )}
@@ -426,8 +519,12 @@ export function PetAvatar({
             .algorithm-owl-svg .eye { animation: owl-blink 5s infinite ease-in-out; transform-origin: 50% 50%; }
             .algorithm-owl-svg .wing-left { animation: owl-flap-left 1.2s infinite ease-in-out alternate; transform-origin: 25% 60%; }
             .algorithm-owl-svg .wing-right { animation: owl-flap-right 1.2s infinite ease-in-out alternate; transform-origin: 75% 60%; }
-            .algorithm-owl-svg .body { animation: owl-breath 3s infinite ease-in-out; transform-origin: 50% 85%; }
+            .algorithm-owl-svg .body {
+              animation: ${isFull ? 'owl-happy-bob 1.5s infinite ease-in-out' : 'owl-breath 3s infinite ease-in-out'};
+              transform-origin: 50% 85%;
+            }
             .algorithm-owl-svg .zzz { animation: zzz-float 3s infinite linear; opacity: 0; }
+            .algorithm-owl-svg .binary-float { animation: binary-float-anim 2.5s infinite ease-in-out; }
             @keyframes owl-blink {
               0%, 90%, 95%, 100% { transform: scaleY(1); }
               92% { transform: scaleY(0.1); }
@@ -442,7 +539,16 @@ export function PetAvatar({
             }
             @keyframes owl-breath {
               0%, 100% { transform: scale(1) translateY(0); }
-              50% { transform: scale(1.02) translateY(-1px); }
+              50% { transform: scale(${isSad ? 1.01 : 1.02}) translateY(${isSad ? '0px' : '-1px'}); }
+            }
+            @keyframes owl-happy-bob {
+              0%, 100% { transform: scale(1) rotate(0deg); }
+              25% { transform: scale(1.03) rotate(-3deg); }
+              75% { transform: scale(1.03) rotate(3deg); }
+            }
+            @keyframes binary-float-anim {
+              0%, 100% { transform: translateY(0); opacity: 0.3; }
+              50% { transform: translateY(-5px); opacity: 0.8; }
             }
           `}</style>
 
@@ -458,11 +564,25 @@ export function PetAvatar({
               <circle cx="57" cy="34" r="6" fill="none" stroke={glassesColor} strokeWidth="2" />
               <line x1="49" y1="34" x2="51" y2="34" stroke={glassesColor} strokeWidth="2" />
               {!isSleeping ? (
-                <>
-                  <circle cx="43" cy="34" r="2.5" fill="#1e293b" className="eye" />
-                  <circle cx="57" cy="34" r="2.5" fill="#1e293b" className="eye" />
-                  <polygon points="50,37 52,41 48,41" fill={secondaryColor} />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M40,34 Q43,31 46,34" fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" className="eye" />
+                    <path d="M54,34 Q57,31 60,34" fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" className="eye" />
+                    <polygon points="50,37 52,41 48,41" fill={secondaryColor} />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <path d="M41,33 L45,35" fill="none" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" className="eye" />
+                    <path d="M59,33 L55,35" fill="none" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" className="eye" />
+                    <polygon points="50,37 52,41 48,41" fill={secondaryColor} />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="43" cy="34" r="2.5" fill="#1e293b" className="eye" />
+                    <circle cx="57" cy="34" r="2.5" fill="#1e293b" className="eye" />
+                    <polygon points="50,37 52,41 48,41" fill={secondaryColor} />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M41,34 Q43,36 45,34" fill="none" stroke={strokeColor} strokeWidth="1.5" />
@@ -492,12 +612,24 @@ export function PetAvatar({
               <line x1="50" y1="38" x2="50" y2="38" stroke={glassesColor} strokeWidth="2.5" />
               {/* Eyes */}
               {!isSleeping ? (
-                <>
-                  <circle cx="42" cy="38" r="3.5" fill="#1e293b" className="eye" />
-                  <circle cx="58" cy="38" r="3.5" fill="#1e293b" className="eye" />
-                  <circle cx="40.5" cy="36.5" r="1" fill="#fff" />
-                  <circle cx="56.5" cy="36.5" r="1" fill="#fff" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M39,38 Q42,35 45,38" fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" className="eye" />
+                    <path d="M55,38 Q58,35 61,38" fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" className="eye" />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <path d="M39,36 L44,39" fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" className="eye" />
+                    <path d="M61,36 L56,39" fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="42" cy="38" r="3.5" fill="#1e293b" className="eye" />
+                    <circle cx="58" cy="38" r="3.5" fill="#1e293b" className="eye" />
+                    <circle cx="40.5" cy="36.5" r="1" fill="#fff" />
+                    <circle cx="56.5" cy="36.5" r="1" fill="#fff" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M39,38 Q42,40 45,38" fill="none" stroke={strokeColor} strokeWidth="2" />
@@ -529,12 +661,24 @@ export function PetAvatar({
               <ellipse cx="60" cy="30" rx="11" ry="11" fill="none" stroke={glassesColor} strokeWidth="3" />
               <line x1="51" y1="30" x2="49" y2="30" stroke={glassesColor} strokeWidth="3" />
               {!isSleeping ? (
-                <>
-                  <circle cx="40" cy="30" r="5" fill="#1e293b" className="eye" />
-                  <circle cx="60" cy="30" r="5" fill="#1e293b" className="eye" />
-                  <circle cx="38" cy="28" r="1.5" fill="#fff" />
-                  <circle cx="58" cy="28" r="1.5" fill="#fff" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M36,30 Q40,26 44,30" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M56,30 Q60,26 64,30" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <path d="M36,28 L42,31" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M64,28 L58,31" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="40" cy="30" r="5" fill="#1e293b" className="eye" />
+                    <circle cx="60" cy="30" r="5" fill="#1e293b" className="eye" />
+                    <circle cx="38" cy="28" r="1.5" fill="#fff" />
+                    <circle cx="58" cy="28" r="1.5" fill="#fff" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M36,30 Q40,33 44,30" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" />
@@ -544,6 +688,13 @@ export function PetAvatar({
               )}
               {/* Beak */}
               <polygon points="50,34 54,41 46,41" fill={secondaryColor} />
+              {/* Floating binary code when full */}
+              {isFull && !isSleeping && (
+                <>
+                  <text x="14" y="28" fill="#a5b4fc" fontSize="8" fontFamily="monospace" className="binary-float">0</text>
+                  <text x="78" y="28" fill="#a5b4fc" fontSize="8" fontFamily="monospace" className="binary-float" style={{ animationDelay: '0.8s' }}>1</text>
+                </>
+              )}
             </g>
           )}
 
@@ -568,12 +719,24 @@ export function PetAvatar({
               <circle cx="62" cy="28" r="10" fill="none" stroke={glassesColor} strokeWidth="3" />
               <line x1="48" y1="28" x2="52" y2="28" stroke={glassesColor} strokeWidth="3" />
               {!isSleeping ? (
-                <>
-                  <circle cx="38" cy="28" r="5" fill="#1e293b" className="eye" />
-                  <circle cx="62" cy="28" r="5" fill="#1e293b" className="eye" />
-                  <circle cx="36" cy="26" r="1.5" fill="#fff" />
-                  <circle cx="60" cy="26" r="1.5" fill="#fff" />
-                </>
+                isFull ? (
+                  <>
+                    <path d="M34,28 Q38,21 42,28" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M58,28 Q62,21 66,28" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : isSad ? (
+                  <>
+                    <path d="M34,28 L42,31" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                    <path d="M58,28 L66,31" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" className="eye" />
+                  </>
+                ) : (
+                  <>
+                    <circle cx="38" cy="28" r="5" fill="#1e293b" className="eye" />
+                    <circle cx="62" cy="28" r="5" fill="#1e293b" className="eye" />
+                    <circle cx="36" cy="26" r="1.5" fill="#fff" />
+                    <circle cx="60" cy="26" r="1.5" fill="#fff" />
+                  </>
+                )
               ) : (
                 <>
                   <path d="M34,28 Q38,31 42,28" fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" />
@@ -583,6 +746,13 @@ export function PetAvatar({
               )}
               {/* Beak */}
               <polygon points="50,31 54,37 46,37" fill={secondaryColor} />
+              {/* Floating binary code when full */}
+              {isFull && !isSleeping && (
+                <>
+                  <text x="12" y="24" fill="#a5b4fc" fontSize="8" fontFamily="monospace" className="binary-float">0</text>
+                  <text x="80" y="24" fill="#a5b4fc" fontSize="8" fontFamily="monospace" className="binary-float" style={{ animationDelay: '0.8s' }}>1</text>
+                </>
+              )}
             </g>
           )}
         </svg>
@@ -592,6 +762,8 @@ export function PetAvatar({
     // FALLBACK Emoji rendering if not matching core templates
     const fallbackEmoji = () => {
       if (isSleeping) return '💤';
+      if (isFull) return '🥰'; // Full happy fallback emoji
+      if (isSad) return '🥺'; // Sad/hungry fallback emoji
       if (stage === 'baby') return pet?.imageBaby || template?.imageBaby || '🥚';
       if (stage === 'teen') return pet?.imageTeen || template?.imageTeen || '🐣';
       if (stage === 'adult') return pet?.imageAdult || template?.imageAdult || '🦉';

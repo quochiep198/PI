@@ -46,7 +46,7 @@ export function LessonPanel({
   const totalLessons = lessons.length;
   const progressPercent = totalLessons > 0 ? Math.min(100, Math.round((completedLessons / totalLessons) * 100)) : 0;
   const selectedLesson = filteredLessons.find((lesson) => lesson.id === selectedLessonId) || null;
-  const currentLessonCompleted = selectedLesson ? completedLessonIds.includes(selectedLesson.id) : false;
+  // const currentLessonCompleted = selectedLesson ? completedLessonIds.includes(selectedLesson.id) : false;
 
   return (
     <div className="lesson-panel">
@@ -70,40 +70,6 @@ export function LessonPanel({
           />
         </div>
       )}
-
-      <article className="task-card">
-        <div className="task-card__hint-icon">
-          <span aria-hidden="true" className="material-symbols-outlined">
-            lightbulb
-          </span>
-        </div>
-        <h2 className="task-card__title">
-          <span aria-hidden="true" className="material-symbols-outlined">
-            assignment
-          </span>
-          Nhiệm vụ của bạn
-        </h2>
-        <p className="task-card__description">
-          {selectedLesson?.objective ||
-            'Chọn một bài học để xem mục tiêu và mã khởi đầu từ Neon DB.'}
-        </p>
-        <div className="task-card__instruction">
-          <p>
-            {selectedLesson
-              ? `Starter code sẽ được nạp vào editor khi bạn chọn "${selectedLesson.title}".`
-              : 'Danh sách bài học đang được tải từ cơ sở dữ liệu Neon DB.'}
-          </p>
-        </div>
-        <div className="task-card__status">
-          {selectedLesson
-            ? currentLessonCompleted
-              ? 'Trạng thái: Đã hoàn thành'
-              : 'Trạng thái: Chưa hoàn thành'
-            : 'Trạng thái: Chưa chọn bài học'}
-        </div>
-      </article>
-
-
       <section className="lessons-card" aria-labelledby="lessons-heading">
         <div className="lessons-card__header">
           <h2 id="lessons-heading">Danh sách bài học</h2>
