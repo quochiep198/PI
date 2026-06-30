@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Challenge, type ChallengeSubmitResult } from '../types/challenge';
+import '../practice.css';
 import { usePyodideRunner } from '../../home/usePyodideRunner';
 import { setCachedXp } from '../../shared/xpCache';
 import { setCachedCoins } from '../../shared/coinsCache';

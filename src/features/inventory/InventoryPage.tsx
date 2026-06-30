@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { InventoryTab } from './types';
+import './inventory.css';
 
 interface Avatar {
   id: number;

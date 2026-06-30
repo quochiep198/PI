@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { VI_MESSAGES } from '../../content/messages';
 import type { AuthUser } from '../auth/types';
+import './home.css';
 import { LessonPanel } from './components/LessonPanel';
 import { WorkspacePanel } from './components/WorkspacePanel';
 import { LevelUpModal } from './components/LevelUpModal';

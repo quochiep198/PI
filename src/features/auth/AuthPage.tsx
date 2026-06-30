@@ -1,6 +1,7 @@
 import { VI_MESSAGES } from '../../content/messages';
 import type { AuthUser } from './types';
 import { useAuthForm } from './useAuthForm';
+import './auth.css';
 
 type AuthPageProps = {
   onAuthenticated: (user: AuthUser) => void;

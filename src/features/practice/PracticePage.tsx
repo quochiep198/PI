@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AuthUser } from '../auth/types';
+import './practice.css';
 import type { UserPet, PetAccessory } from '../pet';
 import { Leaderboard } from './components/Leaderboard';
 import { StreakCalendar } from './components/StreakCalendar';
