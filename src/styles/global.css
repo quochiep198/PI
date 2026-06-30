@@ -197,6 +197,96 @@ select {
     'GRAD' 0,
     'opsz' 24;
   line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+  transition: font-variation-settings 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
+}
+
+/* Dynamic Hover and Focus pop effects for Icons */
+.pressable:hover .material-symbols-outlined,
+button:hover .material-symbols-outlined,
+.lessons-card:hover .material-symbols-outlined,
+.lesson-item:hover .material-symbols-outlined,
+.mobile-nav__item:hover .material-symbols-outlined,
+.settings-theme__option:hover .material-symbols-outlined,
+.inventory-tab:hover .material-symbols-outlined,
+.practice-challenge-card:hover .material-symbols-outlined,
+.active-tab .material-symbols-outlined,
+.is-active .material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 500,
+    'GRAD' 0,
+    'opsz' 24;
+  transform: scale(1.15);
+}
+
+/* Micro-animations */
+
+/* 1. Spin (Refresh, Settings) */
+.icon-spin {
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pressable:hover .icon-spin,
+button:hover .icon-spin,
+.icon-spin:hover {
+  transform: rotate(180deg) scale(1.2);
+}
+
+/* 2. Pulse (Play, Run, Stars, Celebration) */
+@keyframes icon-pulse-anim {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+.pressable:hover .icon-pulse,
+button:hover .icon-pulse,
+.icon-pulse:hover {
+  animation: icon-pulse-anim 0.8s infinite ease-in-out;
+}
+
+/* 3. Wobble (Terminal, Danger, Lightbulbs, Search) */
+@keyframes icon-wobble-anim {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg) scale(1.1); }
+  75% { transform: rotate(10deg) scale(1.1); }
+}
+.pressable:hover .icon-wobble,
+button:hover .icon-wobble,
+.icon-wobble:hover {
+  animation: icon-wobble-anim 0.5s ease-in-out;
+}
+
+/* 4. Float (Console Output, Scroll, Layout Panels) */
+@keyframes icon-float-anim {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px) scale(1.08); }
+}
+.pressable:hover .icon-float,
+button:hover .icon-float,
+.icon-float:hover {
+  animation: icon-float-anim 1.5s infinite ease-in-out;
+}
+
+/* 5. Tilt (Chevron, Arrow, Edit, Lock) */
+.icon-tilt {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pressable:hover .icon-tilt,
+button:hover .icon-tilt,
+.icon-tilt:hover {
+  transform: rotate(-12deg) scale(1.18);
+}
+
+/* Vibrant Icon overrides */
+.icon-coin {
+  color: #fbbf24 !important;
+  filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.3));
+}
+
+.icon-streak {
+  color: #f97316 !important;
+  filter: drop-shadow(0 2px 4px rgba(249, 115, 22, 0.35));
 }
 
 .pressable {
@@ -1660,6 +1750,10 @@ select {
   box-shadow: 0 2px 0 0 #c5c5d8;
 }
 
+.editor-button--secondary .icon-spin {
+  color: #f43f5e;
+}
+
 .editor-button--primary {
   padding-right: 16px;
   padding-left: 16px;
@@ -1667,6 +1761,11 @@ select {
   font-size: 13.5px;
   background: var(--color-primary-container);
   box-shadow: 0 2px 0 0 #0e29cf;
+}
+
+.editor-button--primary .icon-pulse {
+  font-variation-settings: 'FILL' 1, 'wght' 600;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 .editor-button:disabled {

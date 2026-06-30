@@ -60,7 +60,7 @@ export function WorkspacePanel({
               {selectedLesson ? `${selectedLesson.slug}.py` : 'main.py'}
             </span>
           </div>
-          <span aria-hidden="true" className="material-symbols-outlined editor-shell__terminal">
+          <span aria-hidden="true" className="material-symbols-outlined editor-shell__terminal icon-wobble">
             terminal
           </span>
         </div>
@@ -120,7 +120,7 @@ export function WorkspacePanel({
               type="button"
               onClick={onResetCode}
             >
-              <span aria-hidden="true" className="material-symbols-outlined">
+              <span aria-hidden="true" className="material-symbols-outlined icon-spin">
                 refresh
               </span>
               {VI_MESSAGES.home.labels.reset}
@@ -132,7 +132,7 @@ export function WorkspacePanel({
             type="button"
             onClick={() => void onRunCode()}
           >
-            <span aria-hidden="true" className="material-symbols-outlined">
+            <span aria-hidden="true" className="material-symbols-outlined icon-pulse">
               play_arrow
             </span>
             {status === 'loading'
@@ -148,7 +148,7 @@ export function WorkspacePanel({
 
       <section className="output-shell" aria-label="Playground output">
         <div className="output-shell__header">
-          <span aria-hidden="true" className="material-symbols-outlined">
+          <span aria-hidden="true" className="material-symbols-outlined icon-float">
             wysiwyg
           </span>
           <span>{VI_MESSAGES.home.labels.outputTitle}</span>
